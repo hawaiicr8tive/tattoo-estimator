@@ -1,65 +1,126 @@
-import Image from "next/image";
+'use client'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import StyleSelector from '@/components/estimator/StyleSelector'
+import PlacementSelector from '@/components/estimator/PlacementSelector'
+import SizeSelector from '@/components/estimator/SizeSelector'
+import ColorToggle from '@/components/estimator/ColorToggle'
+import NotesField from '@/components/estimator/NotesField'
+import LeadCapture from '@/components/estimator/LeadCapture'
+import type { PlacementKey, TattooSize, StyleOption } from '@/lib/types'
 
-export default function Home() {
+const TOTAL_STEPS = 6
+
+const DEFAULT_STYLES: StyleOption[] = [
+  { id: 'fine-line',   label: 'Fine Line / Dotwork',           description: 'Delicate lines, intricate detail, minimal shading',     multiplier: 1.00 },
+  { id: 'traditional', label: 'Traditional / Neo-Traditional',  description: 'Bold outlines, classic imagery, rich color fills',      multiplier: 1.00 },
+  { id: 'realism',     label: 'Realism & Portraits',            description: 'Photo-realistic detail, portraits, nature scenes',      multiplier: 1.30 },
+  { id: 'polynesian',  label: 'Polynesian / Tribal',            description: 'Dense patterns, cultural motifs, high ink coverage',    multiplier: 1.15 },
+  { id: 'geometric',   label: 'Geometric',                      description: 'Precise shapes, sacred geometry, ruler-straight lines', multiplier: 1.10 },
+]
+
+export default function EstimatorPage() {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [styles, setStyles] = useState<StyleOption[]>(DEFAULT_STYLES)
+  const [style, setStyle] = useState<string | null>(null)
+  const [placement, setPlacement] = useState<PlacementKey | null>(null)
+  const [size, setSize] = useState<TattooSize | null>(null)
+  const [isColor, setIsColor] = useState<boolean | null>(null)
+  const [notes, setNotes] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [email, setEmail] = useState('')
+  const [optedIn, setOptedIn] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/styles')
+      .then(r => r.json())
+      .then((data: StyleOption[]) => { if (Array.isArray(data) && data.length > 0) setStyles(data) })
+      .catch(() => {}) // silently keep defaults on error
+  }, [])
+
+  function advance() { setStep(s => s + 1) }
+  function handleBack() { setStep(s => Math.max(1, s - 1)) }
+
+  async function handleSubmit() {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/submit-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ style, placement, size, isColor, notes, firstName, email, optedIn }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Submission failed')
+      router.push(`/results?id=${data.id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong')
+      setIsSubmitting(false)
+    }
+  }
+
+  const progress = ((step - 1) / TOTAL_STEPS) * 100
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-black tracking-tight text-[#0A0A0A]">Tattoolicious</h1>
+          <p className="text-sm text-[#555555] mt-1">Price Estimator</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <div className="mb-5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[#7B0000] transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-xs text-[#555555] text-right mb-5">Step {step} of {TOTAL_STEPS}</p>
+
+        <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
+          {step === 1 && (
+            <StyleSelector value={style} styles={styles} onChange={v => { setStyle(v); advance() }} />
+          )}
+          {step === 2 && (
+            <PlacementSelector value={placement} onChange={v => { setPlacement(v); advance() }} />
+          )}
+          {step === 3 && (
+            <SizeSelector value={size} onChange={v => { setSize(v); advance() }} />
+          )}
+          {step === 4 && (
+            <ColorToggle value={isColor} onChange={v => { setIsColor(v); advance() }} />
+          )}
+          {step === 5 && (
+            <NotesField value={notes} onChange={setNotes} onSkip={advance} />
+          )}
+          {step === 6 && (
+            <LeadCapture
+              firstName={firstName} email={email} optedIn={optedIn}
+              onFirstNameChange={setFirstName} onEmailChange={setEmail}
+              onOptedInChange={setOptedIn} onSubmit={handleSubmit} isSubmitting={isSubmitting}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          )}
+          {error && <p className="mt-4 text-sm text-center text-red-600">{error}</p>}
         </div>
-      </main>
+
+        <div className="mt-4 flex items-center justify-between">
+          {step > 1 ? (
+            <button type="button" onClick={handleBack} disabled={isSubmitting}
+              className="text-sm text-[#555555] hover:text-[#0A0A0A] disabled:opacity-40 cursor-pointer">
+              ← Back
+            </button>
+          ) : <span />}
+          {step === 5 && (
+            <button type="button" onClick={advance}
+              className="rounded-lg bg-[#7B0000] px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 cursor-pointer">
+              Next →
+            </button>
+          )}
+        </div>
+      </div>
     </div>
-  );
+  )
 }

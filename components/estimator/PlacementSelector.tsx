@@ -1,0 +1,87 @@
+'use client'
+import type { PlacementKey } from '@/lib/types'
+
+const GROUPS = [
+  {
+    label: 'EASY',
+    color: 'bg-green-50 text-green-800 border-green-200',
+    placements: [
+      { id: 'outer-arm' as PlacementKey, label: 'Outer Arm' },
+      { id: 'thigh' as PlacementKey, label: 'Thigh' },
+      { id: 'calf' as PlacementKey, label: 'Calf' },
+      { id: 'shoulder' as PlacementKey, label: 'Shoulder' },
+      { id: 'upper-back' as PlacementKey, label: 'Upper Back' },
+    ],
+  },
+  {
+    label: 'MODERATE',
+    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    placements: [
+      { id: 'inner-arm' as PlacementKey, label: 'Inner Arm' },
+      { id: 'forearm' as PlacementKey, label: 'Forearm' },
+      { id: 'chest' as PlacementKey, label: 'Chest' },
+      { id: 'stomach' as PlacementKey, label: 'Stomach' },
+      { id: 'lower-back' as PlacementKey, label: 'Lower Back' },
+      { id: 'shin' as PlacementKey, label: 'Shin' },
+    ],
+  },
+  {
+    label: 'DIFFICULT',
+    color: 'bg-orange-50 text-orange-800 border-orange-200',
+    placements: [
+      { id: 'ribs' as PlacementKey, label: 'Ribs' },
+      { id: 'spine' as PlacementKey, label: 'Spine' },
+      { id: 'neck' as PlacementKey, label: 'Neck' },
+      { id: 'hands' as PlacementKey, label: 'Hands' },
+      { id: 'feet' as PlacementKey, label: 'Feet' },
+      { id: 'ankle' as PlacementKey, label: 'Ankle' },
+    ],
+  },
+  {
+    label: 'PREMIUM',
+    color: 'bg-red-50 text-red-800 border-red-200',
+    placements: [
+      { id: 'fingers' as PlacementKey, label: 'Fingers' },
+      { id: 'behind-ear' as PlacementKey, label: 'Behind Ear' },
+      { id: 'face' as PlacementKey, label: 'Face' },
+    ],
+  },
+]
+
+interface Props {
+  value: PlacementKey | null
+  onChange: (placement: PlacementKey) => void
+}
+
+export default function PlacementSelector({ value, onChange }: Props) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-center text-[#0A0A0A]">Where on your body?</h2>
+      <div className="space-y-3">
+        {GROUPS.map(group => (
+          <div key={group.label}>
+            <div className={`mb-2 inline-block rounded px-2 py-0.5 text-xs font-bold border ${group.color}`}>
+              {group.label}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {group.placements.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onPointerDown={() => onChange(p.id)}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
+                    ${value === p.id
+                      ? 'border-[#7B0000] bg-[#7B0000] text-white'
+                      : 'border-gray-300 bg-white text-[#0A0A0A] hover:border-[#7B0000]'
+                    }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

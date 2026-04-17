@@ -1,0 +1,51 @@
+{
+  "shopMinimum": 150,
+  "tierRates": {
+    "1": { "min": 150, "max": 200 },
+    "2": { "min": 200, "max": 280 },
+    "3": { "min": 280, "max": 350 }
+  },
+  "sizeHours": {
+    "tiny":   [0.5, 1.0],
+    "small":  [1.0, 2.5],
+    "medium": [2.5, 4.5],
+    "large":  [4.5, 8.0],
+    "xl":     [8.0, 16.0]
+  },
+  "styleMultipliers": {
+    "fine-line":   1.00,
+    "traditional": 1.00,
+    "geometric":   1.10,
+    "polynesian":  1.15,
+    "realism":     1.30
+  },
+  "placementMultipliers": {
+    "outer-arm":   1.00,
+    "thigh":       1.00,
+    "calf":        1.00,
+    "shoulder":    1.00,
+    "upper-back":  1.00,
+    "inner-arm":   1.10,
+    "forearm":     1.10,
+    "chest":       1.10,
+    "stomach":     1.10,
+    "lower-back":  1.10,
+    "shin":        1.10,
+    "ribs":        1.25,
+    "spine":       1.25,
+    "neck":        1.25,
+    "hands":       1.25,
+    "feet":        1.25,
+    "ankle":       1.25,
+    "fingers":     1.35,
+    "behind-ear":  1.35,
+    "face":        1.35
+  },
+  "colorMultiplier": 1.22,
+  "placementDifficulty": {
+    "easy":     ["outer-arm", "thigh", "calf", "shoulder", "upper-back"],
+    "moderate": ["inner-arm", "forearm", "chest", "stomach", "lower-back", "shin"],
+    "difficult":["ribs", "spine", "neck", "hands", "feet", "ankle"],
+    "premium":  ["fingers", "behind-ear", "face"]
+  }
+}
