@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServiceClient } from '@/lib/supabase'
+import { calculateEstimateAllTiers } from '@/lib/pricing'
+import { matchArtists } from '@/lib/artist-matching'
+import type { PlacementKey, TattooSize, StyleOption } from '@/lib/types'
+import { Resend } from 'resend'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -9,11 +14,6 @@ const CORS = {
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS })
 }
-import { getServiceClient } from '@/lib/supabase'
-import { calculateEstimateAllTiers } from '@/lib/pricing'
-import { matchArtists } from '@/lib/artist-matching'
-import type { PlacementKey, TattooSize, StyleOption } from '@/lib/types'
-import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
