@@ -79,7 +79,7 @@ export default function AdminPage() {
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="Password"
             autoFocus
-            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent mb-3"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent mb-3"
           />
           {pwError && <p className="text-xs text-red-600 mb-3">{pwError}</p>}
           <button

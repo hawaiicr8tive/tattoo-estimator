@@ -47,30 +47,30 @@ export default function SizesTab({ initialData }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <input value={size.label} onChange={e => update(i, 'label', e.target.value)}
-                    className="w-28 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-28 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000] text-[#0A0A0A]" />
                 </td>
                 <td className="px-4 py-3">
                   <input value={size.dims} onChange={e => update(i, 'dims', e.target.value)}
-                    className="w-24 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-24 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000] text-[#0A0A0A]" />
                 </td>
                 <td className="px-4 py-3">
                   <input value={size.analog} onChange={e => update(i, 'analog', e.target.value)}
-                    className="w-32 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-32 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000] text-[#0A0A0A]" />
                 </td>
                 <td className="px-4 py-3">
                   <input type="number" min={0} step={0.5} value={size.hoursMin}
                     onChange={e => update(i, 'hoursMin', Number(e.target.value))}
-                    className="w-18 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-18 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000] text-[#0A0A0A]" />
                 </td>
                 <td className="px-4 py-3">
                   <input type="number" min={0} step={0.5} value={size.hoursMax}
                     onChange={e => update(i, 'hoursMax', Number(e.target.value))}
-                    className="w-18 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-18 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000] text-[#0A0A0A]" />
                 </td>
                 <td className="px-4 py-3">
                   <input value={size.note} onChange={e => update(i, 'note', e.target.value)}
                     placeholder="Optional note…"
-                    className="w-48 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-48 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000] text-[#0A0A0A]" />
                 </td>
               </tr>
             ))}

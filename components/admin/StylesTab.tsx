@@ -86,16 +86,16 @@ export default function StylesTab({ initialData }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <input value={style.label} onChange={e => update(i, 'label', e.target.value)}
-                      className="w-full min-w-[160px] rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                      className="w-full min-w-[160px] rounded border border-gray-200 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                   </td>
                   <td className="px-4 py-3">
                     <input value={style.description} onChange={e => update(i, 'description', e.target.value)}
-                      className="w-full min-w-[220px] rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                      className="w-full min-w-[220px] rounded border border-gray-200 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                   </td>
                   <td className="px-4 py-3">
                     <input type="number" min={0.5} max={3} step={0.01} value={style.multiplier}
                       onChange={e => update(i, 'multiplier', Number(e.target.value))}
-                      className="w-20 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                      className="w-20 rounded border border-gray-200 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                   </td>
                   <td className="px-4 py-3 text-[#555555] whitespace-nowrap text-xs">
                     {style.multiplier === 1 ? 'Base rate' : `+${Math.round((style.multiplier - 1) * 100)}% time`}
@@ -128,7 +128,7 @@ export default function StylesTab({ initialData }: Props) {
                 onKeyDown={e => e.key === 'Enter' && addStyle()}
                 placeholder="e.g. Watercolor"
                 autoFocus
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]"
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]"
               />
               {previewId && (
                 <p className="mt-1 text-xs text-[#555555]">
@@ -142,7 +142,7 @@ export default function StylesTab({ initialData }: Props) {
                 value={newStyle.description}
                 onChange={e => setNewStyle({ ...newStyle, description: e.target.value })}
                 placeholder="One-line description shown to customers"
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]"
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]"
               />
             </div>
             <div>
@@ -150,7 +150,7 @@ export default function StylesTab({ initialData }: Props) {
               <input
                 type="number" min={0.5} max={3} step={0.01} value={newStyle.multiplier}
                 onChange={e => setNewStyle({ ...newStyle, multiplier: Number(e.target.value) })}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]"
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]"
               />
             </div>
           </div>

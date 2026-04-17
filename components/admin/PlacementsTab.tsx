@@ -81,19 +81,19 @@ export default function PlacementsTab({ initialData }: Props) {
                         </td>
                         <td className="px-4 py-2">
                           <input value={p.label} onChange={e => update(_i, 'label', e.target.value)}
-                            className="w-36 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                            className="w-36 rounded border border-gray-200 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                         </td>
                         <td className="px-4 py-2">
                           <input type="number" min={1} max={3} step={0.01} value={p.multiplier}
                             onChange={e => update(_i, 'multiplier', Number(e.target.value))}
-                            className="w-20 rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                            className="w-20 rounded border border-gray-200 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                         </td>
                         <td className="px-4 py-2 text-[#555555] whitespace-nowrap text-xs">
                           {p.multiplier === 1 ? 'Base rate' : `+${Math.round((p.multiplier - 1) * 100)}% time`}
                         </td>
                         <td className="px-4 py-2">
                           <select value={p.group} onChange={e => update(_i, 'group', e.target.value)}
-                            className="rounded border border-gray-200 px-2 py-1 text-xs text-[#555555] focus:outline-none focus:ring-1 focus:ring-[#7B0000]">
+                            className="rounded border border-gray-200 px-2 py-1 text-xs text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]">
                             {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
                           </select>
                           <button type="button" onPointerDown={() => removePlacement(_i)}

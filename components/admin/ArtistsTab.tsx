@@ -23,7 +23,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-const INPUT = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent"
+const INPUT = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent"
 
 export default function ArtistsTab({ initialData }: Props) {
   const [artists, setArtists] = useState<Artist[]>(initialData)

@@ -71,12 +71,12 @@ export default function PricingTab({ initialData }: Props) {
                 <td className="px-4 py-3">
                   <input type="number" min={0} step={10} value={rates.min}
                     onChange={e => setTierRate(tier, 'min', Number(e.target.value))}
-                    className="w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                 </td>
                 <td className="px-4 py-3">
                   <input type="number" min={0} step={10} value={rates.max}
                     onChange={e => setTierRate(tier, 'max', Number(e.target.value))}
-                    className="w-24 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
+                    className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-[#0A0A0A] focus:outline-none focus:ring-1 focus:ring-[#7B0000]" />
                 </td>
                 <td className="px-4 py-3 text-[#555555]">${rates.min}–${rates.max}/hr</td>
               </tr>

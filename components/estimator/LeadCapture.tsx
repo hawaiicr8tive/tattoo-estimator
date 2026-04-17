@@ -45,7 +45,7 @@ export default function LeadCapture({
             value={firstName}
             onChange={e => onFirstNameChange(e.target.value)}
             placeholder="Your first name"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent"
           />
           {errors.firstName && <p className="mt-1 text-xs text-red-600">{errors.firstName}</p>}
         </div>
@@ -57,7 +57,7 @@ export default function LeadCapture({
             value={email}
             onChange={e => onEmailChange(e.target.value)}
             placeholder="your@email.com"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent"
           />
           {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
         </div>
