@@ -13,6 +13,9 @@
   --brand-primary-text: #ffffff;
   --brand-button:       #7B0000;
   --brand-button-text:  #ffffff;
+  --brand-pill-rgb:     123,0,0;
+  --brand-pill-opacity: 1;
+  --brand-pill-text:    #ffffff;
   --brand-bg:           #F5F5F0;
   --brand-card:         #ffffff;
   --brand-text:         #0A0A0A;

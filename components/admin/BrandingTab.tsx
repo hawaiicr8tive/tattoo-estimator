@@ -10,6 +10,8 @@ const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
   { key: 'primaryText', label: 'Accent Text',         hint: 'Text color on accent-colored backgrounds (badges, selected pills, booking panel)' },
   { key: 'button',      label: 'Button Background',   hint: 'Main action buttons — Next, Show My Estimate, Book with [Artist]' },
   { key: 'buttonText',  label: 'Button Text',         hint: 'Text color on main action buttons' },
+  { key: 'pillBg',      label: 'Selected Pill Color', hint: 'Fill color for selected placement pills (Inner Arm, Forearm, etc.)' },
+  { key: 'pillText',    label: 'Selected Pill Text',  hint: 'Text color on selected placement pills' },
   { key: 'background',  label: 'Page Background',     hint: 'Overall page background (standalone site only — embed inherits Wix bg)' },
   { key: 'cardBg',      label: 'Card Background',     hint: 'Cards and panels' },
   { key: 'textDark',    label: 'Primary Text',        hint: 'Headings and main body text' },
@@ -91,6 +93,26 @@ export default function BrandingTab({ initialData = {} }: Props) {
             </div>
           ))}
 
+          {/* Selected Pill Opacity */}
+          <div className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-[#0A0A0A]">Selected Pill Opacity</label>
+              <span className="text-xs font-mono text-[#555555] tabular-nums">{cfg.pillOpacity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={cfg.pillOpacity}
+              onChange={e => setCfg(c => ({ ...c, pillOpacity: Number(e.target.value) }))}
+              className="w-full accent-[#7B0000] cursor-pointer"
+            />
+            <p className="mt-2 text-xs text-[#555555]">
+              0% = border only (transparent fill) · 100% = fully solid
+            </p>
+          </div>
+
           {/* Settings */}
           <div className="rounded-xl bg-white border border-gray-200 p-4">
             <p className="text-xs font-bold text-[#555555] uppercase tracking-wide mb-3">Settings</p>
@@ -149,6 +171,28 @@ export default function BrandingTab({ initialData = {} }: Props) {
                     {s}
                   </span>
                 ))}
+              </div>
+
+              {/* Placement pills (selected vs unselected) */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { label: 'Inner Arm', selected: true },
+                  { label: 'Forearm',   selected: false },
+                  { label: 'Chest',     selected: false },
+                ].map(p => {
+                  const pillRgb = hexToRgb(cfg.pillBg)
+                  return (
+                    <span
+                      key={p.label}
+                      style={p.selected
+                        ? { borderColor: cfg.primary, background: `rgba(${pillRgb},${cfg.pillOpacity / 100})`, color: cfg.pillText }
+                        : { borderColor: cfg.border,  background: cfg.cardBg,                                    color: cfg.textDark }}
+                      className="rounded-full border px-3 py-1 text-xs font-medium"
+                    >
+                      {p.label}
+                    </span>
+                  )
+                })}
               </div>
 
               <input

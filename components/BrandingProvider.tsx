@@ -26,6 +26,11 @@ export function applyBranding(cfg: Partial<BrandingConfig>) {
   root.style.setProperty('--brand-primary-text', b.primaryText)
   root.style.setProperty('--brand-button',       b.button ?? b.primary)
   root.style.setProperty('--brand-button-text',  b.buttonText ?? b.primaryText)
+  const pillRgb     = hexToRgb(b.pillBg ?? b.primary)
+  const pillOpacity = (b.pillOpacity ?? 100) / 100
+  root.style.setProperty('--brand-pill-rgb',     pillRgb)
+  root.style.setProperty('--brand-pill-opacity', String(pillOpacity))
+  root.style.setProperty('--brand-pill-text',    b.pillText ?? b.primaryText)
   root.style.setProperty('--brand-bg',           b.background)
   root.style.setProperty('--brand-card',         b.cardBg)
   root.style.setProperty('--brand-text',         b.textDark)
