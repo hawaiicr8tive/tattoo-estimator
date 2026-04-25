@@ -43,6 +43,13 @@ export interface PriceEstimate {
   isConsultationOnly?: boolean
 }
 
+export interface XlConfig {
+  halfDayRate: { min: number; max: number }
+  fullDayRate: { min: number; max: number }
+  sessionsRange: { min: number; max: number }
+  disclaimer: string
+}
+
 export interface Artist {
   id: string
   name: string

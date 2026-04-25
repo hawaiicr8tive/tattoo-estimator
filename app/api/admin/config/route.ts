@@ -57,6 +57,7 @@ function buildDefaultConfig() {
       return { id, label: PLACEMENT_LABELS[id] ?? id, group, multiplier }
     }),
     artists,
+    xlConfig: pc.xlConfig,
   }
 }
 
@@ -76,6 +77,7 @@ export async function GET() {
       placements: saved.placements ?? defaults.placements,
       artists:    saved.artists    ?? defaults.artists,
       branding:   saved.branding   ?? {},
+      xlConfig:   saved.xlConfig   ?? defaults.xlConfig,
     })
   } catch {
     return NextResponse.json(buildDefaultConfig())

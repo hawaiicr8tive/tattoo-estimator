@@ -22,12 +22,19 @@ export function calculateEstimate(
 ): PriceEstimate {
   const { style, placement, size, isColor, artistTier = 1 } = input
 
-  // XL is consultation-only — show a wide advisory range
+  // XL is consultation-only — render side fetches the full xlConfig (day rates,
+  // session range, disclaimer) at runtime; these legacy fields remain for the
+  // leads-table snapshot and for fallback rendering.
   if (size === 'xl') {
+    const xl = pricingConfig.xlConfig
+    const dayMin = xl?.halfDayRate?.min ?? 800
+    const dayMax = xl?.fullDayRate?.max ?? 3000
+    const sMin   = xl?.sessionsRange?.min ?? 1
+    const sMax   = xl?.sessionsRange?.max ?? 10
     return {
-      priceRange: { min: 800, max: 3000 },
+      priceRange: { min: dayMin * sMin, max: dayMax * sMax },
       timeRange: { min: 8, max: 16 },
-      disclaimer: 'Final pricing confirmed at consultation. This is a guide, not a quote.',
+      disclaimer: xl?.disclaimer ?? 'Final pricing confirmed at consultation. This is a guide, not a quote.',
       isConsultationOnly: true,
     }
   }

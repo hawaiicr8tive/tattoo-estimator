@@ -1,13 +1,15 @@
 'use client'
-import type { PriceEstimate } from '@/lib/types'
+import type { PriceEstimate, XlConfig } from '@/lib/types'
 
 interface Props {
   estimate: PriceEstimate
   firstName: string
+  xlConfig?: XlConfig
 }
 
-export default function PriceCard({ estimate, firstName }: Props) {
+export default function PriceCard({ estimate, firstName, xlConfig }: Props) {
   const { priceRange, timeRange, disclaimer, isConsultationOnly } = estimate
+  const showXl = isConsultationOnly && xlConfig
 
   return (
     <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6">
@@ -16,7 +18,35 @@ export default function PriceCard({ estimate, firstName }: Props) {
       </h2>
       <p className="text-xs text-[var(--brand-text-mid)] mb-5">Based on your selections — not a final quote</p>
 
-      {isConsultationOnly ? (
+      {showXl ? (
+        <div className="rounded-xl bg-[var(--brand-primary-5)] border border-[var(--brand-primary-20)] p-4">
+          <p className="text-sm font-bold text-[var(--brand-primary)] text-center mb-3">Custom / Large Piece</p>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="rounded-lg bg-[var(--brand-bg)] p-3 text-center">
+              <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-1">Half Day</p>
+              <p className="text-lg font-black text-[var(--brand-text)]">
+                ${xlConfig.halfDayRate.min.toLocaleString()} – ${xlConfig.halfDayRate.max.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-lg bg-[var(--brand-bg)] p-3 text-center">
+              <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-1">Full Day</p>
+              <p className="text-lg font-black text-[var(--brand-text)]">
+                ${xlConfig.fullDayRate.min.toLocaleString()} – ${xlConfig.fullDayRate.max.toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white border border-gray-100 p-3 text-center">
+            <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-1">Estimated Sessions</p>
+            <p className="text-lg font-black text-[var(--brand-text)]">
+              {xlConfig.sessionsRange.min === xlConfig.sessionsRange.max
+                ? `${xlConfig.sessionsRange.min} ${xlConfig.sessionsRange.min === 1 ? 'session' : 'sessions'}`
+                : `${xlConfig.sessionsRange.min}–${xlConfig.sessionsRange.max} sessions`}
+            </p>
+          </div>
+        </div>
+      ) : isConsultationOnly ? (
         <div className="rounded-xl bg-[var(--brand-primary-5)] border border-[var(--brand-primary-20)] p-4 text-center">
           <p className="text-sm font-bold text-[var(--brand-primary)] mb-1">Custom / Large Piece</p>
           <p className="text-3xl font-black text-[var(--brand-text)]">
@@ -41,7 +71,9 @@ export default function PriceCard({ estimate, firstName }: Props) {
         </div>
       )}
 
-      <p className="text-xs text-[var(--brand-text-mid)] text-center">{disclaimer}</p>
+      <p className="text-xs text-[var(--brand-text-mid)] text-center mt-3">
+        {showXl ? xlConfig.disclaimer : disclaimer}
+      </p>
     </div>
   )
 }

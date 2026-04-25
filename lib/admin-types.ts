@@ -1,6 +1,6 @@
-import type { Artist } from './types'
+import type { Artist, XlConfig } from './types'
 import type { BrandingConfig } from './branding'
-export type { BrandingConfig }
+export type { BrandingConfig, XlConfig }
 
 export interface AdminPricing {
   shopMinimum: number
@@ -39,4 +39,5 @@ export interface AdminConfig {
   placements: AdminPlacement[]
   artists: Artist[]
   branding: Partial<BrandingConfig>
+  xlConfig: XlConfig
 }

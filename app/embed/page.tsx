@@ -7,7 +7,7 @@ import SizeSelector from '@/components/estimator/SizeSelector'
 import ColorToggle from '@/components/estimator/ColorToggle'
 import NotesField from '@/components/estimator/NotesField'
 import LeadCapture from '@/components/estimator/LeadCapture'
-import type { PlacementKey, TattooSize, StyleOption, Lead, Artist, PriceEstimate } from '@/lib/types'
+import type { PlacementKey, TattooSize, StyleOption, Lead, Artist, PriceEstimate, XlConfig } from '@/lib/types'
 
 const TOTAL_STEPS = 6
 
@@ -25,16 +25,19 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
   const { bookingUrl } = useBranding()
   const [lead, setLead] = useState<Lead | null>(null)
   const [allArtists, setAllArtists] = useState<Artist[]>([])
+  const [xlConfig, setXlConfig] = useState<XlConfig | undefined>(undefined)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/submit-lead?id=${encodeURIComponent(leadId)}`).then(r => r.json()),
       fetch('/api/artists').then(r => r.json()),
+      fetch('/api/xl-config').then(r => r.json()),
     ])
-      .then(([leadData, artistsData]) => {
+      .then(([leadData, artistsData, xlData]) => {
         if (!leadData.error) setLead(leadData)
         if (Array.isArray(artistsData)) setAllArtists(artistsData)
+        if (xlData && typeof xlData === 'object') setXlConfig(xlData as XlConfig)
       })
       .finally(() => setLoading(false))
   }, [leadId])
@@ -67,7 +70,33 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
         </h2>
         <p className="text-xs text-[var(--brand-text-mid)] mb-4">Based on your selections — not a final quote</p>
 
-        {estimate.isConsultationOnly ? (
+        {estimate.isConsultationOnly && xlConfig ? (
+          <div className="rounded-xl bg-[var(--brand-primary-5)] border border-[var(--brand-primary-20)] p-4">
+            <p className="text-sm font-bold text-[var(--brand-primary)] text-center mb-3">Custom / Large Piece</p>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="rounded-lg bg-[var(--brand-bg)] p-2.5 text-center">
+                <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Half Day</p>
+                <p className="text-base font-black text-[var(--brand-text)]">
+                  ${xlConfig.halfDayRate.min.toLocaleString()} – ${xlConfig.halfDayRate.max.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[var(--brand-bg)] p-2.5 text-center">
+                <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Full Day</p>
+                <p className="text-base font-black text-[var(--brand-text)]">
+                  ${xlConfig.fullDayRate.min.toLocaleString()} – ${xlConfig.fullDayRate.max.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-white border border-gray-100 p-2.5 text-center">
+              <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Estimated Sessions</p>
+              <p className="text-base font-black text-[var(--brand-text)]">
+                {xlConfig.sessionsRange.min === xlConfig.sessionsRange.max
+                  ? `${xlConfig.sessionsRange.min} ${xlConfig.sessionsRange.min === 1 ? 'session' : 'sessions'}`
+                  : `${xlConfig.sessionsRange.min}–${xlConfig.sessionsRange.max} sessions`}
+              </p>
+            </div>
+          </div>
+        ) : estimate.isConsultationOnly ? (
           <div className="rounded-xl bg-[var(--brand-primary-5)] border border-[var(--brand-primary-20)] p-4 text-center">
             <p className="text-sm font-bold text-[var(--brand-primary)] mb-1">Custom / Large Piece</p>
             <p className="text-3xl font-black text-[var(--brand-text)]">
@@ -93,7 +122,9 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
             </div>
           </div>
         )}
-        <p className="text-xs text-[var(--brand-text-mid)] text-center">{estimate.disclaimer}</p>
+        <p className="text-xs text-[var(--brand-text-mid)] text-center mt-2">
+          {estimate.isConsultationOnly && xlConfig ? xlConfig.disclaimer : estimate.disclaimer}
+        </p>
       </div>
 
       {/* Matched artists */}

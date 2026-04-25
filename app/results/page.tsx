@@ -4,13 +4,14 @@ import { useSearchParams } from 'next/navigation'
 import PriceCard from '@/components/results/PriceCard'
 import ArtistCard from '@/components/results/ArtistCard'
 import BookingCTA from '@/components/results/BookingCTA'
-import type { Lead, Artist, PriceEstimate } from '@/lib/types'
+import type { Lead, Artist, PriceEstimate, XlConfig } from '@/lib/types'
 
 function ResultsContent() {
   const params = useSearchParams()
   const id = params.get('id')
   const [lead, setLead] = useState<Lead | null>(null)
   const [allArtists, setAllArtists] = useState<Artist[]>([])
+  const [xlConfig, setXlConfig] = useState<XlConfig | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,11 +24,13 @@ function ResultsContent() {
     Promise.all([
       fetch(`/api/submit-lead?id=${encodeURIComponent(id)}`).then(r => r.json()),
       fetch('/api/artists').then(r => r.json()),
+      fetch('/api/xl-config').then(r => r.json()),
     ])
-      .then(([leadData, artistsData]) => {
+      .then(([leadData, artistsData, xlData]) => {
         if (leadData.error) throw new Error(leadData.error)
         setLead(leadData)
         if (Array.isArray(artistsData)) setAllArtists(artistsData)
+        if (xlData && typeof xlData === 'object') setXlConfig(xlData as XlConfig)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -73,7 +76,7 @@ function ResultsContent() {
           <p className="text-sm text-[var(--brand-text-mid)] mt-1">Your Estimate</p>
         </div>
 
-        <PriceCard estimate={estimate} firstName={lead.first_name} />
+        <PriceCard estimate={estimate} firstName={lead.first_name} xlConfig={xlConfig} />
 
         {matchedArtists.length > 0 && (
           <div>

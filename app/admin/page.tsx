@@ -157,7 +157,7 @@ export default function AdminPage() {
           <>
             {activeTab === 'pricing'    && <PricingTab    initialData={config.pricing}    />}
             {activeTab === 'styles'     && <StylesTab     initialData={config.styles}     />}
-            {activeTab === 'sizes'      && <SizesTab      initialData={config.sizes}      />}
+            {activeTab === 'sizes'      && <SizesTab      initialData={config.sizes}      initialXl={config.xlConfig} />}
             {activeTab === 'placements' && <PlacementsTab initialData={config.placements} />}
             {activeTab === 'artists'    && <ArtistsTab    initialData={config.artists}    />}
             {activeTab === 'branding'   && <BrandingTab   initialData={config.branding}   />}

@@ -42,6 +42,12 @@
     "face":        1.35
   },
   "colorMultiplier": 1.22,
+  "xlConfig": {
+    "halfDayRate":    { "min": 400, "max": 600 },
+    "fullDayRate":    { "min": 800, "max": 1200 },
+    "sessionsRange":  { "min": 1,   "max": 10 },
+    "disclaimer":     "Final session count confirmed at consultation with your artist or their assistant."
+  },
   "placementDifficulty": {
     "easy":     ["outer-arm", "thigh", "calf", "shoulder", "upper-back"],
     "moderate": ["inner-arm", "forearm", "chest", "stomach", "lower-back", "shin"],
