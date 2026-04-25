@@ -21,6 +21,7 @@ interface BrandingCtx {
   pillBg: string
   pillOpacity: number
   pillText: string
+  pillSelectedBorder: string
 }
 
 const BrandingContext = createContext<BrandingCtx>({
@@ -41,6 +42,7 @@ const BrandingContext = createContext<BrandingCtx>({
   pillBg:              BRANDING_DEFAULTS.pillBg,
   pillOpacity:         BRANDING_DEFAULTS.pillOpacity,
   pillText:            BRANDING_DEFAULTS.pillText,
+  pillSelectedBorder:  BRANDING_DEFAULTS.pillSelectedBorder,
 })
 
 export function useBranding() { return useContext(BrandingContext) }
@@ -90,6 +92,7 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
     pillBg:              BRANDING_DEFAULTS.pillBg,
     pillOpacity:         BRANDING_DEFAULTS.pillOpacity,
     pillText:            BRANDING_DEFAULTS.pillText,
+    pillSelectedBorder:  BRANDING_DEFAULTS.pillSelectedBorder,
   })
 
   useEffect(() => {
@@ -115,6 +118,7 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
           pillBg:              cfg.pillBg              ?? BRANDING_DEFAULTS.pillBg,
           pillOpacity:         cfg.pillOpacity         ?? BRANDING_DEFAULTS.pillOpacity,
           pillText:            cfg.pillText            ?? BRANDING_DEFAULTS.pillText,
+          pillSelectedBorder:  cfg.pillSelectedBorder  ?? cfg.primary ?? BRANDING_DEFAULTS.pillSelectedBorder,
         })
       })
       .catch(() => {})

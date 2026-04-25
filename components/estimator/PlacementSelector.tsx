@@ -6,7 +6,6 @@ import type { PlacementKey } from '@/lib/types'
 const GROUPS = [
   {
     label: 'EASY',
-    color: 'bg-green-50 text-green-800 border-green-200',
     placements: [
       { id: 'outer-arm' as PlacementKey, label: 'Outer Arm' },
       { id: 'thigh' as PlacementKey, label: 'Thigh' },
@@ -17,7 +16,6 @@ const GROUPS = [
   },
   {
     label: 'MODERATE',
-    color: 'bg-yellow-50 text-yellow-800 border-yellow-200',
     placements: [
       { id: 'inner-arm' as PlacementKey, label: 'Inner Arm' },
       { id: 'forearm' as PlacementKey, label: 'Forearm' },
@@ -29,7 +27,6 @@ const GROUPS = [
   },
   {
     label: 'DIFFICULT',
-    color: 'bg-orange-50 text-orange-800 border-orange-200',
     placements: [
       { id: 'ribs' as PlacementKey, label: 'Ribs' },
       { id: 'spine' as PlacementKey, label: 'Spine' },
@@ -41,7 +38,6 @@ const GROUPS = [
   },
   {
     label: 'PREMIUM',
-    color: 'bg-red-50 text-red-800 border-red-200',
     placements: [
       { id: 'fingers' as PlacementKey, label: 'Fingers' },
       { id: 'behind-ear' as PlacementKey, label: 'Behind Ear' },
@@ -56,11 +52,11 @@ interface Props {
 }
 
 export default function PlacementSelector({ value, onChange }: Props) {
-  const { primary, pillDefaultBg, pillDefaultOpacity, pillDefaultText, pillBg, pillOpacity, pillText } = useBranding()
+  const { pillDefaultBg, pillDefaultOpacity, pillDefaultText, pillBg, pillOpacity, pillText, pillSelectedBorder } = useBranding()
   const pillRgb = hexToRgb(pillBg)
   const defaultRgb = hexToRgb(pillDefaultBg)
   const selectedStyle: React.CSSProperties = {
-    borderColor: primary,
+    borderColor: pillSelectedBorder,
     backgroundColor: `rgba(${pillRgb}, ${pillOpacity / 100})`,
     color: pillText,
   }
@@ -75,7 +71,7 @@ export default function PlacementSelector({ value, onChange }: Props) {
       <div className="space-y-3">
         {GROUPS.map(group => (
           <div key={group.label}>
-            <div className={`mb-2 inline-block rounded px-2 py-0.5 text-xs font-bold border ${group.color}`}>
+            <div className="mb-2 inline-block rounded px-2 py-0.5 text-xs font-bold border bg-[var(--brand-bg)] text-[var(--brand-text-mid)] border-[var(--brand-border)]">
               {group.label}
             </div>
             <div className="flex flex-wrap gap-2">

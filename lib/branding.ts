@@ -16,6 +16,7 @@ export interface BrandingConfig {
   pillBg: string        // selected placement pill fill color
   pillOpacity: number   // 0–100 — selected pill fill opacity (0 = border only)
   pillText: string      // selected placement pill text color
+  pillSelectedBorder: string // selected pill border color (separate from main accent)
   background: string    // page background
   cardBg: string        // card / panel background
   textDark: string      // headings & primary text
@@ -43,6 +44,7 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
   pillBg:      '#7B0000',
   pillOpacity: 100,
   pillText:    '#ffffff',
+  pillSelectedBorder: '#7B0000',
   background:  '#F5F5F0',
   cardBg:      '#ffffff',
   textDark:    '#0A0A0A',
