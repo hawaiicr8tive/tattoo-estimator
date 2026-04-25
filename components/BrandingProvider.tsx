@@ -5,10 +5,18 @@ import type { BrandingConfig } from '@/lib/branding'
 
 interface BrandingCtx {
   bookingUrl: string
+  primary: string
+  pillBg: string
+  pillOpacity: number
+  pillText: string
 }
 
 const BrandingContext = createContext<BrandingCtx>({
-  bookingUrl: BRANDING_DEFAULTS.bookingUrl,
+  bookingUrl:  BRANDING_DEFAULTS.bookingUrl,
+  primary:     BRANDING_DEFAULTS.primary,
+  pillBg:      BRANDING_DEFAULTS.pillBg,
+  pillOpacity: BRANDING_DEFAULTS.pillOpacity,
+  pillText:    BRANDING_DEFAULTS.pillText,
 })
 
 export function useBranding() { return useContext(BrandingContext) }
@@ -39,14 +47,26 @@ export function applyBranding(cfg: Partial<BrandingConfig>) {
 }
 
 export default function BrandingProvider({ children }: { children: React.ReactNode }) {
-  const [ctx, setCtx] = useState<BrandingCtx>({ bookingUrl: BRANDING_DEFAULTS.bookingUrl })
+  const [ctx, setCtx] = useState<BrandingCtx>({
+    bookingUrl:  BRANDING_DEFAULTS.bookingUrl,
+    primary:     BRANDING_DEFAULTS.primary,
+    pillBg:      BRANDING_DEFAULTS.pillBg,
+    pillOpacity: BRANDING_DEFAULTS.pillOpacity,
+    pillText:    BRANDING_DEFAULTS.pillText,
+  })
 
   useEffect(() => {
     fetch('/api/branding')
       .then(r => r.json())
       .then((cfg: Partial<BrandingConfig>) => {
         applyBranding(cfg)
-        setCtx({ bookingUrl: cfg.bookingUrl ?? BRANDING_DEFAULTS.bookingUrl })
+        setCtx({
+          bookingUrl:  cfg.bookingUrl  ?? BRANDING_DEFAULTS.bookingUrl,
+          primary:     cfg.primary     ?? BRANDING_DEFAULTS.primary,
+          pillBg:      cfg.pillBg      ?? BRANDING_DEFAULTS.pillBg,
+          pillOpacity: cfg.pillOpacity ?? BRANDING_DEFAULTS.pillOpacity,
+          pillText:    cfg.pillText    ?? BRANDING_DEFAULTS.pillText,
+        })
       })
       .catch(() => {})
   }, [])

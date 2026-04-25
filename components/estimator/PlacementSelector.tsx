@@ -1,4 +1,6 @@
 'use client'
+import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 import type { PlacementKey } from '@/lib/types'
 
 const GROUPS = [
@@ -54,6 +56,14 @@ interface Props {
 }
 
 export default function PlacementSelector({ value, onChange }: Props) {
+  const { primary, pillBg, pillOpacity, pillText } = useBranding()
+  const pillRgb = hexToRgb(pillBg)
+  const selectedStyle: React.CSSProperties = {
+    borderColor: primary,
+    backgroundColor: `rgba(${pillRgb}, ${pillOpacity / 100})`,
+    color: pillText,
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-center text-[var(--brand-text)]">Where on your body?</h2>
@@ -69,11 +79,7 @@ export default function PlacementSelector({ value, onChange }: Props) {
                   key={p.id}
                   type="button"
                   onPointerDown={() => onChange(p.id)}
-                  style={value === p.id ? {
-                    borderColor: 'var(--brand-primary)',
-                    backgroundColor: 'rgba(var(--brand-pill-rgb), var(--brand-pill-opacity))',
-                    color: 'var(--brand-pill-text)',
-                  } : undefined}
+                  style={value === p.id ? selectedStyle : undefined}
                   className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
                     ${value === p.id
                       ? ''
