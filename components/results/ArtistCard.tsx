@@ -1,4 +1,6 @@
 'use client'
+import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 import type { Artist } from '@/lib/types'
 
 interface Props {
@@ -13,6 +15,11 @@ const TIER_LABELS: Record<number, string> = {
 }
 
 export default function ArtistCard({ artist, rank }: Props) {
+  const { button, buttonOpacity, buttonText } = useBranding()
+  const buttonStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(button)}, ${buttonOpacity / 100})`,
+    color: buttonText,
+  }
   return (
     <div className="rounded-xl bg-[var(--brand-card)] border border-[var(--brand-border)] shadow-sm p-4 flex items-start gap-4">
       <div className="w-14 h-14 rounded-full bg-[var(--brand-bg)] border border-[var(--brand-border)] shrink-0 overflow-hidden flex items-center justify-center text-2xl">
@@ -36,7 +43,8 @@ export default function ArtistCard({ artist, rank }: Props) {
           href={artist.bookingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg bg-[var(--brand-button)] px-4 py-1.5 text-xs font-bold text-[var(--brand-button-text)] hover:opacity-90 transition-opacity"
+          style={buttonStyle}
+          className="inline-block rounded-lg px-4 py-1.5 text-xs font-bold hover:opacity-90 transition-opacity"
         >
           Book with {artist.name.split(' ')[0]}
         </a>

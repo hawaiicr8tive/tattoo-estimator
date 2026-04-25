@@ -95,6 +95,26 @@ export default function BrandingTab({ initialData = {} }: Props) {
             </div>
           ))}
 
+          {/* Button Opacity */}
+          <div className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-[#0A0A0A]">Button Opacity</label>
+              <span className="text-xs font-mono text-[#555555] tabular-nums">{cfg.buttonOpacity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={cfg.buttonOpacity}
+              onChange={e => setCfg(c => ({ ...c, buttonOpacity: Number(e.target.value) }))}
+              className="w-full accent-[#7B0000] cursor-pointer"
+            />
+            <p className="mt-2 text-xs text-[#555555]">
+              Action buttons (Next, Show My Estimate, Book with [Artist]) — 0% = transparent · 100% = solid
+            </p>
+          </div>
+
           {/* Default Pill Opacity */}
           <div className="rounded-xl bg-white border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
@@ -227,7 +247,7 @@ export default function BrandingTab({ initialData = {} }: Props) {
 
               <button
                 type="button"
-                style={{ background: cfg.button, color: cfg.buttonText }}
+                style={{ background: `rgba(${hexToRgb(cfg.button)},${cfg.buttonOpacity / 100})`, color: cfg.buttonText }}
                 className="w-full rounded-lg py-2.5 text-xs font-bold cursor-pointer"
               >
                 Show My Estimate →

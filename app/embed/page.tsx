@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 import StyleSelector from '@/components/estimator/StyleSelector'
 import PlacementSelector from '@/components/estimator/PlacementSelector'
 import SizeSelector from '@/components/estimator/SizeSelector'
@@ -22,7 +23,11 @@ const DEFAULT_STYLES: StyleOption[] = [
 const TIER_LABELS: Record<number, string> = { 3: 'Featured Artist', 2: 'Senior Artist', 1: 'Artist' }
 
 function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void }) {
-  const { bookingUrl } = useBranding()
+  const { bookingUrl, button, buttonOpacity, buttonText } = useBranding()
+  const buttonStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(button)}, ${buttonOpacity / 100})`,
+    color: buttonText,
+  }
   const [lead, setLead] = useState<Lead | null>(null)
   const [allArtists, setAllArtists] = useState<Artist[]>([])
   const [xlConfig, setXlConfig] = useState<XlConfig | undefined>(undefined)
@@ -151,7 +156,8 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
                   <p className="text-xs text-[var(--brand-primary)] font-medium mb-1">{TIER_LABELS[artist.tier]}</p>
                   <p className="text-xs text-[var(--brand-text-mid)] line-clamp-2 mb-2">{artist.bio}</p>
                   <a href={artist.bookingUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-block rounded-lg bg-[var(--brand-button)] px-3 py-1 text-xs font-bold text-[var(--brand-button-text)] hover:opacity-90">
+                    style={buttonStyle}
+                    className="inline-block rounded-lg px-3 py-1 text-xs font-bold hover:opacity-90">
                     Book with {artist.name.split(' ')[0]}
                   </a>
                 </div>
@@ -185,6 +191,11 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
 
 export default function EmbedPage() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const { button, buttonOpacity, buttonText } = useBranding()
+  const buttonStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(button)}, ${buttonOpacity / 100})`,
+    color: buttonText,
+  }
 
   const [step, setStep] = useState(1)
   const [styles, setStyles] = useState<StyleOption[]>(DEFAULT_STYLES)
@@ -295,7 +306,8 @@ export default function EmbedPage() {
               ) : <span />}
               {step === 5 && (
                 <button type="button" onClick={advance}
-                  className="rounded-lg bg-[var(--brand-button)] px-5 py-2.5 text-sm font-bold text-[var(--brand-button-text)] hover:opacity-90 cursor-pointer">
+                  style={buttonStyle}
+                  className="rounded-lg px-5 py-2.5 text-sm font-bold hover:opacity-90 cursor-pointer">
                   Next →
                 </button>
               )}

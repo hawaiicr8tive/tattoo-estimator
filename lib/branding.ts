@@ -2,6 +2,7 @@ export interface BrandingConfig {
   primary: string       // accent — borders, badges, progress bar, booking CTA panel
   primaryText: string   // text on accent-colored backgrounds
   button: string        // main CTA action buttons (Next, Show My Estimate, Book with X)
+  buttonOpacity: number // 0–100 — action button background opacity
   buttonText: string    // text on action buttons
   pillDefaultBg: string // unselected placement pill background
   pillDefaultOpacity: number // 0–100 — unselected pill background opacity
@@ -20,8 +21,9 @@ export interface BrandingConfig {
 export const BRANDING_DEFAULTS: BrandingConfig = {
   primary:     '#7B0000',
   primaryText: '#ffffff',
-  button:      '#7B0000',
-  buttonText:  '#ffffff',
+  button:        '#7B0000',
+  buttonOpacity: 100,
+  buttonText:    '#ffffff',
   pillDefaultBg:      '#ffffff',
   pillDefaultOpacity: 100,
   pillDefaultText:    '#0A0A0A',

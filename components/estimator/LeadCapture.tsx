@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 
 interface Props {
   firstName: string
@@ -17,6 +19,11 @@ export default function LeadCapture({
   onFirstNameChange, onEmailChange, onOptedInChange,
   onSubmit, isSubmitting
 }: Props) {
+  const { button, buttonOpacity, buttonText } = useBranding()
+  const buttonStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(button)}, ${buttonOpacity / 100})`,
+    color: buttonText,
+  }
   const [errors, setErrors] = useState<{ firstName?: string; email?: string }>({})
 
   function validate() {
@@ -77,7 +84,8 @@ export default function LeadCapture({
         type="button"
         onClick={handleSubmit}
         disabled={isSubmitting}
-        className="w-full rounded-lg bg-[var(--brand-button)] py-3.5 text-sm font-bold text-[var(--brand-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+        style={buttonStyle}
+        className="w-full rounded-lg py-3.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
       >
         {isSubmitting ? 'Getting your estimate…' : 'Show My Estimate →'}
       </button>

@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 import StyleSelector from '@/components/estimator/StyleSelector'
 import PlacementSelector from '@/components/estimator/PlacementSelector'
 import SizeSelector from '@/components/estimator/SizeSelector'
@@ -21,6 +23,11 @@ const DEFAULT_STYLES: StyleOption[] = [
 
 export default function EstimatorPage() {
   const router = useRouter()
+  const { button, buttonOpacity, buttonText } = useBranding()
+  const buttonStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(button)}, ${buttonOpacity / 100})`,
+    color: buttonText,
+  }
   const [step, setStep] = useState(1)
   const [styles, setStyles] = useState<StyleOption[]>(DEFAULT_STYLES)
   const [style, setStyle] = useState<string | null>(null)
@@ -115,7 +122,8 @@ export default function EstimatorPage() {
           ) : <span />}
           {step === 5 && (
             <button type="button" onClick={advance}
-              className="rounded-lg bg-[var(--brand-button)] px-5 py-2.5 text-sm font-bold text-[var(--brand-button-text)] hover:opacity-90 cursor-pointer">
+              style={buttonStyle}
+              className="rounded-lg px-5 py-2.5 text-sm font-bold hover:opacity-90 cursor-pointer">
               Next →
             </button>
           )}

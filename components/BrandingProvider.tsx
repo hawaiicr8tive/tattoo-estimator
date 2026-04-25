@@ -6,6 +6,9 @@ import type { BrandingConfig } from '@/lib/branding'
 interface BrandingCtx {
   bookingUrl: string
   primary: string
+  button: string
+  buttonOpacity: number
+  buttonText: string
   pillDefaultBg: string
   pillDefaultOpacity: number
   pillDefaultText: string
@@ -17,6 +20,9 @@ interface BrandingCtx {
 const BrandingContext = createContext<BrandingCtx>({
   bookingUrl:         BRANDING_DEFAULTS.bookingUrl,
   primary:            BRANDING_DEFAULTS.primary,
+  button:             BRANDING_DEFAULTS.button,
+  buttonOpacity:      BRANDING_DEFAULTS.buttonOpacity,
+  buttonText:         BRANDING_DEFAULTS.buttonText,
   pillDefaultBg:      BRANDING_DEFAULTS.pillDefaultBg,
   pillDefaultOpacity: BRANDING_DEFAULTS.pillDefaultOpacity,
   pillDefaultText:    BRANDING_DEFAULTS.pillDefaultText,
@@ -56,6 +62,9 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
   const [ctx, setCtx] = useState<BrandingCtx>({
     bookingUrl:         BRANDING_DEFAULTS.bookingUrl,
     primary:            BRANDING_DEFAULTS.primary,
+    button:             BRANDING_DEFAULTS.button,
+    buttonOpacity:      BRANDING_DEFAULTS.buttonOpacity,
+    buttonText:         BRANDING_DEFAULTS.buttonText,
     pillDefaultBg:      BRANDING_DEFAULTS.pillDefaultBg,
     pillDefaultOpacity: BRANDING_DEFAULTS.pillDefaultOpacity,
     pillDefaultText:    BRANDING_DEFAULTS.pillDefaultText,
@@ -72,6 +81,9 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
         setCtx({
           bookingUrl:         cfg.bookingUrl         ?? BRANDING_DEFAULTS.bookingUrl,
           primary:            cfg.primary            ?? BRANDING_DEFAULTS.primary,
+          button:             cfg.button             ?? cfg.primary ?? BRANDING_DEFAULTS.button,
+          buttonOpacity:      cfg.buttonOpacity      ?? BRANDING_DEFAULTS.buttonOpacity,
+          buttonText:         cfg.buttonText         ?? cfg.primaryText ?? BRANDING_DEFAULTS.buttonText,
           pillDefaultBg:      cfg.pillDefaultBg      ?? cfg.cardBg ?? BRANDING_DEFAULTS.pillDefaultBg,
           pillDefaultOpacity: cfg.pillDefaultOpacity ?? BRANDING_DEFAULTS.pillDefaultOpacity,
           pillDefaultText:    cfg.pillDefaultText    ?? cfg.textDark ?? BRANDING_DEFAULTS.pillDefaultText,
