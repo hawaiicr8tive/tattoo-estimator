@@ -69,9 +69,14 @@ export default function PlacementSelector({ value, onChange }: Props) {
                   key={p.id}
                   type="button"
                   onPointerDown={() => onChange(p.id)}
+                  style={value === p.id ? {
+                    borderColor: 'var(--brand-primary)',
+                    backgroundColor: 'rgba(var(--brand-pill-rgb), var(--brand-pill-opacity))',
+                    color: 'var(--brand-pill-text)',
+                  } : undefined}
                   className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
                     ${value === p.id
-                      ? 'border-[var(--brand-primary)] bg-[rgba(var(--brand-pill-rgb),var(--brand-pill-opacity))] text-[var(--brand-pill-text)]'
+                      ? ''
                       : 'border-[var(--brand-border)] bg-[var(--brand-card)] text-[var(--brand-text)] hover:border-[var(--brand-primary)]'
                     }`}
                 >
