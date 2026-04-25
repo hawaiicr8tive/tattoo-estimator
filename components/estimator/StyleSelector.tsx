@@ -18,10 +18,11 @@ interface Props {
 }
 
 export default function StyleSelector({ value, onChange, styles = DEFAULTS }: Props) {
-  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText } = useBranding()
+  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText, cardSelectedBorder } = useBranding()
   const selectedStyle: React.CSSProperties = {
     backgroundColor: `rgba(${hexToRgb(cardSelectedBg)}, ${cardSelectedOpacity / 100})`,
     color: cardSelectedText,
+    borderColor: cardSelectedBorder,
   }
   const defaultStyle: React.CSSProperties = {
     backgroundColor: `rgba(${hexToRgb(cardDefaultBg)}, ${cardDefaultOpacity / 100})`,
@@ -40,7 +41,7 @@ export default function StyleSelector({ value, onChange, styles = DEFAULTS }: Pr
             style={value === style.id ? selectedStyle : defaultStyle}
             className={`relative flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all min-h-[100px] cursor-pointer
               ${value === style.id
-                ? 'border-[var(--brand-primary)] shadow-md'
+                ? 'shadow-md'
                 : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
               }`}
           >

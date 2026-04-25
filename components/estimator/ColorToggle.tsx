@@ -8,10 +8,11 @@ interface Props {
 }
 
 export default function ColorToggle({ value, onChange }: Props) {
-  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText } = useBranding()
+  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText, cardSelectedBorder } = useBranding()
   const selectedStyle: React.CSSProperties = {
     backgroundColor: `rgba(${hexToRgb(cardSelectedBg)}, ${cardSelectedOpacity / 100})`,
     color: cardSelectedText,
+    borderColor: cardSelectedBorder,
   }
   const defaultStyle: React.CSSProperties = {
     backgroundColor: `rgba(${hexToRgb(cardDefaultBg)}, ${cardDefaultOpacity / 100})`,
@@ -28,7 +29,7 @@ export default function ColorToggle({ value, onChange }: Props) {
           style={value === false ? selectedStyle : defaultStyle}
           className={`flex-1 flex flex-col items-center justify-center rounded-lg border-2 py-6 transition-all cursor-pointer
             ${value === false
-              ? 'border-[var(--brand-primary)]'
+              ? ''
               : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
             }`}
         >
@@ -41,7 +42,7 @@ export default function ColorToggle({ value, onChange }: Props) {
           style={value === true ? selectedStyle : defaultStyle}
           className={`flex-1 flex flex-col items-center justify-center rounded-lg border-2 py-6 transition-all cursor-pointer
             ${value === true
-              ? 'border-[var(--brand-primary)]'
+              ? ''
               : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
             }`}
         >

@@ -12,8 +12,9 @@ const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
   { key: 'buttonText',  label: 'Button Text',         hint: 'Text color on main action buttons' },
   { key: 'cardDefaultBg',   label: 'Default Card Color', hint: 'Background of unselected style/size/color cards' },
   { key: 'cardDefaultText', label: 'Default Card Text',  hint: 'Text color on unselected style/size/color cards' },
-  { key: 'cardSelectedBg',  label: 'Selected Card Color', hint: 'Fill color for selected style/size/color card' },
-  { key: 'cardSelectedText',label: 'Selected Card Text', hint: 'Text color on selected style/size/color card' },
+  { key: 'cardSelectedBg',     label: 'Selected Card Color',  hint: 'Fill color for selected style/size/color card' },
+  { key: 'cardSelectedText',   label: 'Selected Card Text',   hint: 'Text color on selected style/size/color card' },
+  { key: 'cardSelectedBorder', label: 'Selected Card Border', hint: 'Border color of the selected style/size/color card (separate from main accent)' },
   { key: 'pillDefaultBg',   label: 'Default Pill Color', hint: 'Background of unselected placement pills (Inner Arm, Forearm, etc. before they\'re tapped)' },
   { key: 'pillDefaultText', label: 'Default Pill Text',  hint: 'Text color on unselected placement pills' },
   { key: 'pillBg',             label: 'Selected Pill Color',  hint: 'Fill color for the placement pill once tapped' },
@@ -253,8 +254,8 @@ export default function BrandingTab({ initialData = {} }: Props) {
                       key={s}
                       style={
                         i === 0
-                          ? { borderColor: cfg.primary, background: `rgba(${cardSelRgb},${cfg.cardSelectedOpacity / 100})`, color: cfg.cardSelectedText }
-                          : { borderColor: cfg.border,  background: `rgba(${cardDefRgb},${cfg.cardDefaultOpacity / 100})`,  color: cfg.cardDefaultText }
+                          ? { borderColor: cfg.cardSelectedBorder, background: `rgba(${cardSelRgb},${cfg.cardSelectedOpacity / 100})`, color: cfg.cardSelectedText }
+                          : { borderColor: cfg.border,             background: `rgba(${cardDefRgb},${cfg.cardDefaultOpacity / 100})`, color: cfg.cardDefaultText }
                       }
                       className="rounded-lg border px-3 py-1 text-xs font-medium"
                     >

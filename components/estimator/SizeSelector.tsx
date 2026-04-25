@@ -17,10 +17,11 @@ interface Props {
 }
 
 export default function SizeSelector({ value, onChange }: Props) {
-  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText } = useBranding()
+  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText, cardSelectedBorder } = useBranding()
   const selectedStyle: React.CSSProperties = {
     backgroundColor: `rgba(${hexToRgb(cardSelectedBg)}, ${cardSelectedOpacity / 100})`,
     color: cardSelectedText,
+    borderColor: cardSelectedBorder,
   }
   const defaultStyle: React.CSSProperties = {
     backgroundColor: `rgba(${hexToRgb(cardDefaultBg)}, ${cardDefaultOpacity / 100})`,
@@ -39,7 +40,7 @@ export default function SizeSelector({ value, onChange }: Props) {
             style={value === size.id ? selectedStyle : defaultStyle}
             className={`w-full flex items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-all cursor-pointer
               ${value === size.id
-                ? 'border-[var(--brand-primary)]'
+                ? ''
                 : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
               }`}
           >

@@ -10,6 +10,7 @@ export interface BrandingConfig {
   cardSelectedBg: string // selected style/size/color card fill
   cardSelectedOpacity: number // 0–100
   cardSelectedText: string // selected card label text
+  cardSelectedBorder: string // selected card border (separate from main accent)
   pillDefaultBg: string // unselected placement pill background
   pillDefaultOpacity: number // 0–100 — unselected pill background opacity
   pillDefaultText: string // unselected placement pill text
@@ -38,6 +39,7 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
   cardSelectedBg:      '#7B0000',
   cardSelectedOpacity: 5,
   cardSelectedText:    '#0A0A0A',
+  cardSelectedBorder:  '#7B0000',
   pillDefaultBg:      '#ffffff',
   pillDefaultOpacity: 100,
   pillDefaultText:    '#0A0A0A',

@@ -15,6 +15,7 @@ interface BrandingCtx {
   cardSelectedBg: string
   cardSelectedOpacity: number
   cardSelectedText: string
+  cardSelectedBorder: string
   pillDefaultBg: string
   pillDefaultOpacity: number
   pillDefaultText: string
@@ -36,6 +37,7 @@ const BrandingContext = createContext<BrandingCtx>({
   cardSelectedBg:      BRANDING_DEFAULTS.cardSelectedBg,
   cardSelectedOpacity: BRANDING_DEFAULTS.cardSelectedOpacity,
   cardSelectedText:    BRANDING_DEFAULTS.cardSelectedText,
+  cardSelectedBorder:  BRANDING_DEFAULTS.cardSelectedBorder,
   pillDefaultBg:       BRANDING_DEFAULTS.pillDefaultBg,
   pillDefaultOpacity:  BRANDING_DEFAULTS.pillDefaultOpacity,
   pillDefaultText:     BRANDING_DEFAULTS.pillDefaultText,
@@ -86,6 +88,7 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
     cardSelectedBg:      BRANDING_DEFAULTS.cardSelectedBg,
     cardSelectedOpacity: BRANDING_DEFAULTS.cardSelectedOpacity,
     cardSelectedText:    BRANDING_DEFAULTS.cardSelectedText,
+    cardSelectedBorder:  BRANDING_DEFAULTS.cardSelectedBorder,
     pillDefaultBg:       BRANDING_DEFAULTS.pillDefaultBg,
     pillDefaultOpacity:  BRANDING_DEFAULTS.pillDefaultOpacity,
     pillDefaultText:     BRANDING_DEFAULTS.pillDefaultText,
@@ -112,6 +115,7 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
           cardSelectedBg:      cfg.cardSelectedBg      ?? cfg.primary  ?? BRANDING_DEFAULTS.cardSelectedBg,
           cardSelectedOpacity: cfg.cardSelectedOpacity ?? BRANDING_DEFAULTS.cardSelectedOpacity,
           cardSelectedText:    cfg.cardSelectedText    ?? cfg.textDark ?? BRANDING_DEFAULTS.cardSelectedText,
+          cardSelectedBorder:  cfg.cardSelectedBorder  ?? cfg.primary  ?? BRANDING_DEFAULTS.cardSelectedBorder,
           pillDefaultBg:       cfg.pillDefaultBg       ?? cfg.cardBg   ?? BRANDING_DEFAULTS.pillDefaultBg,
           pillDefaultOpacity:  cfg.pillDefaultOpacity  ?? BRANDING_DEFAULTS.pillDefaultOpacity,
           pillDefaultText:     cfg.pillDefaultText     ?? cfg.textDark ?? BRANDING_DEFAULTS.pillDefaultText,
