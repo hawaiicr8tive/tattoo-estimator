@@ -6,6 +6,7 @@ import SizesTab from '@/components/admin/SizesTab'
 import PlacementsTab from '@/components/admin/PlacementsTab'
 import ArtistsTab from '@/components/admin/ArtistsTab'
 import LeadsTab from '@/components/admin/LeadsTab'
+import BrandingTab from '@/components/admin/BrandingTab'
 import type { AdminConfig } from '@/lib/admin-types'
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'sizes',      label: 'Sizes' },
   { id: 'placements', label: 'Placements' },
   { id: 'artists',    label: 'Artists' },
+  { id: 'branding',   label: 'Branding' },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -158,6 +160,7 @@ export default function AdminPage() {
             {activeTab === 'sizes'      && <SizesTab      initialData={config.sizes}      />}
             {activeTab === 'placements' && <PlacementsTab initialData={config.placements} />}
             {activeTab === 'artists'    && <ArtistsTab    initialData={config.artists}    />}
+            {activeTab === 'branding'   && <BrandingTab   initialData={config.branding}   />}
           </>
         )}
       </main>

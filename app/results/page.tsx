@@ -34,19 +34,19 @@ function ResultsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
-        <p className="text-[#555555]">Loading your estimate…</p>
+      <div className="min-h-screen bg-[var(--brand-bg)] flex items-center justify-center">
+        <p className="text-[var(--brand-text-mid)]">Loading your estimate…</p>
       </div>
     )
   }
 
   if (error || !lead) {
     return (
-      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[var(--brand-bg)] flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-[#7B0000] font-bold mb-2">Estimate not found</p>
-          <p className="text-sm text-[#555555]">{error}</p>
-          <a href="/" className="mt-4 inline-block text-sm text-[#7B0000] underline">Start over</a>
+          <p className="text-[var(--brand-primary)] font-bold mb-2">Estimate not found</p>
+          <p className="text-sm text-[var(--brand-text-mid)]">{error}</p>
+          <a href="/" className="mt-4 inline-block text-sm text-[var(--brand-primary)] underline">Start over</a>
         </div>
       </div>
     )
@@ -65,18 +65,20 @@ function ResultsContent() {
     .filter((a): a is Artist => Boolean(a))
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] px-4 py-10">
+    <div className="min-h-screen bg-[var(--brand-bg)] px-4 py-10">
       <div className="mx-auto w-full max-w-md space-y-5">
         <div className="text-center">
-          <h1 className="text-2xl font-black tracking-tight text-[#0A0A0A]">Tattoolicious</h1>
-          <p className="text-sm text-[#555555] mt-1">Your Estimate</p>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--brand-text)]">Tattoolicious</h1>
+          <p className="text-sm text-[var(--brand-text-mid)] mt-1">Your Estimate</p>
         </div>
 
         <PriceCard estimate={estimate} firstName={lead.first_name} />
 
         {matchedArtists.length > 0 && (
           <div>
-            <h2 className="text-sm font-bold text-[#0A0A0A] uppercase tracking-wide mb-3">Artists for Your Style</h2>
+            <h2 className="text-sm font-bold text-[var(--brand-text)] uppercase tracking-wide mb-3">
+              {matchedArtists.length === 1 ? 'Artist for Your Style' : 'Artists for Your Style'}
+            </h2>
             <div className="space-y-3">
               {matchedArtists.map((artist, i) => (
                 <ArtistCard key={artist.id} artist={artist} rank={i} />
@@ -87,12 +89,12 @@ function ResultsContent() {
 
         <BookingCTA />
 
-        <p className="text-center text-xs text-[#555555]">
+        <p className="text-center text-xs text-[var(--brand-text-mid)]">
           We've sent a copy to {lead.email}
         </p>
 
         <div className="text-center">
-          <a href="/" className="text-sm text-[#555555] underline hover:text-[#0A0A0A]">Start a new estimate</a>
+          <a href="/" className="text-sm text-[var(--brand-text-mid)] underline hover:text-[var(--brand-text)]">Start a new estimate</a>
         </div>
       </div>
     </div>
@@ -102,8 +104,8 @@ function ResultsContent() {
 export default function ResultsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
-        <p className="text-[#555555]">Loading your estimate…</p>
+      <div className="min-h-screen bg-[var(--brand-bg)] flex items-center justify-center">
+        <p className="text-[var(--brand-text-mid)]">Loading your estimate…</p>
       </div>
     }>
       <ResultsContent />

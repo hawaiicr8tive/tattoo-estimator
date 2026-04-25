@@ -56,7 +56,7 @@ interface Props {
 export default function PlacementSelector({ value, onChange }: Props) {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-center text-[#0A0A0A]">Where on your body?</h2>
+      <h2 className="text-xl font-bold text-center text-[var(--brand-text)]">Where on your body?</h2>
       <div className="space-y-3">
         {GROUPS.map(group => (
           <div key={group.label}>
@@ -71,8 +71,8 @@ export default function PlacementSelector({ value, onChange }: Props) {
                   onPointerDown={() => onChange(p.id)}
                   className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
                     ${value === p.id
-                      ? 'border-[#7B0000] bg-[#7B0000] text-white'
-                      : 'border-gray-300 bg-white text-[#0A0A0A] hover:border-[#7B0000]'
+                      ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-[var(--brand-primary-text)]'
+                      : 'border-gray-300 bg-white text-[var(--brand-text)] hover:border-[var(--brand-primary)]'
                     }`}
                 >
                   {p.label}

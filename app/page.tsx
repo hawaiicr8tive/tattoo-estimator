@@ -38,7 +38,7 @@ export default function EstimatorPage() {
     fetch('/api/styles')
       .then(r => r.json())
       .then((data: StyleOption[]) => { if (Array.isArray(data) && data.length > 0) setStyles(data) })
-      .catch(() => {}) // silently keep defaults on error
+      .catch(() => {})
   }, [])
 
   function advance() { setStep(s => s + 1) }
@@ -65,20 +65,20 @@ export default function EstimatorPage() {
   const progress = ((step - 1) / TOTAL_STEPS) * 100
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-[var(--brand-bg)] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-black tracking-tight text-[#0A0A0A]">Tattoolicious</h1>
-          <p className="text-sm text-[#555555] mt-1">Price Estimator</p>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--brand-text)]">Tattoolicious</h1>
+          <p className="text-sm text-[var(--brand-text-mid)] mt-1">Price Estimator</p>
         </div>
 
         <div className="mb-5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
           <div
-            className="h-full rounded-full bg-[#7B0000] transition-all duration-300"
+            className="h-full rounded-full bg-[var(--brand-primary)] transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-xs text-[#555555] text-right mb-5">Step {step} of {TOTAL_STEPS}</p>
+        <p className="text-xs text-[var(--brand-text-mid)] text-right mb-5">Step {step} of {TOTAL_STEPS}</p>
 
         <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
           {step === 1 && (
@@ -109,13 +109,13 @@ export default function EstimatorPage() {
         <div className="mt-4 flex items-center justify-between">
           {step > 1 ? (
             <button type="button" onClick={handleBack} disabled={isSubmitting}
-              className="text-sm text-[#555555] hover:text-[#0A0A0A] disabled:opacity-40 cursor-pointer">
+              className="text-sm text-[var(--brand-text-mid)] hover:text-[var(--brand-text)] disabled:opacity-40 cursor-pointer">
               ← Back
             </button>
           ) : <span />}
           {step === 5 && (
             <button type="button" onClick={advance}
-              className="rounded-lg bg-[#7B0000] px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 cursor-pointer">
+              className="rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-[var(--brand-primary-text)] hover:opacity-90 cursor-pointer">
               Next →
             </button>
           )}

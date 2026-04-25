@@ -75,6 +75,7 @@ export async function GET() {
       sizes:      saved.sizes      ?? defaults.sizes,
       placements: saved.placements ?? defaults.placements,
       artists:    saved.artists    ?? defaults.artists,
+      branding:   saved.branding   ?? {},
     })
   } catch {
     return NextResponse.json(buildDefaultConfig())
