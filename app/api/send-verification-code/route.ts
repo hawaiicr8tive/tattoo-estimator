@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Could not send verification code' }, { status: 500, headers: CORS })
     }
 
-    await resend.emails.send({
+    const sendResult = await resend.emails.send({
       from: 'Tattoolicious <noreply@tattoolicious.com>',
       to: email,
       subject: `Your Tattoolicious verification code: ${code}`,
@@ -47,7 +47,16 @@ export async function POST(req: NextRequest) {
       `,
     })
 
-    return NextResponse.json({ success: true }, { headers: CORS })
+    if (sendResult.error) {
+      console.error('Resend error sending verification code:', sendResult.error)
+      return NextResponse.json(
+        { error: `Email delivery failed: ${sendResult.error.message ?? 'unknown error'}` },
+        { status: 502, headers: CORS },
+      )
+    }
+
+    console.log('Verification code sent', { email, resendId: sendResult.data?.id })
+    return NextResponse.json({ success: true, resendId: sendResult.data?.id }, { headers: CORS })
   } catch (e) {
     console.error('send-verification-code error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: CORS })
