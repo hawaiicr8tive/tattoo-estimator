@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import SaveBar from './SaveBar'
 import type { Artist } from '@/lib/types'
 
@@ -32,6 +32,29 @@ export default function ArtistsTab({ initialData }: Props) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !editDraft) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/upload-photo', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+      setEditDraft(d => d ? { ...d, photo: data.url } : d)
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   function startEdit(artist: Artist) {
     setEditingId(artist.id)
@@ -119,8 +142,36 @@ export default function ArtistsTab({ initialData }: Props) {
             <Field label="Bio (one sentence)">
               <input value={d.bio} onChange={e => setEditDraft({ ...d, bio: e.target.value })} className={INPUT} placeholder="Specializes in…" />
             </Field>
-            <Field label="Photo URL">
-              <input value={d.photo} onChange={e => setEditDraft({ ...d, photo: e.target.value })} className={INPUT} placeholder="/artists/name.jpg" />
+            <Field label="Profile Photo">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200 shrink-0 overflow-hidden flex items-center justify-center text-xl">
+                  {d.photo
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={d.photo} alt="" className="w-full h-full object-cover" />
+                    : <span>🎨</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-[#0A0A0A] hover:bg-gray-50 disabled:opacity-60 cursor-pointer"
+                  >
+                    {uploading ? 'Uploading…' : 'Upload photo'}
+                  </button>
+                  {uploadError && <p className="mt-1 text-xs text-red-600">{uploadError}</p>}
+                  {d.photo && !uploading && (
+                    <p className="mt-1 text-xs text-[#555555] truncate">{d.photo}</p>
+                  )}
+                </div>
+              </div>
             </Field>
             <Field label="Instagram URL">
               <input value={d.instagramUrl} onChange={e => setEditDraft({ ...d, instagramUrl: e.target.value })} className={INPUT} placeholder="https://instagram.com/handle" />
@@ -174,7 +225,12 @@ export default function ArtistsTab({ initialData }: Props) {
         {artists.map(artist => (
           <div key={artist.id} className={`rounded-xl bg-white border px-5 py-4 flex items-center justify-between gap-4 ${editingId === artist.id ? 'border-[#7B0000]' : 'border-gray-200'}`}>
             <div className="flex items-center gap-4 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-[#F5F5F0] border border-gray-200 flex items-center justify-center text-lg shrink-0">🎨</div>
+              <div className="w-10 h-10 rounded-full bg-[#F5F5F0] border border-gray-200 flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                {artist.photo
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={artist.photo} alt={artist.name} className="w-full h-full object-cover" />
+                  : <span>🎨</span>}
+              </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-[#0A0A0A] text-sm">{artist.name || <em className="text-[#555555]">Unnamed</em>}</span>
