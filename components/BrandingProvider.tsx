@@ -9,6 +9,12 @@ interface BrandingCtx {
   button: string
   buttonOpacity: number
   buttonText: string
+  cardDefaultBg: string
+  cardDefaultOpacity: number
+  cardDefaultText: string
+  cardSelectedBg: string
+  cardSelectedOpacity: number
+  cardSelectedText: string
   pillDefaultBg: string
   pillDefaultOpacity: number
   pillDefaultText: string
@@ -18,17 +24,23 @@ interface BrandingCtx {
 }
 
 const BrandingContext = createContext<BrandingCtx>({
-  bookingUrl:         BRANDING_DEFAULTS.bookingUrl,
-  primary:            BRANDING_DEFAULTS.primary,
-  button:             BRANDING_DEFAULTS.button,
-  buttonOpacity:      BRANDING_DEFAULTS.buttonOpacity,
-  buttonText:         BRANDING_DEFAULTS.buttonText,
-  pillDefaultBg:      BRANDING_DEFAULTS.pillDefaultBg,
-  pillDefaultOpacity: BRANDING_DEFAULTS.pillDefaultOpacity,
-  pillDefaultText:    BRANDING_DEFAULTS.pillDefaultText,
-  pillBg:             BRANDING_DEFAULTS.pillBg,
-  pillOpacity:        BRANDING_DEFAULTS.pillOpacity,
-  pillText:           BRANDING_DEFAULTS.pillText,
+  bookingUrl:          BRANDING_DEFAULTS.bookingUrl,
+  primary:             BRANDING_DEFAULTS.primary,
+  button:              BRANDING_DEFAULTS.button,
+  buttonOpacity:       BRANDING_DEFAULTS.buttonOpacity,
+  buttonText:          BRANDING_DEFAULTS.buttonText,
+  cardDefaultBg:       BRANDING_DEFAULTS.cardDefaultBg,
+  cardDefaultOpacity:  BRANDING_DEFAULTS.cardDefaultOpacity,
+  cardDefaultText:     BRANDING_DEFAULTS.cardDefaultText,
+  cardSelectedBg:      BRANDING_DEFAULTS.cardSelectedBg,
+  cardSelectedOpacity: BRANDING_DEFAULTS.cardSelectedOpacity,
+  cardSelectedText:    BRANDING_DEFAULTS.cardSelectedText,
+  pillDefaultBg:       BRANDING_DEFAULTS.pillDefaultBg,
+  pillDefaultOpacity:  BRANDING_DEFAULTS.pillDefaultOpacity,
+  pillDefaultText:     BRANDING_DEFAULTS.pillDefaultText,
+  pillBg:              BRANDING_DEFAULTS.pillBg,
+  pillOpacity:         BRANDING_DEFAULTS.pillOpacity,
+  pillText:            BRANDING_DEFAULTS.pillText,
 })
 
 export function useBranding() { return useContext(BrandingContext) }
@@ -60,17 +72,23 @@ export function applyBranding(cfg: Partial<BrandingConfig>) {
 
 export default function BrandingProvider({ children }: { children: React.ReactNode }) {
   const [ctx, setCtx] = useState<BrandingCtx>({
-    bookingUrl:         BRANDING_DEFAULTS.bookingUrl,
-    primary:            BRANDING_DEFAULTS.primary,
-    button:             BRANDING_DEFAULTS.button,
-    buttonOpacity:      BRANDING_DEFAULTS.buttonOpacity,
-    buttonText:         BRANDING_DEFAULTS.buttonText,
-    pillDefaultBg:      BRANDING_DEFAULTS.pillDefaultBg,
-    pillDefaultOpacity: BRANDING_DEFAULTS.pillDefaultOpacity,
-    pillDefaultText:    BRANDING_DEFAULTS.pillDefaultText,
-    pillBg:             BRANDING_DEFAULTS.pillBg,
-    pillOpacity:        BRANDING_DEFAULTS.pillOpacity,
-    pillText:           BRANDING_DEFAULTS.pillText,
+    bookingUrl:          BRANDING_DEFAULTS.bookingUrl,
+    primary:             BRANDING_DEFAULTS.primary,
+    button:              BRANDING_DEFAULTS.button,
+    buttonOpacity:       BRANDING_DEFAULTS.buttonOpacity,
+    buttonText:          BRANDING_DEFAULTS.buttonText,
+    cardDefaultBg:       BRANDING_DEFAULTS.cardDefaultBg,
+    cardDefaultOpacity:  BRANDING_DEFAULTS.cardDefaultOpacity,
+    cardDefaultText:     BRANDING_DEFAULTS.cardDefaultText,
+    cardSelectedBg:      BRANDING_DEFAULTS.cardSelectedBg,
+    cardSelectedOpacity: BRANDING_DEFAULTS.cardSelectedOpacity,
+    cardSelectedText:    BRANDING_DEFAULTS.cardSelectedText,
+    pillDefaultBg:       BRANDING_DEFAULTS.pillDefaultBg,
+    pillDefaultOpacity:  BRANDING_DEFAULTS.pillDefaultOpacity,
+    pillDefaultText:     BRANDING_DEFAULTS.pillDefaultText,
+    pillBg:              BRANDING_DEFAULTS.pillBg,
+    pillOpacity:         BRANDING_DEFAULTS.pillOpacity,
+    pillText:            BRANDING_DEFAULTS.pillText,
   })
 
   useEffect(() => {
@@ -79,17 +97,23 @@ export default function BrandingProvider({ children }: { children: React.ReactNo
       .then((cfg: Partial<BrandingConfig>) => {
         applyBranding(cfg)
         setCtx({
-          bookingUrl:         cfg.bookingUrl         ?? BRANDING_DEFAULTS.bookingUrl,
-          primary:            cfg.primary            ?? BRANDING_DEFAULTS.primary,
-          button:             cfg.button             ?? cfg.primary ?? BRANDING_DEFAULTS.button,
-          buttonOpacity:      cfg.buttonOpacity      ?? BRANDING_DEFAULTS.buttonOpacity,
-          buttonText:         cfg.buttonText         ?? cfg.primaryText ?? BRANDING_DEFAULTS.buttonText,
-          pillDefaultBg:      cfg.pillDefaultBg      ?? cfg.cardBg ?? BRANDING_DEFAULTS.pillDefaultBg,
-          pillDefaultOpacity: cfg.pillDefaultOpacity ?? BRANDING_DEFAULTS.pillDefaultOpacity,
-          pillDefaultText:    cfg.pillDefaultText    ?? cfg.textDark ?? BRANDING_DEFAULTS.pillDefaultText,
-          pillBg:             cfg.pillBg             ?? BRANDING_DEFAULTS.pillBg,
-          pillOpacity:        cfg.pillOpacity        ?? BRANDING_DEFAULTS.pillOpacity,
-          pillText:           cfg.pillText           ?? BRANDING_DEFAULTS.pillText,
+          bookingUrl:          cfg.bookingUrl          ?? BRANDING_DEFAULTS.bookingUrl,
+          primary:             cfg.primary             ?? BRANDING_DEFAULTS.primary,
+          button:              cfg.button              ?? cfg.primary  ?? BRANDING_DEFAULTS.button,
+          buttonOpacity:       cfg.buttonOpacity       ?? BRANDING_DEFAULTS.buttonOpacity,
+          buttonText:          cfg.buttonText          ?? cfg.primaryText ?? BRANDING_DEFAULTS.buttonText,
+          cardDefaultBg:       cfg.cardDefaultBg       ?? cfg.cardBg   ?? BRANDING_DEFAULTS.cardDefaultBg,
+          cardDefaultOpacity:  cfg.cardDefaultOpacity  ?? BRANDING_DEFAULTS.cardDefaultOpacity,
+          cardDefaultText:     cfg.cardDefaultText     ?? cfg.textDark ?? BRANDING_DEFAULTS.cardDefaultText,
+          cardSelectedBg:      cfg.cardSelectedBg      ?? cfg.primary  ?? BRANDING_DEFAULTS.cardSelectedBg,
+          cardSelectedOpacity: cfg.cardSelectedOpacity ?? BRANDING_DEFAULTS.cardSelectedOpacity,
+          cardSelectedText:    cfg.cardSelectedText    ?? cfg.textDark ?? BRANDING_DEFAULTS.cardSelectedText,
+          pillDefaultBg:       cfg.pillDefaultBg       ?? cfg.cardBg   ?? BRANDING_DEFAULTS.pillDefaultBg,
+          pillDefaultOpacity:  cfg.pillDefaultOpacity  ?? BRANDING_DEFAULTS.pillDefaultOpacity,
+          pillDefaultText:     cfg.pillDefaultText     ?? cfg.textDark ?? BRANDING_DEFAULTS.pillDefaultText,
+          pillBg:              cfg.pillBg              ?? BRANDING_DEFAULTS.pillBg,
+          pillOpacity:         cfg.pillOpacity         ?? BRANDING_DEFAULTS.pillOpacity,
+          pillText:            cfg.pillText            ?? BRANDING_DEFAULTS.pillText,
         })
       })
       .catch(() => {})

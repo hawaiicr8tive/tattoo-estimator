@@ -4,6 +4,12 @@ export interface BrandingConfig {
   button: string        // main CTA action buttons (Next, Show My Estimate, Book with X)
   buttonOpacity: number // 0–100 — action button background opacity
   buttonText: string    // text on action buttons
+  cardDefaultBg: string  // unselected style/size/color card background
+  cardDefaultOpacity: number // 0–100
+  cardDefaultText: string // unselected card label text
+  cardSelectedBg: string // selected style/size/color card fill
+  cardSelectedOpacity: number // 0–100
+  cardSelectedText: string // selected card label text
   pillDefaultBg: string // unselected placement pill background
   pillDefaultOpacity: number // 0–100 — unselected pill background opacity
   pillDefaultText: string // unselected placement pill text
@@ -24,6 +30,12 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
   button:        '#7B0000',
   buttonOpacity: 100,
   buttonText:    '#ffffff',
+  cardDefaultBg:       '#ffffff',
+  cardDefaultOpacity:  100,
+  cardDefaultText:     '#0A0A0A',
+  cardSelectedBg:      '#7B0000',
+  cardSelectedOpacity: 5,
+  cardSelectedText:    '#0A0A0A',
   pillDefaultBg:      '#ffffff',
   pillDefaultOpacity: 100,
   pillDefaultText:    '#0A0A0A',

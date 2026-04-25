@@ -10,6 +10,10 @@ const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
   { key: 'primaryText', label: 'Accent Text',         hint: 'Text color on accent-colored backgrounds (badges, selected pills, booking panel)' },
   { key: 'button',      label: 'Button Background',   hint: 'Main action buttons — Next, Show My Estimate, Book with [Artist]' },
   { key: 'buttonText',  label: 'Button Text',         hint: 'Text color on main action buttons' },
+  { key: 'cardDefaultBg',   label: 'Default Card Color', hint: 'Background of unselected style/size/color cards' },
+  { key: 'cardDefaultText', label: 'Default Card Text',  hint: 'Text color on unselected style/size/color cards' },
+  { key: 'cardSelectedBg',  label: 'Selected Card Color', hint: 'Fill color for selected style/size/color card' },
+  { key: 'cardSelectedText',label: 'Selected Card Text', hint: 'Text color on selected style/size/color card' },
   { key: 'pillDefaultBg',   label: 'Default Pill Color', hint: 'Background of unselected placement pills (Inner Arm, Forearm, etc. before they\'re tapped)' },
   { key: 'pillDefaultText', label: 'Default Pill Text',  hint: 'Text color on unselected placement pills' },
   { key: 'pillBg',          label: 'Selected Pill Color', hint: 'Fill color for the placement pill once tapped' },
@@ -115,6 +119,46 @@ export default function BrandingTab({ initialData = {} }: Props) {
             </p>
           </div>
 
+          {/* Default Card Opacity */}
+          <div className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-[#0A0A0A]">Default Card Opacity</label>
+              <span className="text-xs font-mono text-[#555555] tabular-nums">{cfg.cardDefaultOpacity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={cfg.cardDefaultOpacity}
+              onChange={e => setCfg(c => ({ ...c, cardDefaultOpacity: Number(e.target.value) }))}
+              className="w-full accent-[#7B0000] cursor-pointer"
+            />
+            <p className="mt-2 text-xs text-[#555555]">
+              Opacity of unselected style/size/color cards (0% = transparent · 100% = solid)
+            </p>
+          </div>
+
+          {/* Selected Card Opacity */}
+          <div className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-[#0A0A0A]">Selected Card Opacity</label>
+              <span className="text-xs font-mono text-[#555555] tabular-nums">{cfg.cardSelectedOpacity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={cfg.cardSelectedOpacity}
+              onChange={e => setCfg(c => ({ ...c, cardSelectedOpacity: Number(e.target.value) }))}
+              className="w-full accent-[#7B0000] cursor-pointer"
+            />
+            <p className="mt-2 text-xs text-[#555555]">
+              Opacity of the selected style/size/color card fill (5% gives the classic faint tint, 100% = solid)
+            </p>
+          </div>
+
           {/* Default Pill Opacity */}
           <div className="rounded-xl bg-white border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
@@ -199,20 +243,24 @@ export default function BrandingTab({ initialData = {} }: Props) {
               <p className="text-sm font-bold" style={{ color: cfg.textDark }}>What style are you looking for?</p>
 
               <div className="flex flex-wrap gap-2">
-                {['Fine Line', 'Traditional', 'Realism'].map((s, i) => (
-                  <span
-                    key={s}
-                    style={
-                      i === 0
-                        ? { borderColor: cfg.primary, background: `rgba(${rgb},0.08)`, color: cfg.textDark }
-                        : { borderColor: cfg.border, background: cfg.cardBg, color: cfg.textDark }
-                    }
-                    className="rounded-lg border px-3 py-1 text-xs font-medium"
-                  >
-                    {i === 0 && <span style={{ color: cfg.primary }}>✓ </span>}
-                    {s}
-                  </span>
-                ))}
+                {['Fine Line', 'Traditional', 'Realism'].map((s, i) => {
+                  const cardSelRgb = hexToRgb(cfg.cardSelectedBg)
+                  const cardDefRgb = hexToRgb(cfg.cardDefaultBg)
+                  return (
+                    <span
+                      key={s}
+                      style={
+                        i === 0
+                          ? { borderColor: cfg.primary, background: `rgba(${cardSelRgb},${cfg.cardSelectedOpacity / 100})`, color: cfg.cardSelectedText }
+                          : { borderColor: cfg.border,  background: `rgba(${cardDefRgb},${cfg.cardDefaultOpacity / 100})`,  color: cfg.cardDefaultText }
+                      }
+                      className="rounded-lg border px-3 py-1 text-xs font-medium"
+                    >
+                      {i === 0 && <span style={{ color: cfg.primary }}>✓ </span>}
+                      {s}
+                    </span>
+                  )
+                })}
               </div>
 
               {/* Placement pills (selected vs unselected) */}

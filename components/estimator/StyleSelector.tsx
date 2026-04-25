@@ -1,4 +1,6 @@
 'use client'
+import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 import type { StyleOption } from '@/lib/types'
 
 const DEFAULTS: StyleOption[] = [
@@ -16,6 +18,16 @@ interface Props {
 }
 
 export default function StyleSelector({ value, onChange, styles = DEFAULTS }: Props) {
+  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText } = useBranding()
+  const selectedStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(cardSelectedBg)}, ${cardSelectedOpacity / 100})`,
+    color: cardSelectedText,
+  }
+  const defaultStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(cardDefaultBg)}, ${cardDefaultOpacity / 100})`,
+    color: cardDefaultText,
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-center text-[var(--brand-text)]">What style are you looking for?</h2>
@@ -25,16 +37,17 @@ export default function StyleSelector({ value, onChange, styles = DEFAULTS }: Pr
             key={style.id}
             type="button"
             onPointerDown={() => onChange(style.id)}
+            style={value === style.id ? selectedStyle : defaultStyle}
             className={`relative flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all min-h-[100px] cursor-pointer
               ${value === style.id
-                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-5)] shadow-md'
-                : 'border-[var(--brand-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary-50)]'
+                ? 'border-[var(--brand-primary)] shadow-md'
+                : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
               }`}
           >
             {value === style.id && (
               <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white text-xs">✓</span>
             )}
-            <span className="font-semibold text-sm text-[var(--brand-text)]">{style.label}</span>
+            <span className="font-semibold text-sm">{style.label}</span>
             <span className="mt-1 text-xs text-[var(--brand-text-mid)]">{style.description}</span>
           </button>
         ))}

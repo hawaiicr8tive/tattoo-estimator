@@ -1,4 +1,6 @@
 'use client'
+import { useBranding } from '@/components/BrandingProvider'
+import { hexToRgb } from '@/lib/branding'
 import type { TattooSize } from '@/lib/types'
 
 const SIZES: { id: TattooSize; label: string; dims: string; analog: string; note?: string }[] = [
@@ -15,6 +17,16 @@ interface Props {
 }
 
 export default function SizeSelector({ value, onChange }: Props) {
+  const { cardDefaultBg, cardDefaultOpacity, cardDefaultText, cardSelectedBg, cardSelectedOpacity, cardSelectedText } = useBranding()
+  const selectedStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(cardSelectedBg)}, ${cardSelectedOpacity / 100})`,
+    color: cardSelectedText,
+  }
+  const defaultStyle: React.CSSProperties = {
+    backgroundColor: `rgba(${hexToRgb(cardDefaultBg)}, ${cardDefaultOpacity / 100})`,
+    color: cardDefaultText,
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-center text-[var(--brand-text)]">How big is your tattoo?</h2>
@@ -24,14 +36,15 @@ export default function SizeSelector({ value, onChange }: Props) {
             key={size.id}
             type="button"
             onPointerDown={() => onChange(size.id)}
+            style={value === size.id ? selectedStyle : defaultStyle}
             className={`w-full flex items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-all cursor-pointer
               ${value === size.id
-                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-5)]'
-                : 'border-[var(--brand-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary-50)]'
+                ? 'border-[var(--brand-primary)]'
+                : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
               }`}
           >
             <div>
-              <span className="font-bold text-[var(--brand-text)]">{size.label}</span>
+              <span className="font-bold">{size.label}</span>
               <span className="ml-2 text-sm text-[var(--brand-text-mid)]">{size.dims}</span>
               {size.note && (
                 <p className="mt-1 text-xs text-[var(--brand-primary)]">{size.note}</p>
