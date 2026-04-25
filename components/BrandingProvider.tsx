@@ -24,6 +24,8 @@ export function applyBranding(cfg: Partial<BrandingConfig>) {
   root.style.setProperty('--brand-primary-20',   `rgba(${rgb},0.20)`)
   root.style.setProperty('--brand-primary-50',   `rgba(${rgb},0.50)`)
   root.style.setProperty('--brand-primary-text', b.primaryText)
+  root.style.setProperty('--brand-button',       b.button ?? b.primary)
+  root.style.setProperty('--brand-button-text',  b.buttonText ?? b.primaryText)
   root.style.setProperty('--brand-bg',           b.background)
   root.style.setProperty('--brand-card',         b.cardBg)
   root.style.setProperty('--brand-text',         b.textDark)

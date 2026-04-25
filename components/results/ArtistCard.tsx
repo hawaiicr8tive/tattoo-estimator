@@ -36,7 +36,7 @@ export default function ArtistCard({ artist, rank }: Props) {
           href={artist.bookingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg bg-[var(--brand-primary)] px-4 py-1.5 text-xs font-bold text-[var(--brand-primary-text)] hover:opacity-90 transition-opacity"
+          className="inline-block rounded-lg bg-[var(--brand-button)] px-4 py-1.5 text-xs font-bold text-[var(--brand-button-text)] hover:opacity-90 transition-opacity"
         >
           Book with {artist.name.split(' ')[0]}
         </a>

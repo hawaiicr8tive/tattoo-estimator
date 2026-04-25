@@ -1,6 +1,8 @@
 export interface BrandingConfig {
-  primary: string       // accent, buttons, progress bar
-  primaryText: string   // text on primary-colored backgrounds
+  primary: string       // accent — borders, badges, progress bar, booking CTA panel
+  primaryText: string   // text on accent-colored backgrounds
+  button: string        // main CTA action buttons (Next, Show My Estimate, Book with X)
+  buttonText: string    // text on action buttons
   background: string    // page background
   cardBg: string        // card / panel background
   textDark: string      // headings & primary text
@@ -12,6 +14,8 @@ export interface BrandingConfig {
 export const BRANDING_DEFAULTS: BrandingConfig = {
   primary:     '#7B0000',
   primaryText: '#ffffff',
+  button:      '#7B0000',
+  buttonText:  '#ffffff',
   background:  '#F5F5F0',
   cardBg:      '#ffffff',
   textDark:    '#0A0A0A',

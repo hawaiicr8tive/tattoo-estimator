@@ -115,7 +115,7 @@ export default function EstimatorPage() {
           ) : <span />}
           {step === 5 && (
             <button type="button" onClick={advance}
-              className="rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-[var(--brand-primary-text)] hover:opacity-90 cursor-pointer">
+              className="rounded-lg bg-[var(--brand-button)] px-5 py-2.5 text-sm font-bold text-[var(--brand-button-text)] hover:opacity-90 cursor-pointer">
               Next →
             </button>
           )}

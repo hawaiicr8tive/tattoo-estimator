@@ -6,10 +6,12 @@ import type { BrandingConfig } from '@/lib/branding'
 import SaveBar from './SaveBar'
 
 const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
-  { key: 'primary',     label: 'Accent / Buttons',   hint: 'Main brand color — buttons, progress bar, highlights' },
-  { key: 'primaryText', label: 'Button Text',         hint: 'Text color on accent-colored backgrounds' },
-  { key: 'background',  label: 'Page Background',     hint: 'Overall page background color' },
-  { key: 'cardBg',      label: 'Card Background',     hint: 'White cards and panels' },
+  { key: 'primary',     label: 'Accent Color',        hint: 'Borders, badges, progress bar, booking CTA panel, selected pills' },
+  { key: 'primaryText', label: 'Accent Text',         hint: 'Text color on accent-colored backgrounds (badges, selected pills, booking panel)' },
+  { key: 'button',      label: 'Button Background',   hint: 'Main action buttons — Next, Show My Estimate, Book with [Artist]' },
+  { key: 'buttonText',  label: 'Button Text',         hint: 'Text color on main action buttons' },
+  { key: 'background',  label: 'Page Background',     hint: 'Overall page background (standalone site only — embed inherits Wix bg)' },
+  { key: 'cardBg',      label: 'Card Background',     hint: 'Cards and panels' },
   { key: 'textDark',    label: 'Primary Text',        hint: 'Headings and main body text' },
   { key: 'textMid',     label: 'Secondary Text',      hint: 'Descriptions and helper text' },
   { key: 'border',      label: 'Borders',             hint: 'Input and card border color' },
@@ -158,7 +160,7 @@ export default function BrandingTab({ initialData = {} }: Props) {
 
               <button
                 type="button"
-                style={{ background: cfg.primary, color: cfg.primaryText }}
+                style={{ background: cfg.button, color: cfg.buttonText }}
                 className="w-full rounded-lg py-2.5 text-xs font-bold cursor-pointer"
               >
                 Show My Estimate →

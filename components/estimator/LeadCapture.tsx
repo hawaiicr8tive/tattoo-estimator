@@ -77,7 +77,7 @@ export default function LeadCapture({
         type="button"
         onClick={handleSubmit}
         disabled={isSubmitting}
-        className="w-full rounded-lg bg-[var(--brand-primary)] py-3.5 text-sm font-bold text-[var(--brand-primary-text)] transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+        className="w-full rounded-lg bg-[var(--brand-button)] py-3.5 text-sm font-bold text-[var(--brand-button-text)] transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
       >
         {isSubmitting ? 'Getting your estimate…' : 'Show My Estimate →'}
       </button>

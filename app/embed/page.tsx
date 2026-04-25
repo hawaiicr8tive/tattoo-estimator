@@ -151,7 +151,7 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
                   <p className="text-xs text-[var(--brand-primary)] font-medium mb-1">{TIER_LABELS[artist.tier]}</p>
                   <p className="text-xs text-[var(--brand-text-mid)] line-clamp-2 mb-2">{artist.bio}</p>
                   <a href={artist.bookingUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-block rounded-lg bg-[var(--brand-primary)] px-3 py-1 text-xs font-bold text-[var(--brand-primary-text)] hover:opacity-90">
+                    className="inline-block rounded-lg bg-[var(--brand-button)] px-3 py-1 text-xs font-bold text-[var(--brand-button-text)] hover:opacity-90">
                     Book with {artist.name.split(' ')[0]}
                   </a>
                 </div>
@@ -295,7 +295,7 @@ export default function EmbedPage() {
               ) : <span />}
               {step === 5 && (
                 <button type="button" onClick={advance}
-                  className="rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-[var(--brand-primary-text)] hover:opacity-90 cursor-pointer">
+                  className="rounded-lg bg-[var(--brand-button)] px-5 py-2.5 text-sm font-bold text-[var(--brand-button-text)] hover:opacity-90 cursor-pointer">
                   Next →
                 </button>
               )}
