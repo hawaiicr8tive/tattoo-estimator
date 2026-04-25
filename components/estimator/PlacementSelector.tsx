@@ -85,7 +85,7 @@ export default function PlacementSelector({ value, onChange }: Props) {
                   type="button"
                   onPointerDown={() => onChange(p.id)}
                   style={value === p.id ? selectedStyle : defaultStyle}
-                  className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
+                  className={`rounded-full border-2 px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
                     ${value === p.id
                       ? ''
                       : 'border-[var(--brand-border)] hover:border-[var(--brand-primary)]'
