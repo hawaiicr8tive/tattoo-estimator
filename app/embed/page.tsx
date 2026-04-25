@@ -64,7 +64,7 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
   return (
     <div className="space-y-4">
       {/* Price card */}
-      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">
+      <div className="rounded-2xl bg-[var(--brand-card)] border border-[var(--brand-border)] shadow-sm p-5">
         <h2 className="text-lg font-bold text-[var(--brand-text)] mb-0.5">
           {lead.first_name ? `${lead.first_name}'s Estimate` : 'Your Estimate'}
         </h2>
@@ -87,7 +87,7 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
                 </p>
               </div>
             </div>
-            <div className="rounded-lg bg-white border border-gray-100 p-2.5 text-center">
+            <div className="rounded-lg bg-[var(--brand-card)] border border-[var(--brand-border)] p-2.5 text-center">
               <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Estimated Sessions</p>
               <p className="text-base font-black text-[var(--brand-text)]">
                 {xlConfig.sessionsRange.min === xlConfig.sessionsRange.max
@@ -135,8 +135,8 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
           </h3>
           <div className="space-y-2">
             {matchedArtists.map((artist, i) => (
-              <div key={artist.id} className="rounded-xl bg-white border border-gray-100 shadow-sm p-3 flex items-start gap-3">
-                <div className="w-11 h-11 rounded-full bg-[var(--brand-bg)] border border-gray-200 shrink-0 overflow-hidden flex items-center justify-center text-xl">
+              <div key={artist.id} className="rounded-xl bg-[var(--brand-card)] border border-[var(--brand-border)] shadow-sm p-3 flex items-start gap-3">
+                <div className="w-11 h-11 rounded-full bg-[var(--brand-bg)] border border-[var(--brand-border)] shrink-0 overflow-hidden flex items-center justify-center text-xl">
                   {artist.photo
                     ? <img src={artist.photo} alt={artist.name} className="w-full h-full object-cover" />
                     : <span>🎨</span>}
@@ -269,7 +269,7 @@ export default function EmbedPage() {
             <p className="text-xs text-[var(--brand-text-mid)] text-right mb-4">Step {step} of {TOTAL_STEPS}</p>
 
             {/* Step card */}
-            <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-5">
+            <div className="rounded-2xl bg-[var(--brand-card)] shadow-sm border border-[var(--brand-border)] p-5">
               {step === 1 && <StyleSelector value={style} styles={styles} onChange={v => { setStyle(v); advance() }} />}
               {step === 2 && <PlacementSelector value={placement} onChange={v => { setPlacement(v); advance() }} />}
               {step === 3 && <SizeSelector value={size} onChange={v => { setSize(v); advance() }} />}

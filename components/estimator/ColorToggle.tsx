@@ -16,7 +16,7 @@ export default function ColorToggle({ value, onChange }: Props) {
           className={`flex-1 flex flex-col items-center justify-center rounded-lg border-2 py-6 transition-all cursor-pointer
             ${value === false
               ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-5)]'
-              : 'border-gray-200 bg-white hover:border-[var(--brand-primary-50)]'
+              : 'border-[var(--brand-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary-50)]'
             }`}
         >
           <span className="text-3xl mb-2">⬛</span>
@@ -28,7 +28,7 @@ export default function ColorToggle({ value, onChange }: Props) {
           className={`flex-1 flex flex-col items-center justify-center rounded-lg border-2 py-6 transition-all cursor-pointer
             ${value === true
               ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-5)]'
-              : 'border-gray-200 bg-white hover:border-[var(--brand-primary-50)]'
+              : 'border-[var(--brand-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary-50)]'
             }`}
         >
           <span className="text-3xl mb-2">🎨</span>

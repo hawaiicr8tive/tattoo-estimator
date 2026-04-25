@@ -27,7 +27,7 @@ export default function SizeSelector({ value, onChange }: Props) {
             className={`w-full flex items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-all cursor-pointer
               ${value === size.id
                 ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-5)]'
-                : 'border-gray-200 bg-white hover:border-[var(--brand-primary-50)]'
+                : 'border-[var(--brand-border)] bg-[var(--brand-card)] hover:border-[var(--brand-primary-50)]'
               }`}
           >
             <div>

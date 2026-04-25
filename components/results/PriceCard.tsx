@@ -12,7 +12,7 @@ export default function PriceCard({ estimate, firstName, xlConfig }: Props) {
   const showXl = isConsultationOnly && xlConfig
 
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6">
+    <div className="rounded-2xl bg-[var(--brand-card)] border border-[var(--brand-border)] shadow-sm p-6">
       <h2 className="text-xl font-bold text-[var(--brand-text)] mb-1">
         {firstName ? `${firstName}'s Estimate` : 'Your Estimate'}
       </h2>
@@ -37,7 +37,7 @@ export default function PriceCard({ estimate, firstName, xlConfig }: Props) {
             </div>
           </div>
 
-          <div className="rounded-lg bg-white border border-gray-100 p-3 text-center">
+          <div className="rounded-lg bg-[var(--brand-card)] border border-[var(--brand-border)] p-3 text-center">
             <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-1">Estimated Sessions</p>
             <p className="text-lg font-black text-[var(--brand-text)]">
               {xlConfig.sessionsRange.min === xlConfig.sessionsRange.max

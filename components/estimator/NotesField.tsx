@@ -19,7 +19,7 @@ export default function NotesField({ value, onChange, onSkip }: Props) {
           onChange={e => onChange(e.target.value.slice(0, MAX))}
           rows={5}
           placeholder="Anything else we should know? Cover-up? Reference image? Rough design idea?"
-          className="w-full rounded-lg border border-gray-300 p-3 text-sm text-[var(--brand-text)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent"
+          className="w-full rounded-lg border border-[var(--brand-border)] p-3 text-sm text-[var(--brand-text)] bg-[var(--brand-card)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent"
         />
         <span className={`absolute bottom-3 right-3 text-xs ${value.length >= MAX ? 'text-[var(--brand-primary)]' : 'text-[var(--brand-text-mid)]'}`}>
           {value.length}/{MAX}

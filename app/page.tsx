@@ -80,7 +80,7 @@ export default function EstimatorPage() {
         </div>
         <p className="text-xs text-[var(--brand-text-mid)] text-right mb-5">Step {step} of {TOTAL_STEPS}</p>
 
-        <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
+        <div className="rounded-2xl bg-[var(--brand-card)] shadow-sm border border-[var(--brand-border)] p-6">
           {step === 1 && (
             <StyleSelector value={style} styles={styles} onChange={v => { setStyle(v); advance() }} />
           )}

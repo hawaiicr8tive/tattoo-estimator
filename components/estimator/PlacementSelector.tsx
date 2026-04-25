@@ -72,7 +72,7 @@ export default function PlacementSelector({ value, onChange }: Props) {
                   className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
                     ${value === p.id
                       ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-[var(--brand-primary-text)]'
-                      : 'border-gray-300 bg-white text-[var(--brand-text)] hover:border-[var(--brand-primary)]'
+                      : 'border-[var(--brand-border)] bg-[var(--brand-card)] text-[var(--brand-text)] hover:border-[var(--brand-primary)]'
                     }`}
                 >
                   {p.label}

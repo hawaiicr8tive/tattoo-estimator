@@ -14,8 +14,8 @@ const TIER_LABELS: Record<number, string> = {
 
 export default function ArtistCard({ artist, rank }: Props) {
   return (
-    <div className="rounded-xl bg-white border border-gray-100 shadow-sm p-4 flex items-start gap-4">
-      <div className="w-14 h-14 rounded-full bg-[var(--brand-bg)] border border-gray-200 shrink-0 overflow-hidden flex items-center justify-center text-2xl">
+    <div className="rounded-xl bg-[var(--brand-card)] border border-[var(--brand-border)] shadow-sm p-4 flex items-start gap-4">
+      <div className="w-14 h-14 rounded-full bg-[var(--brand-bg)] border border-[var(--brand-border)] shrink-0 overflow-hidden flex items-center justify-center text-2xl">
         {artist.photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={artist.photo} alt={artist.name} className="w-full h-full object-cover" />
