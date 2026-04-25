@@ -8,9 +8,6 @@ import ColorToggle from '@/components/estimator/ColorToggle'
 import NotesField from '@/components/estimator/NotesField'
 import LeadCapture from '@/components/estimator/LeadCapture'
 import type { PlacementKey, TattooSize, StyleOption, Lead, Artist, PriceEstimate } from '@/lib/types'
-import artistsData from '@/data/artists.json'
-
-const allArtists = artistsData as Artist[]
 
 const TOTAL_STEPS = 6
 
@@ -27,12 +24,18 @@ const TIER_LABELS: Record<number, string> = { 3: 'Featured Artist', 2: 'Senior A
 function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void }) {
   const { bookingUrl } = useBranding()
   const [lead, setLead] = useState<Lead | null>(null)
+  const [allArtists, setAllArtists] = useState<Artist[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/submit-lead?id=${encodeURIComponent(leadId)}`)
-      .then(r => r.json())
-      .then(data => { if (!data.error) setLead(data) })
+    Promise.all([
+      fetch(`/api/submit-lead?id=${encodeURIComponent(leadId)}`).then(r => r.json()),
+      fetch('/api/artists').then(r => r.json()),
+    ])
+      .then(([leadData, artistsData]) => {
+        if (!leadData.error) setLead(leadData)
+        if (Array.isArray(artistsData)) setAllArtists(artistsData)
+      })
       .finally(() => setLoading(false))
   }, [leadId])
 

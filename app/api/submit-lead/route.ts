@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { calculateEstimateAllTiers } from '@/lib/pricing'
 import { matchArtists } from '@/lib/artist-matching'
-import type { PlacementKey, TattooSize, StyleOption } from '@/lib/types'
+import type { PlacementKey, TattooSize, StyleOption, Artist } from '@/lib/types'
+import artistsData from '@/data/artists.json'
 import { Resend } from 'resend'
 
 const CORS = {
@@ -37,20 +38,30 @@ export async function POST(req: NextRequest) {
 
     const input = { style, placement, size, isColor, notes }
 
-    // Fetch custom style multipliers from Supabase (falls back to built-ins if not found)
+    // Fetch config from Supabase in parallel
     let extraStyleMultipliers: Record<string, number> | undefined
+    let artistPool: Artist[] = artistsData as Artist[]
     try {
       const db = getServiceClient()
-      const { data } = await db.from('admin_config').select('data').eq('key', 'styles').single()
-      if (data?.data) {
-        extraStyleMultipliers = Object.fromEntries(
-          (data.data as StyleOption[]).map(s => [s.id, s.multiplier])
-        )
+      const { data: cfgRows } = await db
+        .from('admin_config')
+        .select('key, data')
+        .in('key', ['styles', 'artists'])
+      if (cfgRows) {
+        const byKey = Object.fromEntries(cfgRows.map(r => [r.key, r.data]))
+        if (byKey.styles) {
+          extraStyleMultipliers = Object.fromEntries(
+            (byKey.styles as StyleOption[]).map(s => [s.id, s.multiplier])
+          )
+        }
+        if (byKey.artists && Array.isArray(byKey.artists) && byKey.artists.length > 0) {
+          artistPool = byKey.artists as Artist[]
+        }
       }
-    } catch { /* use built-in multipliers */ }
+    } catch { /* use defaults */ }
 
     const estimate = calculateEstimateAllTiers(input, extraStyleMultipliers)
-    const artists = matchArtists(input)
+    const artists = matchArtists(input, artistPool)
 
     const db = getServiceClient()
 

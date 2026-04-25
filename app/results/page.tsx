@@ -5,14 +5,12 @@ import PriceCard from '@/components/results/PriceCard'
 import ArtistCard from '@/components/results/ArtistCard'
 import BookingCTA from '@/components/results/BookingCTA'
 import type { Lead, Artist, PriceEstimate } from '@/lib/types'
-import artistsData from '@/data/artists.json'
-
-const allArtists = artistsData as Artist[]
 
 function ResultsContent() {
   const params = useSearchParams()
   const id = params.get('id')
   const [lead, setLead] = useState<Lead | null>(null)
+  const [allArtists, setAllArtists] = useState<Artist[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,11 +20,14 @@ function ResultsContent() {
       setLoading(false)
       return
     }
-    fetch(`/api/submit-lead?id=${encodeURIComponent(id)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) throw new Error(data.error)
-        setLead(data)
+    Promise.all([
+      fetch(`/api/submit-lead?id=${encodeURIComponent(id)}`).then(r => r.json()),
+      fetch('/api/artists').then(r => r.json()),
+    ])
+      .then(([leadData, artistsData]) => {
+        if (leadData.error) throw new Error(leadData.error)
+        setLead(leadData)
+        if (Array.isArray(artistsData)) setAllArtists(artistsData)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
