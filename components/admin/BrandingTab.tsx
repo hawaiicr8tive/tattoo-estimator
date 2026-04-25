@@ -6,8 +6,9 @@ import type { BrandingConfig } from '@/lib/branding'
 import SaveBar from './SaveBar'
 
 const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
-  { key: 'primary',     label: 'Accent Color',        hint: 'Best Match badge, progress bar, booking CTA panel, hover highlights, artist tier label' },
+  { key: 'primary',     label: 'Accent Color',        hint: 'Best Match badge, progress bar, booking CTA panel, artist tier label' },
   { key: 'primaryText', label: 'Accent Text',         hint: 'Text color on accent-colored backgrounds (Best Match badge, booking CTA panel)' },
+  { key: 'hoverColor',  label: 'Hover Highlight',     hint: 'Border color when hovering over a card or pill (uses 50% opacity on cards, full color on pills)' },
   { key: 'button',      label: 'Button Background',   hint: 'Main action buttons — Next, Show My Estimate, Book with [Artist]' },
   { key: 'buttonText',  label: 'Button Text',         hint: 'Text color on main action buttons' },
   { key: 'cardDefaultBg',   label: 'Default Card Color', hint: 'Background of unselected style/size/color cards' },

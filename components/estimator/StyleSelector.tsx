@@ -42,7 +42,7 @@ export default function StyleSelector({ value, onChange, styles = DEFAULTS }: Pr
             className={`relative flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all min-h-[100px] cursor-pointer
               ${value === style.id
                 ? 'shadow-md'
-                : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
+                : 'border-[var(--brand-border)] hover:border-[var(--brand-hover-50)]'
               }`}
           >
             {value === style.id && (

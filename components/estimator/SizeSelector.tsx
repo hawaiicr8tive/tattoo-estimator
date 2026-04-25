@@ -41,7 +41,7 @@ export default function SizeSelector({ value, onChange }: Props) {
             className={`w-full flex items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-all cursor-pointer
               ${value === size.id
                 ? ''
-                : 'border-[var(--brand-border)] hover:border-[var(--brand-primary-50)]'
+                : 'border-[var(--brand-border)] hover:border-[var(--brand-hover-50)]'
               }`}
           >
             <div>

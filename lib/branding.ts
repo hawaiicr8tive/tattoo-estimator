@@ -1,6 +1,7 @@
 export interface BrandingConfig {
   primary: string       // accent — borders, badges, progress bar, booking CTA panel
   primaryText: string   // text on accent-colored backgrounds
+  hoverColor: string    // hover highlight color on selectable cards/pills
   button: string        // main CTA action buttons (Next, Show My Estimate, Book with X)
   buttonOpacity: number // 0–100 — action button background opacity
   buttonText: string    // text on action buttons
@@ -30,6 +31,7 @@ export interface BrandingConfig {
 export const BRANDING_DEFAULTS: BrandingConfig = {
   primary:     '#7B0000',
   primaryText: '#ffffff',
+  hoverColor:  '#7B0000',
   button:        '#7B0000',
   buttonOpacity: 100,
   buttonText:    '#ffffff',
