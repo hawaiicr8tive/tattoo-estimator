@@ -3,6 +3,8 @@ export interface BrandingConfig {
   primaryText: string   // text on accent-colored backgrounds
   button: string        // main CTA action buttons (Next, Show My Estimate, Book with X)
   buttonText: string    // text on action buttons
+  pillDefaultBg: string // unselected placement pill background
+  pillDefaultText: string // unselected placement pill text
   pillBg: string        // selected placement pill fill color
   pillOpacity: number   // 0–100 — selected pill fill opacity (0 = border only)
   pillText: string      // selected placement pill text color
@@ -19,6 +21,8 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
   primaryText: '#ffffff',
   button:      '#7B0000',
   buttonText:  '#ffffff',
+  pillDefaultBg:   '#ffffff',
+  pillDefaultText: '#0A0A0A',
   pillBg:      '#7B0000',
   pillOpacity: 100,
   pillText:    '#ffffff',

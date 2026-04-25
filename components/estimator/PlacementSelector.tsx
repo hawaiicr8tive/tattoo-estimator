@@ -56,12 +56,16 @@ interface Props {
 }
 
 export default function PlacementSelector({ value, onChange }: Props) {
-  const { primary, pillBg, pillOpacity, pillText } = useBranding()
+  const { primary, pillDefaultBg, pillDefaultText, pillBg, pillOpacity, pillText } = useBranding()
   const pillRgb = hexToRgb(pillBg)
   const selectedStyle: React.CSSProperties = {
     borderColor: primary,
     backgroundColor: `rgba(${pillRgb}, ${pillOpacity / 100})`,
     color: pillText,
+  }
+  const defaultStyle: React.CSSProperties = {
+    backgroundColor: pillDefaultBg,
+    color: pillDefaultText,
   }
 
   return (
@@ -79,11 +83,11 @@ export default function PlacementSelector({ value, onChange }: Props) {
                   key={p.id}
                   type="button"
                   onPointerDown={() => onChange(p.id)}
-                  style={value === p.id ? selectedStyle : undefined}
+                  style={value === p.id ? selectedStyle : defaultStyle}
                   className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-all cursor-pointer
                     ${value === p.id
                       ? ''
-                      : 'border-[var(--brand-border)] bg-[var(--brand-card)] text-[var(--brand-text)] hover:border-[var(--brand-primary)]'
+                      : 'border-[var(--brand-border)] hover:border-[var(--brand-primary)]'
                     }`}
                 >
                   {p.label}

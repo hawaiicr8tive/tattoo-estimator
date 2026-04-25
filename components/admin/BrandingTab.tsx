@@ -10,8 +10,10 @@ const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
   { key: 'primaryText', label: 'Accent Text',         hint: 'Text color on accent-colored backgrounds (badges, selected pills, booking panel)' },
   { key: 'button',      label: 'Button Background',   hint: 'Main action buttons — Next, Show My Estimate, Book with [Artist]' },
   { key: 'buttonText',  label: 'Button Text',         hint: 'Text color on main action buttons' },
-  { key: 'pillBg',      label: 'Selected Pill Color', hint: 'Fill color for selected placement pills (Inner Arm, Forearm, etc.)' },
-  { key: 'pillText',    label: 'Selected Pill Text',  hint: 'Text color on selected placement pills' },
+  { key: 'pillDefaultBg',   label: 'Default Pill Color', hint: 'Background of unselected placement pills (Inner Arm, Forearm, etc. before they\'re tapped)' },
+  { key: 'pillDefaultText', label: 'Default Pill Text',  hint: 'Text color on unselected placement pills' },
+  { key: 'pillBg',          label: 'Selected Pill Color', hint: 'Fill color for the placement pill once tapped' },
+  { key: 'pillText',        label: 'Selected Pill Text',  hint: 'Text color on the selected placement pill' },
   { key: 'background',  label: 'Page Background',     hint: 'Overall page background (standalone site only — embed inherits Wix bg)' },
   { key: 'cardBg',      label: 'Card Background',     hint: 'Cards and panels' },
   { key: 'textDark',    label: 'Primary Text',        hint: 'Headings and main body text' },
@@ -186,7 +188,7 @@ export default function BrandingTab({ initialData = {} }: Props) {
                       key={p.label}
                       style={p.selected
                         ? { borderColor: cfg.primary, background: `rgba(${pillRgb},${cfg.pillOpacity / 100})`, color: cfg.pillText }
-                        : { borderColor: cfg.border,  background: cfg.cardBg,                                    color: cfg.textDark }}
+                        : { borderColor: cfg.border,  background: cfg.pillDefaultBg,                            color: cfg.pillDefaultText }}
                       className="rounded-full border px-3 py-1 text-xs font-medium"
                     >
                       {p.label}
