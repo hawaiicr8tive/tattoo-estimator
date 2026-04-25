@@ -51,21 +51,27 @@ export default function EstimatorPage() {
   function advance() { setStep(s => s + 1) }
   function handleBack() { setStep(s => Math.max(1, s - 1)) }
 
-  async function handleSubmit() {
+  async function handleSubmit(verificationCode: string): Promise<{ ok: boolean; error?: string }> {
     setIsSubmitting(true)
     setError(null)
     try {
       const res = await fetch('/api/submit-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style, placement, size, isColor, notes, firstName, email, optedIn }),
+        body: JSON.stringify({ style, placement, size, isColor, notes, firstName, email, optedIn, verificationCode }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Submission failed')
+      if (!res.ok) {
+        setIsSubmitting(false)
+        return { ok: false, error: data.error || 'Submission failed' }
+      }
       router.push(`/results?id=${data.id}`)
+      return { ok: true }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
       setIsSubmitting(false)
+      const msg = e instanceof Error ? e.message : 'Something went wrong'
+      setError(msg)
+      return { ok: false, error: msg }
     }
   }
 

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useBranding } from '@/components/BrandingProvider'
 import { hexToRgb } from '@/lib/branding'
+import EmailVerificationModal from './EmailVerificationModal'
 
 interface Props {
   firstName: string
@@ -10,7 +11,7 @@ interface Props {
   onFirstNameChange: (v: string) => void
   onEmailChange: (v: string) => void
   onOptedInChange: (v: boolean) => void
-  onSubmit: () => void
+  onSubmit: (verificationCode: string) => Promise<{ ok: boolean; error?: string }>
   isSubmitting: boolean
 }
 
@@ -25,6 +26,9 @@ export default function LeadCapture({
     color: buttonText,
   }
   const [errors, setErrors] = useState<{ firstName?: string; email?: string }>({})
+  const [sendingCode, setSendingCode] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
   function validate() {
     const e: typeof errors = {}
@@ -35,14 +39,41 @@ export default function LeadCapture({
     return Object.keys(e).length === 0
   }
 
-  function handleSubmit() {
-    if (validate()) onSubmit()
+  async function sendCode(): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch('/api/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, firstName }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { ok: false, error: data.error || 'Failed to send code' }
+      return { ok: true }
+    } catch {
+      return { ok: false, error: 'Network error — try again' }
+    }
+  }
+
+  async function handleSubmit() {
+    if (!validate()) return
+    setSendingCode(true); setSendError(null)
+    const result = await sendCode()
+    setSendingCode(false)
+    if (!result.ok) {
+      setSendError(result.error || 'Failed to send verification code')
+      return
+    }
+    setShowModal(true)
+  }
+
+  async function handleVerify(code: string) {
+    return await onSubmit(code)
   }
 
   return (
     <div className="space-y-5">
       <h2 className="text-xl font-bold text-center text-[var(--brand-text)]">Where should we send your estimate?</h2>
-      <p className="text-center text-sm text-[var(--brand-text-mid)]">Just a name and email — we'll show your results right away.</p>
+      <p className="text-center text-sm text-[var(--brand-text-mid)]">Just a name and email — we'll send a quick verification code to confirm.</p>
 
       <div className="space-y-3">
         <div>
@@ -83,12 +114,23 @@ export default function LeadCapture({
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={isSubmitting}
+        disabled={sendingCode || isSubmitting}
         style={buttonStyle}
         className="w-full rounded-lg py-3.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
       >
-        {isSubmitting ? 'Getting your estimate…' : 'Show My Estimate →'}
+        {sendingCode ? 'Sending verification…' : isSubmitting ? 'Getting your estimate…' : 'Show My Estimate →'}
       </button>
+
+      {sendError && <p className="text-center text-sm text-red-600">{sendError}</p>}
+
+      {showModal && (
+        <EmailVerificationModal
+          email={email}
+          onVerify={handleVerify}
+          onCancel={() => setShowModal(false)}
+          onResend={sendCode}
+        />
+      )}
     </div>
   )
 }

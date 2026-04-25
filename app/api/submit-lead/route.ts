@@ -21,7 +21,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { style, placement, size, isColor, notes, firstName, email, optedIn } = body as {
+    const { style, placement, size, isColor, notes, firstName, email, optedIn, verificationCode } = body as {
       style: string
       placement: PlacementKey
       size: TattooSize
@@ -30,10 +30,42 @@ export async function POST(req: NextRequest) {
       firstName: string
       email: string
       optedIn: boolean
+      verificationCode?: string
     }
 
     if (!style || !placement || !size || isColor === undefined || !firstName || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400, headers: CORS })
+    }
+
+    if (!verificationCode || !/^\d{4}$/.test(verificationCode)) {
+      return NextResponse.json({ error: 'Verification code required' }, { status: 400, headers: CORS })
+    }
+
+    // Check the most recent unused, unexpired code for this email
+    {
+      const verifyDb = getServiceClient()
+      const { data: codeRow } = await verifyDb
+        .from('verification_codes')
+        .select('id, code, expires_at, used')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!codeRow) {
+        return NextResponse.json({ error: 'No verification code found. Request a new code.' }, { status: 401, headers: CORS })
+      }
+      if (codeRow.used) {
+        return NextResponse.json({ error: 'This code has already been used. Request a new code.' }, { status: 401, headers: CORS })
+      }
+      if (new Date(codeRow.expires_at as string).getTime() < Date.now()) {
+        return NextResponse.json({ error: 'This code has expired. Request a new code.' }, { status: 401, headers: CORS })
+      }
+      if (codeRow.code !== verificationCode) {
+        return NextResponse.json({ error: 'Incorrect code. Try again.' }, { status: 401, headers: CORS })
+      }
+
+      await verifyDb.from('verification_codes').update({ used: true }).eq('id', codeRow.id)
     }
 
     const input = { style, placement, size, isColor, notes }
