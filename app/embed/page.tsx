@@ -249,7 +249,7 @@ export default function EmbedPage() {
   const progress = ((step - 1) / TOTAL_STEPS) * 100
 
   return (
-    <div ref={containerRef} className="bg-white px-4 py-6">
+    <div ref={containerRef} className="bg-transparent px-4 py-6">
       <div className="w-full max-w-md mx-auto">
 
         {/* Header */}
