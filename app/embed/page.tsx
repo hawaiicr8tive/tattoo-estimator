@@ -81,20 +81,20 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div className="rounded-lg bg-[var(--brand-bg)] p-2.5 text-center">
                 <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Half Day</p>
-                <p className="text-base font-black text-[var(--brand-text)]">
+                <p className="text-base font-black text-[var(--brand-result-price-text)]">
                   ${xlConfig.halfDayRate.min.toLocaleString()} – ${xlConfig.halfDayRate.max.toLocaleString()}
                 </p>
               </div>
               <div className="rounded-lg bg-[var(--brand-bg)] p-2.5 text-center">
                 <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Full Day</p>
-                <p className="text-base font-black text-[var(--brand-text)]">
+                <p className="text-base font-black text-[var(--brand-result-price-text)]">
                   ${xlConfig.fullDayRate.min.toLocaleString()} – ${xlConfig.fullDayRate.max.toLocaleString()}
                 </p>
               </div>
             </div>
             <div className="rounded-lg bg-[var(--brand-card)] border border-[var(--brand-border)] p-2.5 text-center">
               <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-0.5">Estimated Sessions</p>
-              <p className="text-base font-black text-[var(--brand-text)]">
+              <p className="text-base font-black text-[var(--brand-result-price-text)]">
                 {xlConfig.sessionsRange.min === xlConfig.sessionsRange.max
                   ? `${xlConfig.sessionsRange.min} ${xlConfig.sessionsRange.min === 1 ? 'session' : 'sessions'}`
                   : `${xlConfig.sessionsRange.min}–${xlConfig.sessionsRange.max} sessions`}
@@ -104,7 +104,7 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
         ) : estimate.isConsultationOnly ? (
           <div className="rounded-xl bg-[var(--brand-primary-5)] border border-[var(--brand-primary-20)] p-4 text-center">
             <p className="text-sm font-bold text-[var(--brand-primary)] mb-1">Custom / Large Piece</p>
-            <p className="text-3xl font-black text-[var(--brand-text)]">
+            <p className="text-3xl font-black text-[var(--brand-result-price-text)]">
               ${estimate.priceRange.min.toLocaleString()} – ${estimate.priceRange.max.toLocaleString()}
             </p>
             <p className="text-xs text-[var(--brand-text-mid)] mt-1">
@@ -115,13 +115,13 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="rounded-xl bg-[var(--brand-bg)] p-3 text-center">
               <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-1">Estimated Cost</p>
-              <p className="text-xl font-black text-[var(--brand-text)]">
+              <p className="text-xl font-black text-[var(--brand-result-price-text)]">
                 ${estimate.priceRange.min.toLocaleString()} – ${estimate.priceRange.max.toLocaleString()}
               </p>
             </div>
             <div className="rounded-xl bg-[var(--brand-bg)] p-3 text-center">
               <p className="text-xs font-medium text-[var(--brand-text-mid)] uppercase tracking-wide mb-1">Session Time</p>
-              <p className="text-xl font-black text-[var(--brand-text)]">
+              <p className="text-xl font-black text-[var(--brand-result-price-text)]">
                 {estimate.timeRange.min}–{estimate.timeRange.max}h
               </p>
             </div>

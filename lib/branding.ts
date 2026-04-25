@@ -20,6 +20,7 @@ export interface BrandingConfig {
   cardBg: string        // card / panel background
   textDark: string      // headings & primary text
   textMid: string       // descriptions & secondary text
+  resultPriceText: string // big price/time numbers on the results page
   border: string        // input and card borders
   bookingUrl: string    // CTA link on results page
 }
@@ -46,6 +47,7 @@ export const BRANDING_DEFAULTS: BrandingConfig = {
   cardBg:      '#ffffff',
   textDark:    '#0A0A0A',
   textMid:     '#555555',
+  resultPriceText: '#0A0A0A',
   border:      '#e5e7eb',
   bookingUrl:  'https://tattoolicious.com/booking',
 }

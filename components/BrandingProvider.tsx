@@ -68,6 +68,7 @@ export function applyBranding(cfg: Partial<BrandingConfig>) {
   root.style.setProperty('--brand-text',         b.textDark)
   root.style.setProperty('--brand-text-mid',     b.textMid)
   root.style.setProperty('--brand-border',       b.border)
+  root.style.setProperty('--brand-result-price-text', b.resultPriceText ?? b.textDark)
 }
 
 export default function BrandingProvider({ children }: { children: React.ReactNode }) {

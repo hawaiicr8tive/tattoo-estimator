@@ -21,6 +21,7 @@
   --brand-text:         #0A0A0A;
   --brand-text-mid:     #555555;
   --brand-border:       #e5e7eb;
+  --brand-result-price-text: #0A0A0A;
 }
 
 @theme inline {

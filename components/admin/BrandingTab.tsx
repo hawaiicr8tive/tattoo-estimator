@@ -22,6 +22,7 @@ const FIELDS: { key: keyof BrandingConfig; label: string; hint: string }[] = [
   { key: 'cardBg',      label: 'Card Background',     hint: 'Cards and panels' },
   { key: 'textDark',    label: 'Primary Text',        hint: 'Headings and main body text' },
   { key: 'textMid',     label: 'Secondary Text',      hint: 'Descriptions and helper text' },
+  { key: 'resultPriceText', label: 'End Result Price Text', hint: 'Color of the big numbers on the results page (Estimated Cost, Session Time, day rates, sessions count)' },
   { key: 'border',      label: 'Borders',             hint: 'Input and card border color' },
 ]
 
