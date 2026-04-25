@@ -95,6 +95,26 @@ export default function BrandingTab({ initialData = {} }: Props) {
             </div>
           ))}
 
+          {/* Default Pill Opacity */}
+          <div className="rounded-xl bg-white border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-[#0A0A0A]">Default Pill Opacity</label>
+              <span className="text-xs font-mono text-[#555555] tabular-nums">{cfg.pillDefaultOpacity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={cfg.pillDefaultOpacity}
+              onChange={e => setCfg(c => ({ ...c, pillDefaultOpacity: Number(e.target.value) }))}
+              className="w-full accent-[#7B0000] cursor-pointer"
+            />
+            <p className="mt-2 text-xs text-[#555555]">
+              Opacity of the unselected pill background (0% = transparent · 100% = solid)
+            </p>
+          </div>
+
           {/* Selected Pill Opacity */}
           <div className="rounded-xl bg-white border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
@@ -183,12 +203,13 @@ export default function BrandingTab({ initialData = {} }: Props) {
                   { label: 'Chest',     selected: false },
                 ].map(p => {
                   const pillRgb = hexToRgb(cfg.pillBg)
+                  const defaultRgb = hexToRgb(cfg.pillDefaultBg)
                   return (
                     <span
                       key={p.label}
                       style={p.selected
-                        ? { borderColor: cfg.primary, background: `rgba(${pillRgb},${cfg.pillOpacity / 100})`, color: cfg.pillText }
-                        : { borderColor: cfg.border,  background: cfg.pillDefaultBg,                            color: cfg.pillDefaultText }}
+                        ? { borderColor: cfg.primary, background: `rgba(${pillRgb},${cfg.pillOpacity / 100})`,         color: cfg.pillText }
+                        : { borderColor: cfg.border,  background: `rgba(${defaultRgb},${cfg.pillDefaultOpacity / 100})`, color: cfg.pillDefaultText }}
                       className="rounded-full border px-3 py-1 text-xs font-medium"
                     >
                       {p.label}

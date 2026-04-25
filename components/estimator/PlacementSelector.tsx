@@ -56,15 +56,16 @@ interface Props {
 }
 
 export default function PlacementSelector({ value, onChange }: Props) {
-  const { primary, pillDefaultBg, pillDefaultText, pillBg, pillOpacity, pillText } = useBranding()
+  const { primary, pillDefaultBg, pillDefaultOpacity, pillDefaultText, pillBg, pillOpacity, pillText } = useBranding()
   const pillRgb = hexToRgb(pillBg)
+  const defaultRgb = hexToRgb(pillDefaultBg)
   const selectedStyle: React.CSSProperties = {
     borderColor: primary,
     backgroundColor: `rgba(${pillRgb}, ${pillOpacity / 100})`,
     color: pillText,
   }
   const defaultStyle: React.CSSProperties = {
-    backgroundColor: pillDefaultBg,
+    backgroundColor: `rgba(${defaultRgb}, ${pillDefaultOpacity / 100})`,
     color: pillDefaultText,
   }
 
