@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Placeholder values so `next build` can collect page data without real
+    # backends. Build never connects to anything — these never leave CI.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_anon_key
+      SUPABASE_SERVICE_ROLE_KEY: dummy_service_role_key
+      RESEND_API_KEY: re_dummy
+      ADMIN_PASSWORD: ci_placeholder
+      ANTHROPIC_API_KEY: sk-ant-dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

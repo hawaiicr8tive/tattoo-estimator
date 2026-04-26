@@ -73,7 +73,7 @@ export default function LeadCapture({
   return (
     <div className="space-y-5">
       <h2 className="text-xl font-bold text-center text-[var(--brand-text)]">Where should we send your estimate?</h2>
-      <p className="text-center text-sm text-[var(--brand-text-mid)]">Just a name and email — we'll send a quick verification code to confirm.</p>
+      <p className="text-center text-sm text-[var(--brand-text-mid)]">Just a name and email — we&apos;ll send a quick verification code to confirm.</p>
 
       <div className="space-y-3">
         <div>

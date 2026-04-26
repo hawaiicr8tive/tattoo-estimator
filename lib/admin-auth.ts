@@ -33,6 +33,19 @@ export function clearSessionCookie(res: NextResponse): void {
 }
 
 /**
+ * Returns true if the supplied cookie value matches the expected admin session
+ * token. Use from server components / route handlers that already have the
+ * cookie value (e.g. via `cookies()` from `next/headers`).
+ */
+export function verifyAdminToken(token: string | undefined | null): boolean {
+  const password = process.env.ADMIN_PASSWORD
+  if (!password || !token) return false
+  const expected = expectedToken(password)
+  if (token.length !== expected.length) return false
+  return safeEqual(token, expected)
+}
+
+/**
  * Returns null if the request carries a valid admin session cookie; otherwise
  * returns a NextResponse the caller should return immediately.
  */

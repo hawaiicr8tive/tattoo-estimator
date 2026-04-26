@@ -33,8 +33,11 @@ export default function AdminPage() {
   const [pwLoading, setPwLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<TabId>('leads')
   const [config, setConfig] = useState<AdminConfig | null>(null)
-  const [configLoading, setConfigLoading] = useState(false)
   const [configError, setConfigError] = useState<string | null>(null)
+
+  // Loading state is derived: we're loading once authed and the fetch hasn't
+  // landed yet (no config and no error captured).
+  const configLoading = authed === true && config === null && configError === null
 
   // Resume admin session on reload via the cookie set by /api/admin/auth.
   useEffect(() => {
@@ -47,12 +50,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed) return
-    setConfigLoading(true)
+    let cancelled = false
     fetch('/api/admin/config')
       .then(r => r.json())
-      .then(setConfig)
-      .catch(e => setConfigError(e.message))
-      .finally(() => setConfigLoading(false))
+      .then(d => { if (!cancelled) setConfig(d) })
+      .catch(e => { if (!cancelled) setConfigError(e instanceof Error ? e.message : 'Load failed') })
+    return () => { cancelled = true }
   }, [authed])
 
   async function handleLogout() {
