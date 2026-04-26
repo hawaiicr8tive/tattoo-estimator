@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin-auth'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -61,7 +62,9 @@ function buildDefaultConfig() {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = requireAdmin(req)
+  if (denied) return denied
   try {
     const db = getServiceClient()
     const { data, error } = await db.from('admin_config').select('key, data')
@@ -86,6 +89,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const denied = requireAdmin(req)
+  if (denied) return denied
   try {
     const { key, data } = await req.json()
     if (!key || data === undefined) return NextResponse.json({ error: 'Missing key or data' }, { status: 400 })

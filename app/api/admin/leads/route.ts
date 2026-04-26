@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-
-function authorize(req: NextRequest) {
-  const adminKey = process.env.ADMIN_SECRET_KEY
-  if (!adminKey) return null
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${adminKey}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return null
-}
+import { requireAdmin } from '@/lib/admin-auth'
 
 export async function GET(req: NextRequest) {
-  const unauthorized = authorize(req)
-  if (unauthorized) return unauthorized
+  const denied = requireAdmin(req)
+  if (denied) return denied
 
   const { searchParams } = req.nextUrl
   const from = searchParams.get('from')
@@ -35,8 +26,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const unauthorized = authorize(req)
-  if (unauthorized) return unauthorized
+  const denied = requireAdmin(req)
+  if (denied) return denied
 
   let ids: unknown
   try {

@@ -24,7 +24,8 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(false)
+  // null = checking session, true/false = settled.
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const [pw, setPw] = useState('')
   const [pwError, setPwError] = useState<string | null>(null)
   const [pwLoading, setPwLoading] = useState(false)
@@ -32,6 +33,15 @@ export default function AdminPage() {
   const [config, setConfig] = useState<AdminConfig | null>(null)
   const [configLoading, setConfigLoading] = useState(false)
   const [configError, setConfigError] = useState<string | null>(null)
+
+  // Resume admin session on reload via the cookie set by /api/admin/auth.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/auth', { method: 'GET' })
+      .then(r => { if (!cancelled) setAuthed(r.ok) })
+      .catch(() => { if (!cancelled) setAuthed(false) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (!authed) return
@@ -42,6 +52,13 @@ export default function AdminPage() {
       .catch(e => setConfigError(e.message))
       .finally(() => setConfigLoading(false))
   }, [authed])
+
+  async function handleLogout() {
+    await fetch('/api/admin/auth', { method: 'DELETE' }).catch(() => {})
+    setAuthed(false)
+    setConfig(null)
+    setPw('')
+  }
 
   async function handleLogin() {
     setPwLoading(true)
@@ -63,6 +80,14 @@ export default function AdminPage() {
     } finally {
       setPwLoading(false)
     }
+  }
+
+  if (authed === null) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center text-[#555555] text-sm">
+        Checking session…
+      </div>
+    )
   }
 
   if (!authed) {
@@ -114,7 +139,7 @@ export default function AdminPage() {
             </a>
             <button
               type="button"
-              onClick={() => setAuthed(false)}
+              onClick={handleLogout}
               className="text-xs text-[#555555] hover:text-[#0A0A0A] cursor-pointer"
             >
               Sign out

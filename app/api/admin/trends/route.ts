@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveIndustryDataset } from '@/lib/trends/store'
+import { requireAdmin } from '@/lib/admin-auth'
 import type { IndustryDataset } from '@/lib/trends/types'
 
 function isValidId(id: unknown): id is string {
@@ -19,6 +20,8 @@ function isValidDataset(d: unknown): d is IndustryDataset {
 }
 
 export async function PUT(req: NextRequest) {
+  const denied = requireAdmin(req)
+  if (denied) return denied
   try {
     const body = await req.json()
     const dataset = body?.dataset
