@@ -2,19 +2,48 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, copy `.env.example` to `.env.local` and fill in the required values (see [Environment variables](#environment-variables) below).
+
+Then install dependencies and run the dev server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Routes
+
+| Route | Who can see it | What it is |
+|---|---|---|
+| `/` | Public | Tattoo price estimator (lead form) |
+| `/results` | Public (one-shot) | Estimate result page following a submission |
+| `/embed` | Public | Iframe-embeddable estimator (for Wix etc.) |
+| `/admin` | Admin password | Leads, pricing, styles, sizes, placements, artists, branding, **Trends**, **AI Research** |
+| `/trends` | Admin cookie | Style cycle dashboard — forecasts, lineage map, fusion lab |
+
+Both `/admin` and `/trends` are gated by an HTTP-only HMAC cookie set by `POST /api/admin/auth`. Logging in once at `/admin` unlocks both for 24 hours.
+
+## Environment variables
+
+Copy `.env.example` → `.env.local` and fill the values. All variables are read server-side except the two `NEXT_PUBLIC_*` Supabase keys.
+
+| Variable | Required for | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Everything except `/` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Everything except `/` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server routes | Bypasses RLS — server-side only |
+| `ADMIN_PASSWORD` | `/admin`, `/trends` | Picked by you; used to derive the session cookie HMAC |
+| `RESEND_API_KEY` | Lead submission + verification | Resend API key |
+| `STUDIO_EMAIL` | Lead notifications | Fallback if no studio email is set in `/admin → Leads` |
+| `ANTHROPIC_API_KEY` | `/admin → AI Research` | Anthropic API key for Claude |
+
+Supabase migrations live in `supabase/migrations/` — apply them in order before the first run.
+
+## CI
+
+GitHub Actions runs `npm run lint` and `npm run build` (with placeholder env values) on every push and PR. See `.github/workflows/ci.yml`.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

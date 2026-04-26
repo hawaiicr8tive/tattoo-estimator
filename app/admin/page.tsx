@@ -7,6 +7,8 @@ import PlacementsTab from '@/components/admin/PlacementsTab'
 import ArtistsTab from '@/components/admin/ArtistsTab'
 import LeadsTab from '@/components/admin/LeadsTab'
 import BrandingTab from '@/components/admin/BrandingTab'
+import TrendsTab from '@/components/admin/TrendsTab'
+import ResearchTab from '@/components/admin/ResearchTab'
 import type { AdminConfig } from '@/lib/admin-types'
 
 const TABS = [
@@ -17,29 +19,51 @@ const TABS = [
   { id: 'placements', label: 'Placements' },
   { id: 'artists',    label: 'Artists' },
   { id: 'branding',   label: 'Branding' },
+  { id: 'trends',     label: 'Trends' },
+  { id: 'research',   label: 'AI Research' },
 ] as const
 
 type TabId = typeof TABS[number]['id']
 
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(false)
+  // null = checking session, true/false = settled.
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const [pw, setPw] = useState('')
   const [pwError, setPwError] = useState<string | null>(null)
   const [pwLoading, setPwLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<TabId>('leads')
   const [config, setConfig] = useState<AdminConfig | null>(null)
-  const [configLoading, setConfigLoading] = useState(false)
   const [configError, setConfigError] = useState<string | null>(null)
+
+  // Loading state is derived: we're loading once authed and the fetch hasn't
+  // landed yet (no config and no error captured).
+  const configLoading = authed === true && config === null && configError === null
+
+  // Resume admin session on reload via the cookie set by /api/admin/auth.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/auth', { method: 'GET' })
+      .then(r => { if (!cancelled) setAuthed(r.ok) })
+      .catch(() => { if (!cancelled) setAuthed(false) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (!authed) return
-    setConfigLoading(true)
+    let cancelled = false
     fetch('/api/admin/config')
       .then(r => r.json())
-      .then(setConfig)
-      .catch(e => setConfigError(e.message))
-      .finally(() => setConfigLoading(false))
+      .then(d => { if (!cancelled) setConfig(d) })
+      .catch(e => { if (!cancelled) setConfigError(e instanceof Error ? e.message : 'Load failed') })
+    return () => { cancelled = true }
   }, [authed])
+
+  async function handleLogout() {
+    await fetch('/api/admin/auth', { method: 'DELETE' }).catch(() => {})
+    setAuthed(false)
+    setConfig(null)
+    setPw('')
+  }
 
   async function handleLogin() {
     setPwLoading(true)
@@ -61,6 +85,14 @@ export default function AdminPage() {
     } finally {
       setPwLoading(false)
     }
+  }
+
+  if (authed === null) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center text-[#555555] text-sm">
+        Checking session…
+      </div>
+    )
   }
 
   if (!authed) {
@@ -112,7 +144,7 @@ export default function AdminPage() {
             </a>
             <button
               type="button"
-              onClick={() => setAuthed(false)}
+              onClick={handleLogout}
               className="text-xs text-[#555555] hover:text-[#0A0A0A] cursor-pointer"
             >
               Sign out
@@ -145,15 +177,17 @@ export default function AdminPage() {
       <main className="mx-auto max-w-7xl px-4 py-8">
         {/* Leads tab doesn't need config */}
         {activeTab === 'leads' && <LeadsTab />}
+        {activeTab === 'trends' && <TrendsTab />}
+        {activeTab === 'research' && <ResearchTab />}
 
         {/* Config tabs */}
-        {activeTab !== 'leads' && configLoading && (
+        {activeTab !== 'leads' && activeTab !== 'trends' && activeTab !== 'research' && configLoading && (
           <p className="text-[#555555] py-12 text-center">Loading configuration…</p>
         )}
-        {activeTab !== 'leads' && configError && (
+        {activeTab !== 'leads' && activeTab !== 'trends' && activeTab !== 'research' && configError && (
           <p className="text-red-600 py-4">{configError}</p>
         )}
-        {activeTab !== 'leads' && !configLoading && !configError && config && (
+        {activeTab !== 'leads' && activeTab !== 'trends' && activeTab !== 'research' && !configLoading && !configError && config && (
           <>
             {activeTab === 'pricing'    && <PricingTab    initialData={config.pricing}    />}
             {activeTab === 'styles'     && <StylesTab     initialData={config.styles}     />}

@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import PriceCard from '@/components/results/PriceCard'
 import ArtistCard from '@/components/results/ArtistCard'
@@ -12,29 +13,42 @@ function ResultsContent() {
   const [lead, setLead] = useState<Lead | null>(null)
   const [allArtists, setAllArtists] = useState<Artist[]>([])
   const [xlConfig, setXlConfig] = useState<XlConfig | undefined>(undefined)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Loading is derived from observable state — avoids synchronous setState in
+  // an effect just to drop a spinner.
+  const loading = !error && !lead && id !== null
+  const missingId = id === null
 
   useEffect(() => {
-    if (!id) {
-      setError('No estimate ID provided.')
-      setLoading(false)
-      return
-    }
+    if (!id) return
+    let cancelled = false
     Promise.all([
       fetch(`/api/submit-lead?id=${encodeURIComponent(id)}`).then(r => r.json()),
       fetch('/api/artists').then(r => r.json()),
       fetch('/api/xl-config').then(r => r.json()),
     ])
       .then(([leadData, artistsData, xlData]) => {
+        if (cancelled) return
         if (leadData.error) throw new Error(leadData.error)
         setLead(leadData)
         if (Array.isArray(artistsData)) setAllArtists(artistsData)
         if (xlData && typeof xlData === 'object') setXlConfig(xlData as XlConfig)
       })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
+      .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : 'Load failed') })
+    return () => { cancelled = true }
   }, [id])
+
+  if (missingId && !error) {
+    return (
+      <div className="min-h-screen bg-[var(--brand-bg)] flex items-center justify-center px-4">
+        <div className="text-center">
+          <p className="text-[var(--brand-primary)] font-bold mb-2">Estimate not found</p>
+          <p className="text-sm text-[var(--brand-text-mid)]">No estimate ID provided.</p>
+          <Link href="/" className="mt-4 inline-block text-sm text-[var(--brand-primary)] underline">Start over</Link>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -50,7 +64,7 @@ function ResultsContent() {
         <div className="text-center">
           <p className="text-[var(--brand-primary)] font-bold mb-2">Estimate not found</p>
           <p className="text-sm text-[var(--brand-text-mid)]">{error}</p>
-          <a href="/" className="mt-4 inline-block text-sm text-[var(--brand-primary)] underline">Start over</a>
+          <Link href="/" className="mt-4 inline-block text-sm text-[var(--brand-primary)] underline">Start over</Link>
         </div>
       </div>
     )
@@ -94,11 +108,11 @@ function ResultsContent() {
         <BookingCTA />
 
         <p className="text-center text-xs text-[var(--brand-text-mid)]">
-          We've sent a copy to {lead.email}
+          We&apos;ve sent a copy to {lead.email}
         </p>
 
         <div className="text-center">
-          <a href="/" className="text-sm text-[var(--brand-text-mid)] underline hover:text-[var(--brand-text)]">Start a new estimate</a>
+          <Link href="/" className="text-sm text-[var(--brand-text-mid)] underline hover:text-[var(--brand-text)]">Start a new estimate</Link>
         </div>
       </div>
     </div>

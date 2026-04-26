@@ -171,7 +171,7 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
       <div className="rounded-2xl bg-[var(--brand-primary)] p-5 text-center">
         <h3 className="text-base font-black mb-1 text-[var(--brand-primary-text)]">Ready to book your session?</h3>
         <p className="text-sm mb-3 text-[var(--brand-primary-text)] opacity-80">
-          Book a free consultation — we'll nail down the design, placement, and final price together.
+          Book a free consultation — we&apos;ll nail down the design, placement, and final price together.
         </p>
         <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
           className="inline-block rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[var(--brand-primary)] hover:opacity-90">
@@ -179,7 +179,7 @@ function ResultsView({ leadId, onReset }: { leadId: string; onReset: () => void 
         </a>
       </div>
 
-      <p className="text-center text-xs text-[var(--brand-text-mid)]">We've sent a copy to {lead.email}</p>
+      <p className="text-center text-xs text-[var(--brand-text-mid)]">We&apos;ve sent a copy to {lead.email}</p>
 
       <button type="button" onClick={onReset}
         className="block mx-auto text-xs text-[var(--brand-text-mid)] underline hover:text-[var(--brand-text)] cursor-pointer">
