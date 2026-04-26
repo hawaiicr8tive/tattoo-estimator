@@ -31,6 +31,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Single-needle origins in 1970s East LA prison and Chicano scenes (Jack Rudy, Freddy Negrete, Charlie Cartwright at Good Time Charlie\'s). Resurfaced as celebrity-friendly micro tattoos around 2005, then exploded post-2017 with Dr. Woo and Instagram-native artists.',
     origin: 1970,
+    parentId: 'black-grey-chicano',
     ancestors: ['black-grey-chicano'],
     curve: [
       { year: 1975, value: 42 },
@@ -93,6 +94,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Emerged in the late 1990s with rotary machines and refined cartridges; matured around 2010 with hyperrealism. High-effort, high-skill style that competes with portraiture and oil painting.',
     origin: 1995,
+    parentId: 'black-grey-chicano',
     ancestors: ['black-grey-chicano'],
     curve: [
       { year: 2000, value: 35 },
@@ -106,12 +108,50 @@ const tattooStyles: StyleStrand[] = [
     pioneers: ['Nikko Hurtado', 'Bob Tyrrell'],
   },
   {
+    id: 'hyperrealism',
+    label: 'Hyperrealism',
+    tagline: 'Skin-as-photography, every micro-shadow',
+    description:
+      'A 2010s extreme of realism — pushed by competition culture and Instagram zoom. Long sittings, color charts, airbrush-style gradients. Ages well only with a master; technically punishing.',
+    origin: 2008,
+    parentId: 'realism',
+    ancestors: ['realism', 'black-grey-chicano'],
+    curve: [
+      { year: 2010, value: 35 },
+      { year: 2016, value: 78 },
+      { year: 2020, value: 82 },
+      { year: 2024, value: 70 },
+      { year: 2025, value: 64 },
+    ],
+    signals: ['competition culture', 'long sittings', 'technical mastery'],
+    tags: ['detailed', 'monochrome', 'modern'],
+  },
+  {
+    id: 'mandala',
+    label: 'Mandala',
+    tagline: 'Symmetric circular sacred geometry',
+    description:
+      'Subset of geometric/blackwork built on radial symmetry, rooted in Hindu/Buddhist iconography. Surged with the 2014 sacred-geometry wave; durable as a center-of-piece motif inside larger ornamental sleeves.',
+    origin: 2012,
+    parentId: 'geometric',
+    ancestors: ['geometric', 'blackwork', 'dotwork'],
+    curve: [
+      { year: 2014, value: 55 },
+      { year: 2018, value: 72 },
+      { year: 2022, value: 60 },
+      { year: 2025, value: 56 },
+    ],
+    signals: ['symmetry', 'spiritual', 'craft'],
+    tags: ['blackwork', 'pattern', 'modern'],
+  },
+  {
     id: 'micro-realism',
     label: 'Micro Realism',
     tagline: 'Realism shrunk to a coin',
     description:
       'Korean and Spanish scenes (Inal Bersekov, Eva Krbdk) compressed full realism into 2-inch panels with fine line outlines. Defined the late 2010s Instagram aesthetic of pets, flowers and tiny still lifes.',
     origin: 2014,
+    parentId: 'fine-line',
     ancestors: ['fine-line', 'realism'],
     curve: [
       { year: 2016, value: 30 },
@@ -130,6 +170,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Expands Americana with deeper palettes, soft gradients, art nouveau line weights. Late-2000s wave (Jeff Gogue, Russ Abbott) into a steady mainstream presence.',
     origin: 2005,
+    parentId: 'americana-traditional',
     ancestors: ['americana-traditional'],
     curve: [
       { year: 2008, value: 45 },
@@ -147,6 +188,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Mid-1990s Skribblz / Marcus Pacheco era. Exaggerated proportions, 3D rendering, graffiti DNA. Faded after 2005, low-key revival forming in collaboration with cyber sigilism artists.',
     origin: 1990,
+    parentId: 'americana-traditional',
     ancestors: ['americana-traditional'],
     curve: [
       { year: 1995, value: 55 },
@@ -183,6 +225,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Distinct from tribal; descends from European etching, mehndi, sacred geometry. Strongly tied to ornamental, mandala and dotwork. Steady riser since 2012.',
     origin: 2008,
+    parentId: 'tribal',
     ancestors: ['tribal'],
     curve: [
       { year: 2012, value: 40 },
@@ -217,6 +260,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Mandala and sacred geometry boom around 2013, often paired with dotwork or fine line. Now a substyle backbone for ornamental and cyber sigilism.',
     origin: 2010,
+    parentId: 'blackwork',
     ancestors: ['dotwork', 'blackwork'],
     curve: [
       { year: 2013, value: 55 },
@@ -234,6 +278,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Early-2010s viral aesthetic (Ondrash). Aged poorly; popularity peaked then fell as collectors saw 5-year results. Lives on as an accent inside neo-traditional.',
     origin: 2010,
+    parentId: 'neo-traditional',
     ancestors: ['neo-traditional'],
     curve: [
       { year: 2013, value: 70 },
@@ -251,6 +296,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Buena Vista Tattoo Club, Germany. Early 2010s peak. Photorealism + brushstrokes + typographic noise.',
     origin: 2008,
+    parentId: 'realism',
     ancestors: ['realism'],
     curve: [
       { year: 2012, value: 60 },
@@ -268,6 +314,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'A 2020+ TikTok-fueled fusion: tribal silhouettes, fine line execution, sigil and Y2K typography. Compresses the canonical 22-year cycle to ~4 years end-to-end.',
     origin: 2020,
+    parentId: 'blackwork',
     ancestors: ['fine-line', 'tribal', 'blackwork'],
     curve: [
       { year: 2021, value: 28 },
@@ -284,6 +331,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Driven by post-2018 anime mainstreaming. Big in Asia and Latin America. Often colored, often single-panel comp.',
     origin: 2015,
+    parentId: 'new-school',
     ancestors: ['new-school', 'neo-traditional'],
     curve: [
       { year: 2018, value: 40 },
@@ -317,6 +365,7 @@ const tattooStyles: StyleStrand[] = [
     description:
       'Decorative blackwork descended from mehndi and Eastern European ornament. Used as clothing-line work that follows anatomy.',
     origin: 2014,
+    parentId: 'blackwork',
     ancestors: ['blackwork', 'dotwork'],
     curve: [
       { year: 2016, value: 45 },

@@ -47,6 +47,7 @@ export default function StrandMap({ styles, highlightId, onPick }: Props) {
     const hi = styles.find(s => s.id === highlightId)
     if (!me || !hi) return false
     if (me.ancestors.includes(highlightId) || hi.ancestors.includes(id)) return true
+    if (me.parentId === highlightId || hi.parentId === id) return true
     return false
   }
 
@@ -70,16 +71,35 @@ export default function StrandMap({ styles, highlightId, onPick }: Props) {
             const dim = highlightId && !relatedToHi(s.id) && !relatedToHi(aid)
             return (
               <line
-                key={`${aid}->${s.id}`}
+                key={`anc:${aid}->${s.id}`}
                 x1={a.x + 170} y1={a.y + 14}
                 x2={b.x} y2={b.y + 14}
-                stroke="#94a3b8"
+                stroke="#cbd5e1"
                 strokeWidth={1}
-                opacity={dim ? 0.15 : 0.7}
+                strokeDasharray="3 3"
+                opacity={dim ? 0.1 : 0.6}
               />
             )
           }),
         )}
+
+        {styles.map(s => {
+          if (!s.parentId) return null
+          const a = positions.get(s.parentId)
+          const b = positions.get(s.id)
+          if (!a || !b) return null
+          const dim = highlightId && !relatedToHi(s.id) && !relatedToHi(s.parentId)
+          return (
+            <line
+              key={`par:${s.parentId}->${s.id}`}
+              x1={a.x + 170} y1={a.y + 14}
+              x2={b.x} y2={b.y + 14}
+              stroke="#7B0000"
+              strokeWidth={1.5}
+              opacity={dim ? 0.2 : 0.85}
+            />
+          )
+        })}
 
         {styles.map(s => {
           const p = positions.get(s.id)
@@ -106,6 +126,16 @@ export default function StrandMap({ styles, highlightId, onPick }: Props) {
           )
         })}
       </svg>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-600">
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="#7B0000" strokeWidth="1.5" /></svg>
+          parent / sub-style
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" /></svg>
+          ancestral lineage
+        </span>
+      </div>
     </div>
   )
 }

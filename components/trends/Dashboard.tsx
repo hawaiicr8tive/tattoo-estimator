@@ -29,6 +29,7 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
   const dueForReturn = forecasts.filter(
     f => f.trajectory === 'dormant' && f.cycle && f.cycle.yearsToNextPeak > 0 && f.cycle.yearsToNextPeak <= 12,
   )
+  const saturationWatch = forecasts.filter(f => f.saturationLabel !== 'low')
 
   function pick(id: string) {
     setHighlightId(prev => (prev === id ? null : id))
@@ -58,6 +59,7 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
             cresting={cresting.length}
             rising={rising.length}
             dueForReturn={dueForReturn.length}
+            saturationWatch={saturationWatch.length}
             currentYear={currentYear}
           />
 
@@ -132,23 +134,25 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
   )
 }
 
-function SummaryStrip({ cresting, rising, dueForReturn, currentYear }: { cresting: number; rising: number; dueForReturn: number; currentYear: number }) {
+function SummaryStrip({ cresting, rising, dueForReturn, saturationWatch, currentYear }: { cresting: number; rising: number; dueForReturn: number; saturationWatch: number; currentYear: number }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       <Card label="Cresting now" value={cresting.toString()} sub={`${currentYear} leaders`} tone="amber" />
       <Card label="Rising" value={rising.toString()} sub="momentum gaining" tone="emerald" />
       <Card label="Due for return" value={dueForReturn.toString()} sub="dormant cycle hits" tone="slate" />
+      <Card label="Saturation watch" value={saturationWatch.toString()} sub="primed to fade" tone="orange" />
       <Card label="Cycle assumption" value="22 yr" sub="compresses ~55% online" tone="rose" />
     </div>
   )
 }
 
-function Card({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: 'amber' | 'emerald' | 'slate' | 'rose' }) {
+function Card({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: 'amber' | 'emerald' | 'slate' | 'rose' | 'orange' }) {
   const tones = {
     amber: 'border-amber-200 bg-amber-50',
     emerald: 'border-emerald-200 bg-emerald-50',
     slate: 'border-slate-200 bg-slate-50',
     rose: 'border-rose-200 bg-rose-50',
+    orange: 'border-orange-200 bg-orange-50',
   } as const
   return (
     <div className={`rounded-xl border ${tones[tone]} px-3 py-2.5`}>

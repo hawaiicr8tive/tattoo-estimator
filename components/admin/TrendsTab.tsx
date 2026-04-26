@@ -341,7 +341,19 @@ function StrandCard({ index, strand, allStrands, expanded, onToggle, onUpdate, o
                 className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
               />
             </Field>
-            <Field label="Ancestors">
+            <Field label="Parent (sub-style of)">
+              <select
+                value={strand.parentId ?? ''}
+                onChange={e => onUpdate({ parentId: e.target.value || undefined })}
+                className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm bg-white"
+              >
+                <option value="">— top-level —</option>
+                {ancestorOptions.map(o => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Ancestors (full lineage)" className="sm:col-span-2">
               <select
                 multiple
                 value={strand.ancestors}

@@ -22,6 +22,11 @@ export interface StyleStrand {
   description: string
   /** Earliest credible emergence year. */
   origin: number
+  /**
+   * Canonical immediate parent for sub-style hierarchy. Distinct from `ancestors`,
+   * which is the full historical lineage. A strand is top-level if this is unset.
+   */
+  parentId?: string
   /** Lineage: parent style ids this descends from. */
   ancestors: string[]
   /** Hand-tuned popularity curve over time. Sparse points are fine; the engine interpolates. */
@@ -61,8 +66,13 @@ export interface DetectedCycle {
 export interface TrendForecast {
   styleId: string
   label: string
-  /** Right-now momentum score 0-100. */
+  parentId?: string
+  /** Right-now momentum score 0-100, recency-weighted. */
   momentum: number
+  /** 0-100 likelihood the style is at/near saturation and primed to fade. */
+  saturationRisk: number
+  /** Plain-language label for the saturation bucket. */
+  saturationLabel: 'low' | 'watch' | 'high'
   /** Direction of travel for the next 24 months. */
   trajectory: 'rising' | 'cresting' | 'declining' | 'dormant'
   /** Years until projected peak (negative if past peak). */
