@@ -1,13 +1,16 @@
 import Dashboard from '@/components/trends/Dashboard'
-import { TATTOO_DATASET, FASHION_DATASET, MUSIC_DATASET, INTERIOR_DATASET } from '@/lib/trends/data'
+import { loadAllDatasets } from '@/lib/trends/store'
 
 export const metadata = {
   title: 'Style Cycle Dashboard | Tattoolicious',
   description: 'Predict upcoming styles from historical strands, cycle math, and fusion anomalies.',
 }
 
-export default function TrendsPage() {
-  const datasets = [TATTOO_DATASET, FASHION_DATASET, MUSIC_DATASET, INTERIOR_DATASET]
+// Always render fresh — datasets are admin-editable.
+export const dynamic = 'force-dynamic'
+
+export default async function TrendsPage() {
+  const datasets = await loadAllDatasets()
   const currentYear = new Date().getFullYear()
   return (
     <div className="min-h-screen bg-[var(--brand-bg)] px-4 py-8">

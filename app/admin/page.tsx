@@ -7,6 +7,7 @@ import PlacementsTab from '@/components/admin/PlacementsTab'
 import ArtistsTab from '@/components/admin/ArtistsTab'
 import LeadsTab from '@/components/admin/LeadsTab'
 import BrandingTab from '@/components/admin/BrandingTab'
+import TrendsTab from '@/components/admin/TrendsTab'
 import type { AdminConfig } from '@/lib/admin-types'
 
 const TABS = [
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'placements', label: 'Placements' },
   { id: 'artists',    label: 'Artists' },
   { id: 'branding',   label: 'Branding' },
+  { id: 'trends',     label: 'Trends' },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -145,15 +147,16 @@ export default function AdminPage() {
       <main className="mx-auto max-w-7xl px-4 py-8">
         {/* Leads tab doesn't need config */}
         {activeTab === 'leads' && <LeadsTab />}
+        {activeTab === 'trends' && <TrendsTab />}
 
         {/* Config tabs */}
-        {activeTab !== 'leads' && configLoading && (
+        {activeTab !== 'leads' && activeTab !== 'trends' && configLoading && (
           <p className="text-[#555555] py-12 text-center">Loading configuration…</p>
         )}
-        {activeTab !== 'leads' && configError && (
+        {activeTab !== 'leads' && activeTab !== 'trends' && configError && (
           <p className="text-red-600 py-4">{configError}</p>
         )}
-        {activeTab !== 'leads' && !configLoading && !configError && config && (
+        {activeTab !== 'leads' && activeTab !== 'trends' && !configLoading && !configError && config && (
           <>
             {activeTab === 'pricing'    && <PricingTab    initialData={config.pricing}    />}
             {activeTab === 'styles'     && <StylesTab     initialData={config.styles}     />}
