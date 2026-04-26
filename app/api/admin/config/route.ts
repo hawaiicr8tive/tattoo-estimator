@@ -78,6 +78,7 @@ export async function GET() {
       artists:    saved.artists    ?? defaults.artists,
       branding:   saved.branding   ?? {},
       xlConfig:   saved.xlConfig   ?? defaults.xlConfig,
+      notifications: saved.notifications ?? { studioEmail: '' },
     })
   } catch {
     return NextResponse.json(buildDefaultConfig())

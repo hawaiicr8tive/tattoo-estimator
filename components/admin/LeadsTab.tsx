@@ -60,6 +60,27 @@ export default function LeadsTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
 
+  const [studioEmail, setStudioEmail] = useState('')
+  const [savedStudioEmail, setSavedStudioEmail] = useState('')
+  const [studioEmailLoaded, setStudioEmailLoaded] = useState(false)
+  const [savingStudioEmail, setSavingStudioEmail] = useState(false)
+  const [studioEmailStatus, setStudioEmailStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/config')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        const value = (data?.notifications?.studioEmail as string | undefined) ?? ''
+        setStudioEmail(value)
+        setSavedStudioEmail(value)
+        setStudioEmailLoaded(true)
+      })
+      .catch(() => { if (!cancelled) setStudioEmailLoaded(true) })
+    return () => { cancelled = true }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     const params = new URLSearchParams()
@@ -151,6 +172,28 @@ export default function LeadsTab() {
   const datesDirty = pendingFrom !== from || pendingTo !== to
   const datesActive = from !== '' || to !== ''
 
+  const studioEmailDirty = studioEmail.trim() !== savedStudioEmail.trim()
+
+  async function saveStudioEmail() {
+    setSavingStudioEmail(true)
+    setStudioEmailStatus('idle')
+    try {
+      const res = await fetch('/api/admin/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'notifications', data: { studioEmail: studioEmail.trim() } }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      setSavedStudioEmail(studioEmail.trim())
+      setStudioEmailStatus('saved')
+      setTimeout(() => setStudioEmailStatus('idle'), 2000)
+    } catch {
+      setStudioEmailStatus('error')
+    } finally {
+      setSavingStudioEmail(false)
+    }
+  }
+
   const INPUT = 'rounded-lg border border-gray-300 px-3 py-2 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent'
 
   return (
@@ -160,6 +203,39 @@ export default function LeadsTab() {
         <span className="text-sm text-[#555555]">
           {leads.length} shown{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
         </span>
+      </div>
+
+      <div className="rounded-xl bg-white border border-gray-200 p-4 mb-6">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <h3 className="text-sm font-bold text-[#0A0A0A]">Settings</h3>
+          {studioEmailStatus === 'saved' && <span className="text-xs text-green-600">✓ Saved</span>}
+          {studioEmailStatus === 'error' && <span className="text-xs text-red-600">Save failed</span>}
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-[#555555]">Notification email (where new lead alerts go)</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="text"
+              value={studioEmail}
+              onChange={e => setStudioEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && studioEmailDirty && !savingStudioEmail && saveStudioEmail()}
+              placeholder={studioEmailLoaded ? 'name@example.com' : 'Loading…'}
+              disabled={!studioEmailLoaded}
+              className="flex-1 min-w-[240px] rounded-lg border border-gray-300 px-3 py-2 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[#7B0000] focus:border-transparent disabled:bg-gray-50"
+            />
+            <button
+              type="button"
+              onClick={saveStudioEmail}
+              disabled={!studioEmailDirty || savingStudioEmail || !studioEmailLoaded}
+              className="rounded-lg bg-[#7B0000] px-4 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {savingStudioEmail ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+          <span className="text-xs text-[#555555] mt-1">
+            Leave blank to use the default. Separate multiple addresses with commas.
+          </span>
+        </label>
       </div>
 
       <div className="flex items-end justify-between gap-3 mb-4 flex-wrap">

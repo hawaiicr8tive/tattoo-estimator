@@ -73,12 +73,13 @@ export async function POST(req: NextRequest) {
     // Fetch config from Supabase in parallel
     let extraStyleMultipliers: Record<string, number> | undefined
     let artistPool: Artist[] = artistsData as Artist[]
+    let configuredStudioEmail: string | undefined
     try {
       const db = getServiceClient()
       const { data: cfgRows } = await db
         .from('admin_config')
         .select('key, data')
-        .in('key', ['styles', 'artists'])
+        .in('key', ['styles', 'artists', 'notifications'])
       if (cfgRows) {
         const byKey = Object.fromEntries(cfgRows.map(r => [r.key, r.data]))
         if (byKey.styles) {
@@ -88,6 +89,9 @@ export async function POST(req: NextRequest) {
         }
         if (byKey.artists && Array.isArray(byKey.artists) && byKey.artists.length > 0) {
           artistPool = byKey.artists as Artist[]
+        }
+        if (byKey.notifications && typeof (byKey.notifications as { studioEmail?: unknown }).studioEmail === 'string') {
+          configuredStudioEmail = (byKey.notifications as { studioEmail: string }).studioEmail
         }
       }
     } catch { /* use defaults */ }
@@ -123,11 +127,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to save estimate' }, { status: 500, headers: CORS })
     }
 
-    // Send email notification to studio
-    const studioEmail = process.env.STUDIO_EMAIL ?? 'sean_m@tattoolicious.com'
+    // Send email notification to studio. Priority: admin_config → env var → hardcoded default.
+    const rawStudioEmail = configuredStudioEmail?.trim() || process.env.STUDIO_EMAIL || 'sean_m@tattoolicious.com'
+    const studioRecipients = rawStudioEmail.split(',').map(s => s.trim()).filter(Boolean)
     await resend.emails.send({
       from: 'Tattoolicious Estimator <noreply@tattoolicious.com>',
-      to: studioEmail,
+      to: studioRecipients.length > 1 ? studioRecipients : studioRecipients[0],
       subject: `New estimate: ${firstName} (${style}, ${size})`,
       html: `
         <h2>New Estimate Submitted</h2>
