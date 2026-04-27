@@ -1,4 +1,4 @@
-export type IndustryId = 'tattoo' | 'fashion' | 'music' | 'interior'
+export type IndustryId = 'tattoo' | 'fashion' | 'walkin' | 'music' | 'interior'
 
 export interface Industry {
   id: IndustryId
@@ -11,6 +11,23 @@ export interface PopularityPoint {
   year: number
   /** 0-100 popularity index in the relevant scene */
   value: number
+}
+
+export type TriggerMedium = 'film' | 'tv' | 'music' | 'celebrity' | 'viral' | 'literature' | 'sports' | 'other'
+export type TriggerImpact = 'high' | 'medium' | 'low'
+
+/**
+ * A specific cultural event credibly tied to a strand's wave — a film
+ * release, a celebrity moment, a viral TikTok. Used by the engine and
+ * AI Research to reason about event-driven motifs (especially in the
+ * walk-in / flash domain where motif waves are anchored to releases).
+ */
+export interface CulturalTrigger {
+  year: number
+  name: string
+  medium: TriggerMedium
+  impact: TriggerImpact
+  notes?: string
 }
 
 export interface StyleStrand {
@@ -37,6 +54,8 @@ export interface StyleStrand {
   tags: string[]
   /** Authors / scenes that defined the canonical wave. */
   pioneers?: string[]
+  /** Specific cultural events that drove waves (films, celebs, viral moments). */
+  triggers?: CulturalTrigger[]
 }
 
 export interface IndustryDataset {

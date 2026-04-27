@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import SaveBar from './SaveBar'
-import type { IndustryDataset, PopularityPoint, StyleStrand } from '@/lib/trends/types'
+import type { CulturalTrigger, IndustryDataset, PopularityPoint, StyleStrand, TriggerImpact, TriggerMedium } from '@/lib/trends/types'
 
 const INDUSTRIES = [
   { id: 'tattoo', label: 'Tattoo' },
   { id: 'fashion', label: 'Fashion' },
+  { id: 'walkin', label: 'Walk-in / Flash' },
   { id: 'music', label: 'Music' },
   { id: 'interior', label: 'Interior' },
 ] as const
@@ -373,6 +374,8 @@ function StrandCard({ index, strand, allStrands, expanded, onToggle, onUpdate, o
 
           <CurveEditor curve={strand.curve} onChange={c => onUpdate({ curve: c })} />
 
+          <TriggersEditor triggers={strand.triggers ?? []} onChange={t => onUpdate({ triggers: t.length > 0 ? t : undefined })} />
+
           <div className="flex justify-end pt-2 border-t border-gray-100">
             <button
               type="button"
@@ -457,6 +460,73 @@ function CurveEditor({ curve, onChange }: { curve: PopularityPoint[]; onChange: 
                 onChange={e => update(i, { value: Number(e.target.value) })}
                 className="w-16 rounded border border-gray-300 px-2 py-1 text-sm"
               />
+              <button type="button" onClick={() => remove(i)} className="text-xs text-red-600 hover:text-red-800">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const TRIGGER_MEDIA: TriggerMedium[] = ['film', 'tv', 'music', 'celebrity', 'viral', 'literature', 'sports', 'other']
+const TRIGGER_IMPACTS: TriggerImpact[] = ['low', 'medium', 'high']
+
+function TriggersEditor({ triggers, onChange }: { triggers: CulturalTrigger[]; onChange: (t: CulturalTrigger[]) => void }) {
+  function addTrigger() {
+    const last = triggers[triggers.length - 1]
+    const year = last ? last.year + 1 : new Date().getFullYear()
+    onChange([
+      ...triggers,
+      { year, name: '', medium: 'film', impact: 'medium' },
+    ])
+  }
+  function update(i: number, patch: Partial<CulturalTrigger>) {
+    const next = triggers.slice()
+    next[i] = { ...next[i], ...patch }
+    onChange(next)
+  }
+  function remove(i: number) {
+    onChange(triggers.filter((_, idx) => idx !== i))
+  }
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-[#555555]">Cultural triggers (films, celebs, viral moments)</span>
+        <button type="button" onClick={addTrigger} className="text-xs underline text-[#7B0000]">+ Add trigger</button>
+      </div>
+      {triggers.length === 0 ? (
+        <p className="text-xs text-[#555555] italic">No triggers — add film releases, celebrity moments, or viral waves that pushed this strand.</p>
+      ) : (
+        <div className="space-y-1">
+          {triggers.map((t, i) => (
+            <div key={i} className="grid grid-cols-[80px_1fr_110px_90px_24px] items-center gap-2">
+              <input
+                type="number"
+                value={t.year}
+                onChange={e => update(i, { year: Number(e.target.value) })}
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+              />
+              <input
+                value={t.name}
+                onChange={e => update(i, { name: e.target.value })}
+                placeholder="e.g. Lilo & Stitch (live action)"
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+              />
+              <select
+                value={t.medium}
+                onChange={e => update(i, { medium: e.target.value as TriggerMedium })}
+                className="rounded border border-gray-300 px-2 py-1 text-sm bg-white"
+              >
+                {TRIGGER_MEDIA.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select
+                value={t.impact}
+                onChange={e => update(i, { impact: e.target.value as TriggerImpact })}
+                className="rounded border border-gray-300 px-2 py-1 text-sm bg-white"
+              >
+                {TRIGGER_IMPACTS.map(im => <option key={im} value={im}>{im}</option>)}
+              </select>
               <button type="button" onClick={() => remove(i)} className="text-xs text-red-600 hover:text-red-800">×</button>
             </div>
           ))}

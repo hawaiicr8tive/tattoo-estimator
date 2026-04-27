@@ -8,6 +8,7 @@ import type { ResearchHistoryEntry } from '@/lib/trends/research-history'
 const INDUSTRIES = [
   { id: 'tattoo', label: 'Tattoo' },
   { id: 'fashion', label: 'Fashion' },
+  { id: 'walkin', label: 'Walk-in / Flash' },
   { id: 'music', label: 'Music' },
   { id: 'interior', label: 'Interior' },
 ] as const

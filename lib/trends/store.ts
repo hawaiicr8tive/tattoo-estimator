@@ -32,10 +32,11 @@ export async function loadIndustryDataset(industryId: string): Promise<IndustryD
  * Load every supported industry dataset.
  */
 export async function loadAllDatasets(): Promise<IndustryDataset[]> {
-  const ids: IndustryId[] = ['tattoo', 'fashion', 'music', 'interior']
+  const ids: IndustryId[] = ['tattoo', 'fashion', 'walkin', 'music', 'interior']
   const seedMap: Record<string, IndustryDataset> = {
     tattoo: DATASETS.tattoo,
     fashion: DATASETS.fashion,
+    walkin: DATASETS.walkin,
     music: DATASETS.music,
     interior: DATASETS.interior,
   }

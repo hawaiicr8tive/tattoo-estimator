@@ -736,6 +736,492 @@ export const FASHION_DATASET: IndustryDataset = {
   yearRange: { start: 1955, end: 2030 },
 }
 
+export const WALKIN_DATASET: IndustryDataset = {
+  industry: {
+    id: 'walkin',
+    label: 'Walk-in / Flash',
+    blurb: 'Motif-level cycles tied to films, celebrities, and viral moments. Cycle window 4-8 years.',
+    status: 'active',
+  },
+  styles: [
+    {
+      id: 'butterfly',
+      label: 'Butterfly',
+      tagline: 'Y2K signifier; perennial women\'s motif',
+      description:
+        'Surged with Britney/Aaliyah Y2K era (2000-03), faded mid-2000s, returned hard 2020+ on TikTok. The flagship event-driven motif: small fineline butterflies are now a dominant first-tattoo choice for women under 30.',
+      origin: 1995,
+      ancestors: [],
+      curve: [
+        { year: 2001, value: 78 },
+        { year: 2008, value: 30 },
+        { year: 2018, value: 22 },
+        { year: 2022, value: 78 },
+        { year: 2025, value: 82 },
+      ],
+      signals: ['y2k revival', 'tiktok-native', 'feminine micro'],
+      tags: ['feminine', 'micro', 'fineline-friendly'],
+      triggers: [
+        { year: 2001, name: 'Britney Spears Crazy / Toxic era', medium: 'celebrity', impact: 'high' },
+        { year: 2003, name: 'Mariah Carey butterfly motif', medium: 'celebrity', impact: 'medium' },
+        { year: 2020, name: 'Y2K TikTok revival', medium: 'viral', impact: 'high' },
+      ],
+    },
+    {
+      id: 'dolphin',
+      label: 'Dolphin',
+      tagline: 'Lower-back wave, 2000-2005 women\'s spike',
+      description:
+        'Defining motif of the early-2000s "tramp stamp" era. Tied to spring-break Sea World aesthetics and pre-Y2K beach culture. Sharp decline post-2008; hasn\'t returned and probably won\'t in this form.',
+      origin: 1998,
+      ancestors: [],
+      curve: [
+        { year: 2002, value: 75 },
+        { year: 2007, value: 45 },
+        { year: 2012, value: 18 },
+        { year: 2020, value: 8 },
+        { year: 2025, value: 6 },
+      ],
+      signals: ['pinterest era', 'beach culture', 'fast cycle'],
+      tags: ['feminine', 'declined', 'lower-back'],
+      triggers: [
+        { year: 1996, name: 'Free Willy 3', medium: 'film', impact: 'low' },
+        { year: 2000, name: 'Spring break / MTV beach culture', medium: 'tv', impact: 'high' },
+      ],
+    },
+    {
+      id: 'fairy',
+      label: 'Fairy',
+      tagline: 'Mid-2000s women\'s flash, hip/back placement',
+      description:
+        'Tinkerbell-influenced fairies on hips and shoulder blades, 2004-2009 peak. Faded; partial micro-revival inside 2024 fairycore aesthetic but not as the dominant motif it once was.',
+      origin: 2002,
+      ancestors: [],
+      curve: [
+        { year: 2006, value: 70 },
+        { year: 2012, value: 25 },
+        { year: 2020, value: 12 },
+        { year: 2024, value: 26 },
+        { year: 2025, value: 30 },
+      ],
+      signals: ['fantasy', 'feminine', 'fairycore-adjacent'],
+      tags: ['feminine', 'illustrative'],
+      triggers: [
+        { year: 2003, name: 'Peter Pan (live action)', medium: 'film', impact: 'medium' },
+        { year: 2008, name: 'Tinker Bell (Disney)', medium: 'film', impact: 'medium' },
+      ],
+    },
+    {
+      id: 'star-cluster',
+      label: 'Stars / Star Cluster',
+      tagline: 'Wrist and neckline trails, 2005-2012',
+      description:
+        'Small five-point stars in clusters, often trailing from a larger one. Hugely common 2005-2012 then aged out. Constellation tattoos (separate id) absorbed the demand from 2018+.',
+      origin: 2003,
+      ancestors: [],
+      curve: [
+        { year: 2007, value: 72 },
+        { year: 2014, value: 30 },
+        { year: 2020, value: 15 },
+        { year: 2025, value: 12 },
+      ],
+      signals: ['scenester', 'mall tattoo', 'declined'],
+      tags: ['feminine', 'graphic', 'declined'],
+      triggers: [
+        { year: 2005, name: 'Rihanna shoulder stars', medium: 'celebrity', impact: 'medium' },
+      ],
+    },
+    {
+      id: 'infinity-symbol',
+      label: 'Infinity Symbol',
+      tagline: '"Live laugh love" of tattoos',
+      description:
+        '∞ alone or merged with words, a heart, or feathers. 2010-2015 peak driven by Pinterest-quote culture. Heavy decline since; now considered a mall-tattoo cliché but still walked-in.',
+      origin: 2009,
+      ancestors: [],
+      curve: [
+        { year: 2012, value: 78 },
+        { year: 2017, value: 45 },
+        { year: 2022, value: 22 },
+        { year: 2025, value: 18 },
+      ],
+      signals: ['pinterest era', 'declined', 'walk-in standard'],
+      tags: ['feminine', 'graphic', 'declined'],
+      triggers: [
+        { year: 2010, name: 'Pinterest visual era', medium: 'viral', impact: 'high' },
+      ],
+    },
+    {
+      id: 'feather-to-birds',
+      label: 'Feather Dissolving Into Birds',
+      tagline: 'Single feather where tip becomes flying birds',
+      description:
+        'A graphic device popularized 2011-2015, often paired with a quote. Tied to Pinterest/Tumblr era and migration/freedom symbolism. Saturated then declined.',
+      origin: 2010,
+      ancestors: [],
+      curve: [
+        { year: 2013, value: 70 },
+        { year: 2018, value: 30 },
+        { year: 2025, value: 14 },
+      ],
+      signals: ['pinterest era', 'symbolic', 'declined'],
+      tags: ['graphic', 'declined'],
+      triggers: [
+        { year: 2011, name: 'Tumblr image culture', medium: 'viral', impact: 'high' },
+      ],
+    },
+    {
+      id: 'anchor',
+      label: 'Anchor',
+      tagline: 'Hipster nautical wave, 2012-2017',
+      description:
+        'Sailor Jerry classic that broke into mainstream walk-in via the 2012-2016 hipster nautical aesthetic (anchors + roses + swallows). Still common but no longer trending.',
+      origin: 2010,
+      parentId: 'compass-rose',
+      ancestors: [],
+      curve: [
+        { year: 2014, value: 72 },
+        { year: 2018, value: 50 },
+        { year: 2025, value: 32 },
+      ],
+      signals: ['nautical', 'hipster wave'],
+      tags: ['unisex', 'classic'],
+      triggers: [
+        { year: 2003, name: 'Pirates of the Caribbean', medium: 'film', impact: 'medium' },
+      ],
+    },
+    {
+      id: 'compass-rose',
+      label: 'Compass Rose',
+      tagline: 'Nautical compass, often with mountains or coordinates',
+      description:
+        'Travel-symbolism wave 2014-2019, frequently combined with mountains, oceans, or coordinates of meaningful places. Heavy in walk-in flash for "wanderlust" demographic.',
+      origin: 2013,
+      ancestors: [],
+      curve: [
+        { year: 2016, value: 78 },
+        { year: 2020, value: 55 },
+        { year: 2025, value: 38 },
+      ],
+      signals: ['wanderlust', 'instagram-native'],
+      tags: ['unisex', 'graphic'],
+    },
+    {
+      id: 'arrow',
+      label: 'Arrow',
+      tagline: 'Forearm arrows, often in a row',
+      description:
+        '2014-2017 microtrend. Single arrow on forearm/finger, sometimes in pairs as friendship or sibling tattoos. Faded fast.',
+      origin: 2013,
+      ancestors: [],
+      curve: [
+        { year: 2015, value: 68 },
+        { year: 2019, value: 30 },
+        { year: 2025, value: 14 },
+      ],
+      signals: ['minimalism', 'friendship', 'fast cycle'],
+      tags: ['unisex', 'declined', 'micro'],
+    },
+    {
+      id: 'mountain-range',
+      label: 'Minimalist Mountain Range',
+      tagline: 'Single-line peaks, often on forearm or rib',
+      description:
+        '2015-2020 peak. Outdoorsy / wanderlust signifier, often combined with sun, moon, or compass. Still walked-in but past peak — gorpcore fashion absorbed the same demographic.',
+      origin: 2014,
+      ancestors: [],
+      curve: [
+        { year: 2017, value: 72 },
+        { year: 2021, value: 60 },
+        { year: 2025, value: 42 },
+      ],
+      signals: ['wanderlust', 'minimalism', 'gorpcore-adjacent'],
+      tags: ['unisex', 'minimal'],
+    },
+    {
+      id: 'rose-with-dagger',
+      label: 'Rose with Dagger',
+      tagline: 'Neo-traditional flash standard',
+      description:
+        'Classic neo-traditional pairing — rose pierced by a dagger, often with banner. Climbed steadily 2015-now, now a flash-sheet staple. Doesn\'t age out the way trend motifs do.',
+      origin: 2010,
+      ancestors: [],
+      curve: [
+        { year: 2014, value: 50 },
+        { year: 2020, value: 70 },
+        { year: 2025, value: 75 },
+      ],
+      signals: ['neo-traditional', 'durable', 'flash standard'],
+      tags: ['unisex', 'illustrative', 'classic'],
+    },
+    {
+      id: 'snake',
+      label: 'Snake',
+      tagline: 'Forearm and ribcage snakes, fineline or traditional',
+      description:
+        'Strong climb 2018-now. Symbolism (transformation, danger) plus high-fashion runway adoption. Both fineline minimal and full traditional palette.',
+      origin: 2017,
+      ancestors: [],
+      curve: [
+        { year: 2019, value: 55 },
+        { year: 2022, value: 78 },
+        { year: 2025, value: 84 },
+      ],
+      signals: ['symbolic', 'gucci-effect', 'instagram-native'],
+      tags: ['unisex', 'illustrative'],
+      triggers: [
+        { year: 2017, name: 'Gucci snake motifs (Alessandro Michele era)', medium: 'celebrity', impact: 'medium' },
+        { year: 2018, name: 'Taylor Swift Reputation era', medium: 'music', impact: 'medium' },
+      ],
+    },
+    {
+      id: 'moth',
+      label: 'Moth',
+      tagline: 'Symmetric moth, often with skull or moon',
+      description:
+        'Gothic-adjacent moth tattoos — death\'s-head, luna, atlas. Sharp climb post-2020 alongside dark academia and cottagecore. Very TikTok.',
+      origin: 2019,
+      ancestors: [],
+      curve: [
+        { year: 2020, value: 30 },
+        { year: 2023, value: 70 },
+        { year: 2025, value: 78 },
+      ],
+      signals: ['dark academia', 'tiktok-native', 'symbolic'],
+      tags: ['feminine', 'gothic', 'fineline-friendly'],
+    },
+    {
+      id: 'tiny-heart',
+      label: 'Tiny Heart',
+      tagline: 'Coin-sized red or black heart, anywhere',
+      description:
+        'Flagship of the fineline-micro era. Often paired with initials or stand-alone. 2019-now, still climbing. Closest thing to an "evergreen" motif of the current decade.',
+      origin: 2018,
+      ancestors: [],
+      curve: [
+        { year: 2020, value: 65 },
+        { year: 2023, value: 82 },
+        { year: 2025, value: 88 },
+      ],
+      signals: ['fineline-micro', 'gen-z', 'tiktok-native'],
+      tags: ['feminine', 'micro', 'fineline-friendly'],
+    },
+    {
+      id: 'lightning-bolt',
+      label: 'Lightning Bolt',
+      tagline: 'Single fineline bolt, finger or behind ear',
+      description:
+        '2019-2022 microtrend, often as small finger or ear tattoo. Faded as a microtrend but persists as a flash option.',
+      origin: 2018,
+      ancestors: [],
+      curve: [
+        { year: 2020, value: 60 },
+        { year: 2022, value: 50 },
+        { year: 2025, value: 28 },
+      ],
+      signals: ['micro', 'finger', 'fast cycle'],
+      tags: ['unisex', 'micro'],
+    },
+    {
+      id: 'bat',
+      label: 'Bat',
+      tagline: 'Gothic resurgence motif, 2022+',
+      description:
+        'Bats — sometimes tribal, increasingly fineline gothic — surged post-Wednesday TV show. Coquette/dark-feminine overlap. Strong 2023+ climb.',
+      origin: 2021,
+      ancestors: [],
+      curve: [
+        { year: 2022, value: 35 },
+        { year: 2024, value: 70 },
+        { year: 2025, value: 78 },
+      ],
+      signals: ['dark feminine', 'gothic', 'tiktok-native'],
+      tags: ['feminine', 'gothic'],
+      triggers: [
+        { year: 2022, name: 'Wednesday (Netflix)', medium: 'tv', impact: 'high' },
+        { year: 2023, name: 'Coquette / dark feminine TikTok wave', medium: 'viral', impact: 'high' },
+      ],
+    },
+    {
+      id: 'mushroom',
+      label: 'Mushroom',
+      tagline: 'Cottagecore amanita, often with mycelium',
+      description:
+        'Tied to 2020-21 cottagecore wave. Red-cap amanita most common; some psychedelic / 60s-revival overlap. Stable now but no longer climbing.',
+      origin: 2019,
+      ancestors: [],
+      curve: [
+        { year: 2021, value: 65 },
+        { year: 2023, value: 60 },
+        { year: 2025, value: 50 },
+      ],
+      signals: ['cottagecore', 'psychedelic revival', 'pinterest era'],
+      tags: ['feminine', 'illustrative'],
+    },
+    {
+      id: 'evil-eye',
+      label: 'Evil Eye',
+      tagline: 'Nazar / hamsa eye, often combined with hamsa',
+      description:
+        'Spiritual-protection motif, climbing 2018-now. Driven by celebrity adoption (Gigi Hadid, Hailey Bieber) and broader Mediterranean/Middle Eastern aesthetic mainstreaming.',
+      origin: 2017,
+      ancestors: [],
+      curve: [
+        { year: 2019, value: 55 },
+        { year: 2022, value: 72 },
+        { year: 2025, value: 78 },
+      ],
+      signals: ['spiritual', 'celebrity', 'instagram-native'],
+      tags: ['unisex', 'symbolic'],
+      triggers: [
+        { year: 2018, name: 'Gigi Hadid evil eye', medium: 'celebrity', impact: 'medium' },
+      ],
+    },
+    {
+      id: 'constellation',
+      label: 'Constellation',
+      tagline: 'Star-map birth-sign or matching friend tattoo',
+      description:
+        'Replaced star-clusters as the small-stars motif. Often birth constellation or matching friend / sibling tattoos. Steady plateau.',
+      origin: 2017,
+      ancestors: [],
+      curve: [
+        { year: 2019, value: 60 },
+        { year: 2022, value: 70 },
+        { year: 2025, value: 65 },
+      ],
+      signals: ['astrology', 'friendship', 'fineline-micro'],
+      tags: ['feminine', 'micro'],
+    },
+    {
+      id: 'cherry',
+      label: 'Cherry',
+      tagline: 'Coquette pair-of-cherries, hand or shoulder',
+      description:
+        'Coquette/balletcore-adjacent. Pair of cherries with stem, often red ink only. 2022+ climb tied to coquette TikTok aesthetic.',
+      origin: 2021,
+      ancestors: [],
+      curve: [
+        { year: 2022, value: 35 },
+        { year: 2024, value: 65 },
+        { year: 2025, value: 70 },
+      ],
+      signals: ['coquette', 'tiktok-native', 'soft girl'],
+      tags: ['feminine', 'micro'],
+      triggers: [
+        { year: 2022, name: 'Coquette TikTok wave', medium: 'viral', impact: 'high' },
+      ],
+    },
+    {
+      id: 'cherub',
+      label: 'Cherub',
+      tagline: 'Renaissance putto, fineline or full color',
+      description:
+        'Y2K-revival aesthetic — Botticelli/Raphael cherubs. Often paired with hearts or hands. Climbed 2021+ alongside Y2K and old-money waves.',
+      origin: 2020,
+      ancestors: [],
+      curve: [
+        { year: 2022, value: 45 },
+        { year: 2024, value: 68 },
+        { year: 2025, value: 70 },
+      ],
+      signals: ['y2k revival', 'classical', 'tiktok-native'],
+      tags: ['feminine', 'illustrative'],
+    },
+    {
+      id: 'stitch-cartoon',
+      label: 'Stitch / Cartoon Imports',
+      tagline: 'Lilo & Stitch (and similar) cartoon characters',
+      description:
+        'Modest baseline since the original 2002 film. Big spike with the 2024 live-action remake — Stitch became the dominant kids/young-adult walk-in cartoon motif. Pikachu, Hello Kitty, and other iconic characters cycle alongside.',
+      origin: 2002,
+      ancestors: [],
+      curve: [
+        { year: 2003, value: 35 },
+        { year: 2010, value: 25 },
+        { year: 2018, value: 30 },
+        { year: 2024, value: 70 },
+        { year: 2025, value: 76 },
+      ],
+      signals: ['nostalgia', 'film tie-in', 'tiktok-native'],
+      tags: ['unisex', 'illustrative', 'character'],
+      triggers: [
+        { year: 2002, name: 'Lilo & Stitch (original)', medium: 'film', impact: 'medium' },
+        { year: 2024, name: 'Lilo & Stitch (live action)', medium: 'film', impact: 'high' },
+      ],
+    },
+    {
+      id: 'sugar-skull',
+      label: 'Sugar Skull / Day of the Dead',
+      tagline: 'Decorated calavera, often with roses',
+      description:
+        'Coco (2017) drove a noticeable mid-2010s spike. Pre-existing in Chicano culture; mainstream walk-in adoption faded but never zeroed.',
+      origin: 2010,
+      ancestors: [],
+      curve: [
+        { year: 2014, value: 55 },
+        { year: 2018, value: 65 },
+        { year: 2022, value: 50 },
+        { year: 2025, value: 42 },
+      ],
+      signals: ['cultural', 'film tie-in'],
+      tags: ['unisex', 'illustrative', 'colored'],
+      triggers: [
+        { year: 2017, name: 'Coco (Pixar)', medium: 'film', impact: 'medium' },
+      ],
+    },
+    {
+      id: 'demogorgon-stranger',
+      label: 'Stranger Things motifs',
+      tagline: 'Demogorgon, Eleven, "Friends Don\'t Lie"',
+      description:
+        'Show-driven walk-in spikes during each Stranger Things season (2016, 2019, 2022). Mostly Demogorgon and quote tattoos. Drops between seasons.',
+      origin: 2016,
+      ancestors: [],
+      curve: [
+        { year: 2017, value: 35 },
+        { year: 2019, value: 50 },
+        { year: 2022, value: 55 },
+        { year: 2025, value: 30 },
+      ],
+      signals: ['fandom', 'fast cycle', 'tv tie-in'],
+      tags: ['unisex', 'illustrative', 'character'],
+      triggers: [
+        { year: 2016, name: 'Stranger Things S1 (Netflix)', medium: 'tv', impact: 'medium' },
+        { year: 2022, name: 'Stranger Things S4', medium: 'tv', impact: 'high' },
+      ],
+    },
+    {
+      id: 'rihanna-finger-script',
+      label: 'Single-letter Finger / Wrist Script',
+      tagline: 'Initial or short word, pinky or wrist',
+      description:
+        'Took off 2017-2020. Driven by celebrity finger tattoos (Rihanna, Hailey Bieber\'s "G", Ariana Grande). Saturated then plateaued.',
+      origin: 2014,
+      ancestors: [],
+      curve: [
+        { year: 2017, value: 65 },
+        { year: 2020, value: 72 },
+        { year: 2024, value: 55 },
+        { year: 2025, value: 50 },
+      ],
+      signals: ['celebrity', 'micro', 'finger'],
+      tags: ['unisex', 'micro', 'lettering'],
+      triggers: [
+        { year: 2018, name: 'Hailey Bieber "G" finger tattoo', medium: 'celebrity', impact: 'medium' },
+      ],
+    },
+  ],
+  cycleNotes: [
+    'Walk-in motifs cycle in 4-8 years, not 22. Dolphins (2002 peak) never came back; butterflies did because Y2K returned wholesale via TikTok.',
+    'Triggers explain the gaps: Lilo & Stitch (2002) was a modest baseline event, but the 2024 live-action remake produced a much larger walk-in spike. Moana (2016) did not produce a comparable wave despite similar studio support — note this when forecasting future film triggers.',
+    'A motif aging out of "trending" doesn\'t mean it stops walking in. Infinity symbols, anchors, and small stars are still daily walk-ins despite being out of fashion — flash sheets reflect this.',
+    'Celebrity-anchored motifs (single-letter finger script, evil eye, stars) follow the celebrity\'s relevance more than a cultural cycle. When the celebrity moment fades, so does the motif.',
+    'Gothic/dark-feminine motifs (bats, moths, snakes) are currently the strongest rising cluster among women under 30, displacing the 2010s bohemian cluster (feathers, arrows, mountains).',
+  ],
+  yearRange: { start: 1995, end: 2030 },
+}
+
 export const MUSIC_DATASET: IndustryDataset = {
   industry: {
     id: 'music',
@@ -763,6 +1249,7 @@ export const INTERIOR_DATASET: IndustryDataset = {
 export const DATASETS: Record<string, IndustryDataset> = {
   tattoo: TATTOO_DATASET,
   fashion: FASHION_DATASET,
+  walkin: WALKIN_DATASET,
   music: MUSIC_DATASET,
   interior: INTERIOR_DATASET,
 }

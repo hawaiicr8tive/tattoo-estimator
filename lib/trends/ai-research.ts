@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { IndustryDataset, StyleStrand } from './types'
+import type { CulturalTrigger, IndustryDataset, StyleStrand } from './types'
 
 export const RESEARCH_MODELS = [
   { id: 'claude-opus-4-7', label: 'Claude Opus 4.7 (most capable)' },
@@ -25,6 +25,7 @@ export interface SuggestedStrand {
   signals: string[]
   tags: string[]
   pioneers?: string[]
+  triggers?: CulturalTrigger[]
   confidence: number
   rationale: string
 }
@@ -73,6 +74,22 @@ const SUGGESTION_SCHEMA = {
           signals: { type: 'array', items: { type: 'string' }, description: 'Cultural/temporal signals carrying this strand.' },
           tags: { type: 'array', items: { type: 'string' }, description: 'Free-form grouping tags.' },
           pioneers: { type: 'array', items: { type: 'string' }, description: 'Optional list of canonical artists/scenes.' },
+          triggers: {
+            type: 'array',
+            description: 'Optional cultural events that drove waves (films, celebrities, viral moments). Especially important for walk-in / flash motifs.',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                year: { type: 'integer' },
+                name: { type: 'string', description: 'e.g. "Lilo & Stitch (live action)" or "Hailey Bieber G finger tattoo".' },
+                medium: { type: 'string', enum: ['film', 'tv', 'music', 'celebrity', 'viral', 'literature', 'sports', 'other'] },
+                impact: { type: 'string', enum: ['high', 'medium', 'low'] },
+                notes: { type: 'string' },
+              },
+              required: ['year', 'name', 'medium', 'impact'],
+            },
+          },
           confidence: { type: 'integer', description: '0-100 confidence the suggestion is grounded in real history.' },
           rationale: { type: 'string', description: 'One sentence explaining why this suggestion is worth adding.' },
         },
@@ -96,6 +113,7 @@ Constraints:
 - parentId and ancestors must reference existing strand ids verbatim. If you reference a parent, make sure it makes sense as the canonical immediate parent.
 - curve_points should reflect actual historical peaks and troughs. Aim for 3-6 points.
 - Cycle notes should be the kind of observation a domain expert would record (e.g. "X peaked roughly 22 years before Y resurfaced, suggesting a canonical cycle"). Keep them factual.
+- For walk-in / flash motifs especially, attach concrete cultural triggers (film releases, celebrity moments, viral waves) with year, medium, and impact. Triggers explain why a wave happened — they're often the strongest signal for forecasting future motifs.
 - Confidence should reflect your honest grounding. 80+ for canonical history, 50-70 for emerging trends, below 50 for speculative pulls.
 
 Return only the structured JSON described by the output schema.`
@@ -104,7 +122,10 @@ function describeStrand(s: StyleStrand): string {
   const peaks = s.curve.map(c => `${c.year}:${c.value}`).join(' ')
   const lineage = s.parentId ? ` parent=${s.parentId}` : ''
   const anc = s.ancestors.length > 0 ? ` ancestors=[${s.ancestors.join(',')}]` : ''
-  return `- ${s.id} | ${s.label} (${s.tagline}) origin=${s.origin}${lineage}${anc} curve=[${peaks}]`
+  const trig = s.triggers && s.triggers.length > 0
+    ? ` triggers=[${s.triggers.map(t => `${t.year} ${t.name} (${t.medium}, ${t.impact})`).join('; ')}]`
+    : ''
+  return `- ${s.id} | ${s.label} (${s.tagline}) origin=${s.origin}${lineage}${anc} curve=[${peaks}]${trig}`
 }
 
 function buildDatasetContext(dataset: IndustryDataset): string {
@@ -310,6 +331,22 @@ function validateResult(input: unknown, dataset: IndustryDataset): ResearchResul
         typeof p === 'object' && p !== null && typeof (p as Record<string, unknown>).year === 'number' && typeof (p as Record<string, unknown>).value === 'number',
       )
       .map(p => ({ year: Math.round(p.year), value: Math.max(0, Math.min(100, Math.round(p.value))) }))
+    const triggersRaw = Array.isArray(x.triggers) ? x.triggers : []
+    const triggers = triggersRaw
+      .map((t): SuggestedStrand['triggers'] extends (infer U)[] | undefined ? U | null : null => {
+        if (typeof t !== 'object' || t === null) return null
+        const tt = t as Record<string, unknown>
+        const year = typeof tt.year === 'number' ? Math.round(tt.year) : null
+        const name = typeof tt.name === 'string' ? tt.name : null
+        const medium = typeof tt.medium === 'string' && ['film','tv','music','celebrity','viral','literature','sports','other'].includes(tt.medium)
+          ? (tt.medium as 'film'|'tv'|'music'|'celebrity'|'viral'|'literature'|'sports'|'other') : null
+        const impact = typeof tt.impact === 'string' && ['high','medium','low'].includes(tt.impact)
+          ? (tt.impact as 'high'|'medium'|'low') : null
+        if (year === null || !name || !medium || !impact) return null
+        return { year, name, medium, impact, notes: typeof tt.notes === 'string' ? tt.notes : undefined }
+      })
+      .filter((t): t is NonNullable<typeof t> => t !== null)
+
     suggestions.push({
       proposed_id,
       label: typeof x.label === 'string' ? x.label : proposed_id,
@@ -322,6 +359,7 @@ function validateResult(input: unknown, dataset: IndustryDataset): ResearchResul
       signals: Array.isArray(x.signals) ? x.signals.filter((v): v is string => typeof v === 'string') : [],
       tags: Array.isArray(x.tags) ? x.tags.filter((v): v is string => typeof v === 'string') : [],
       pioneers: Array.isArray(x.pioneers) ? x.pioneers.filter((v): v is string => typeof v === 'string') : undefined,
+      triggers: triggers.length > 0 ? triggers : undefined,
       confidence: typeof x.confidence === 'number' ? Math.max(0, Math.min(100, Math.round(x.confidence))) : 50,
       rationale: typeof x.rationale === 'string' ? x.rationale : '',
     })
@@ -346,5 +384,6 @@ export function suggestionToStrand(s: SuggestedStrand): StyleStrand {
     signals: s.signals,
     tags: s.tags,
     pioneers: s.pioneers,
+    triggers: s.triggers,
   }
 }

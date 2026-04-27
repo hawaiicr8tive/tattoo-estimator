@@ -106,6 +106,27 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
                   </ul>
                 )}
               </div>
+              {highlightId && (() => {
+                const highlightedStrand = dataset.styles.find(s => s.id === highlightId)
+                const trigs = highlightedStrand?.triggers ?? []
+                if (trigs.length === 0) return null
+                return (
+                  <div className="mt-4">
+                    <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">Cultural triggers — {highlightedStrand?.label}</h3>
+                    <ul className="text-sm text-gray-800 space-y-1">
+                      {trigs
+                        .slice()
+                        .sort((a, b) => a.year - b.year)
+                        .map((t, i) => (
+                          <li key={`${t.year}-${i}`}>
+                            <span className="font-medium tabular-nums">{t.year}</span> · {t.name}
+                            <span className="ml-1 text-xs text-gray-500">({t.medium}, {t.impact} impact)</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )
+              })()}
             </section>
           </div>
 
