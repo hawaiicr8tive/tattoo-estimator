@@ -11,7 +11,7 @@ interface Props {
 export default function SaveBar({ title, saving, saved, error, onSave }: Props) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <h2 className="text-lg font-bold text-[#0A0A0A]">{title}</h2>
+      <h2 className="text-lg font-bold text-[var(--brand-text)]">{title}</h2>
       <div className="flex items-center gap-3">
         {saved && <span className="text-sm text-green-600 font-medium">✓ Saved</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}

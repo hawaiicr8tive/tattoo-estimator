@@ -132,20 +132,20 @@ export default function ResearchTab() {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-[#0A0A0A] mb-4">AI Trend Research</h2>
-      <p className="text-sm text-[#555555] mb-4">
+      <h2 className="text-lg font-bold text-[var(--brand-text)] mb-4">AI Trend Research</h2>
+      <p className="text-sm text-[var(--brand-text-mid)] mb-4">
         Ask Claude to surface strands that should exist in the dataset based on your research query. Suggestions are
         previewed first; nothing is written until you click <strong>Apply selected</strong>.
       </p>
 
       <section className="rounded-xl bg-white border border-gray-200 p-4 mb-5 space-y-3">
         <div>
-          <span className="block text-xs text-[#555555] mb-2">Industry</span>
+          <span className="block text-xs text-[var(--brand-text-mid)] mb-2">Industry</span>
           <IndustrySwitcher industries={INDUSTRIES} current={industryId} onChange={setIndustryId} />
         </div>
         <div>
           <label className="block text-sm">
-            <span className="block text-xs text-[#555555] mb-1">Model</span>
+            <span className="block text-xs text-[var(--brand-text-mid)] mb-1">Model</span>
             <select
               value={model}
               onChange={e => setModel(e.target.value as ResearchModelId)}
@@ -157,7 +157,7 @@ export default function ResearchTab() {
         </div>
 
         <label className="block text-sm">
-          <span className="block text-xs text-[#555555] mb-1">Research query</span>
+          <span className="block text-xs text-[var(--brand-text-mid)] mb-1">Research query</span>
           <textarea
             rows={3}
             value={query}
@@ -183,16 +183,16 @@ export default function ResearchTab() {
       {entry && (
         <section className="rounded-xl bg-white border border-gray-200 p-4 mb-5">
           <div className="flex items-baseline justify-between gap-3 mb-2">
-            <h3 className="text-base font-bold text-[#0A0A0A]">Suggestions</h3>
-            <span className="text-xs text-[#555555]">
+            <h3 className="text-base font-bold text-[var(--brand-text)]">Suggestions</h3>
+            <span className="text-xs text-[var(--brand-text-mid)]">
               {entry.result.suggestions.length} strands · {entry.result.cycle_notes_to_add.length} notes ·
               cache {entry.usage.cache_read_input_tokens > 0 ? 'hit' : 'miss'} · {entry.usage.input_tokens + entry.usage.cache_read_input_tokens + entry.usage.cache_creation_input_tokens} in / {entry.usage.output_tokens} out
             </span>
           </div>
-          {entry.reasoning && <p className="text-sm text-[#555555] mb-3 italic">{entry.reasoning}</p>}
+          {entry.reasoning && <p className="text-sm text-[var(--brand-text-mid)] mb-3 italic">{entry.reasoning}</p>}
 
           {entry.result.suggestions.length === 0 ? (
-            <p className="text-sm text-[#555555] py-3">No new strand suggestions for this query.</p>
+            <p className="text-sm text-[var(--brand-text-mid)] py-3">No new strand suggestions for this query.</p>
           ) : (
             <ul className="space-y-2">
               {entry.result.suggestions.map(s => (
@@ -208,7 +208,7 @@ export default function ResearchTab() {
 
           {entry.result.cycle_notes_to_add.length > 0 && (
             <div className="mt-4 rounded border border-gray-200 p-3">
-              <label className="flex items-center gap-2 text-xs text-[#555555] mb-2">
+              <label className="flex items-center gap-2 text-xs text-[var(--brand-text-mid)] mb-2">
                 <input type="checkbox" checked={includeNotes} onChange={e => setIncludeNotes(e.target.checked)} />
                 Include {entry.result.cycle_notes_to_add.length} cycle note(s)
               </label>
@@ -233,18 +233,18 @@ export default function ResearchTab() {
       )}
 
       <section>
-        <h3 className="text-sm font-bold text-[#0A0A0A] mb-2">Recent research</h3>
+        <h3 className="text-sm font-bold text-[var(--brand-text)] mb-2">Recent research</h3>
         {history.length === 0 ? (
-          <p className="text-xs text-[#555555]">No history yet.</p>
+          <p className="text-xs text-[var(--brand-text-mid)]">No history yet.</p>
         ) : (
           <ul className="divide-y divide-gray-100 rounded-xl bg-white border border-gray-200">
             {history.slice(0, 12).map(h => (
               <li key={h.id} className="p-3 text-sm">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium text-[#0A0A0A] truncate">{h.query}</span>
-                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-[#555555]">{h.industryId} · {h.model}</span>
+                  <span className="font-medium text-[var(--brand-text)] truncate">{h.query}</span>
+                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-[var(--brand-text-mid)]">{h.industryId} · {h.model}</span>
                 </div>
-                <div className="text-xs text-[#555555] mt-1">
+                <div className="text-xs text-[var(--brand-text-mid)] mt-1">
                   {new Date(h.timestamp).toLocaleString()} · {h.suggestionCount} suggestions · {h.appliedIds.length} applied
                 </div>
               </li>
@@ -272,10 +272,10 @@ function SuggestionCard({
         <input type="checkbox" checked={selected} onChange={onToggle} className="mt-1" />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="font-semibold text-[#0A0A0A]">{s.label}</span>
-            <span className="text-xs text-[#555555]">conf {s.confidence}</span>
+            <span className="font-semibold text-[var(--brand-text)]">{s.label}</span>
+            <span className="text-xs text-[var(--brand-text-mid)]">conf {s.confidence}</span>
           </div>
-          <div className="text-xs text-[#555555]">
+          <div className="text-xs text-[var(--brand-text-mid)]">
             <code className="bg-gray-100 rounded px-1">{s.proposed_id}</code>
             <span className="ml-2">origin {s.origin}</span>
             {s.parentId && <span className="ml-2">↳ {s.parentId}</span>}
@@ -283,8 +283,8 @@ function SuggestionCard({
           </div>
           <p className="mt-1 text-sm text-gray-800">{s.tagline}</p>
           {s.description && <p className="mt-1 text-xs text-gray-700">{s.description}</p>}
-          <p className="mt-1 text-xs italic text-[#555555]">{s.rationale}</p>
-          <div className="mt-1 text-[11px] text-[#555555] font-mono">curve: {peaks}</div>
+          <p className="mt-1 text-xs italic text-[var(--brand-text-mid)]">{s.rationale}</p>
+          <div className="mt-1 text-[11px] text-[var(--brand-text-mid)] font-mono">curve: {peaks}</div>
           {(s.signals.length > 0 || s.tags.length > 0) && (
             <div className="mt-1 flex flex-wrap gap-1">
               {s.signals.map(sig => <span key={`sig-${sig}`} className="text-[10px] rounded-full bg-blue-50 text-blue-800 px-1.5 py-0.5">{sig}</span>)}

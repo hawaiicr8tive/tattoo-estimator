@@ -135,9 +135,9 @@ export default function TrendsTab() {
       />
 
       <div className="mb-4">
-        <span className="block text-xs text-[#555555] mb-2">Industry</span>
+        <span className="block text-xs text-[var(--brand-text-mid)] mb-2">Industry</span>
         <IndustrySwitcher industries={INDUSTRIES} current={industryId} onChange={setIndustryId} />
-        <p className="text-xs text-[#555555] mt-2">
+        <p className="text-xs text-[var(--brand-text-mid)] mt-2">
           Edits save to <code className="bg-gray-100 rounded px-1">admin_config[trends:{industryId}]</code>.
           The public <code className="bg-gray-100 rounded px-1">/trends</code> dashboard reads from there with seed fallback.
         </p>
@@ -145,12 +145,12 @@ export default function TrendsTab() {
 
       <MotifLibraryImporter />
 
-      {loading && <p className="text-[#555555] py-12 text-center">Loading dataset…</p>}
+      {loading && <p className="text-[var(--brand-text-mid)] py-12 text-center">Loading dataset…</p>}
 
       {!loading && dataset && (
         <div className="space-y-5">
           <section className="rounded-xl bg-white border border-gray-200 p-4">
-            <h3 className="text-sm font-bold text-[#0A0A0A] mb-3">Industry header</h3>
+            <h3 className="text-sm font-bold text-[var(--brand-text)] mb-3">Industry header</h3>
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Label">
                 <input
@@ -207,7 +207,7 @@ export default function TrendsTab() {
 
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-[#0A0A0A]">Strands ({dataset.styles.length})</h3>
+              <h3 className="text-sm font-bold text-[var(--brand-text)]">Strands ({dataset.styles.length})</h3>
               <button
                 type="button"
                 onClick={addStrand}
@@ -231,7 +231,7 @@ export default function TrendsTab() {
                 />
               ))}
               {dataset.styles.length === 0 && (
-                <p className="text-sm text-[#555555] py-6 text-center bg-white rounded-xl border border-dashed border-gray-300">
+                <p className="text-sm text-[var(--brand-text-mid)] py-6 text-center bg-white rounded-xl border border-dashed border-gray-300">
                   No strands yet — click “Add strand” to seed this industry.
                 </p>
               )}
@@ -246,7 +246,7 @@ export default function TrendsTab() {
 function Field({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={`block ${className}`}>
-      <span className="block text-xs text-[#555555] mb-1">{label}</span>
+      <span className="block text-xs text-[var(--brand-text-mid)] mb-1">{label}</span>
       {children}
     </label>
   )
@@ -277,15 +277,15 @@ function StrandCard({ index, strand, allStrands, expanded, onToggle, onUpdate, o
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
       >
         <div className="min-w-0">
-          <div className="font-semibold text-[#0A0A0A] truncate">{strand.label || '(unnamed)'}</div>
-          <div className="text-xs text-[#555555] truncate">
+          <div className="font-semibold text-[var(--brand-text)] truncate">{strand.label || '(unnamed)'}</div>
+          <div className="text-xs text-[var(--brand-text-mid)] truncate">
             <code className="bg-gray-100 px-1 rounded">{strand.id || '(no id)'}</code>
             <span className="ml-2">origin {strand.origin}</span>
             <span className="ml-2">{strand.curve.length} pts</span>
             {strand.ancestors.length > 0 && <span className="ml-2">← {strand.ancestors.join(', ')}</span>}
           </div>
         </div>
-        <span className="text-xs text-[#555555]">{expanded ? '▾' : '▸'}</span>
+        <span className="text-xs text-[var(--brand-text-mid)]">{expanded ? '▾' : '▸'}</span>
       </button>
 
       {expanded && (
@@ -427,11 +427,11 @@ function CurveEditor({ curve, onChange }: { curve: PopularityPoint[]; onChange: 
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-[#555555]">Popularity curve (year → 0–100)</span>
+        <span className="text-xs text-[var(--brand-text-mid)]">Popularity curve (year → 0–100)</span>
         <button type="button" onClick={addPoint} className="text-xs underline text-[#7B0000]">+ Add point</button>
       </div>
       {curve.length === 0 ? (
-        <p className="text-xs text-[#555555] italic">No curve points — engine will treat as no signal.</p>
+        <p className="text-xs text-[var(--brand-text-mid)] italic">No curve points — engine will treat as no signal.</p>
       ) : (
         <div className="space-y-1">
           {curve.map((p, i) => (
@@ -488,11 +488,11 @@ function TriggersEditor({ triggers, onChange }: { triggers: CulturalTrigger[]; o
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-[#555555]">Cultural triggers (films, celebs, viral moments)</span>
+        <span className="text-xs text-[var(--brand-text-mid)]">Cultural triggers (films, celebs, viral moments)</span>
         <button type="button" onClick={addTrigger} className="text-xs underline text-[#7B0000]">+ Add trigger</button>
       </div>
       {triggers.length === 0 ? (
-        <p className="text-xs text-[#555555] italic">No triggers — add film releases, celebrity moments, or viral waves that pushed this strand.</p>
+        <p className="text-xs text-[var(--brand-text-mid)] italic">No triggers — add film releases, celebrity moments, or viral waves that pushed this strand.</p>
       ) : (
         <div className="space-y-1">
           {triggers.map((t, i) => (
@@ -563,14 +563,14 @@ function MotifLibraryImporter() {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 text-sm font-medium text-[#0A0A0A]"
+        className="flex items-center gap-2 text-sm font-medium text-[var(--brand-text)]"
       >
-        <span className="text-[#555555] text-xs">{open ? '▾' : '▸'}</span>
+        <span className="text-[var(--brand-text-mid)] text-xs">{open ? '▾' : '▸'}</span>
         Motif library — import CSV
       </button>
       {open && (
         <div className="mt-3 text-sm">
-          <p className="text-xs text-[#555555] mb-2">
+          <p className="text-xs text-[var(--brand-text-mid)] mb-2">
             CSV header: <code className="bg-gray-100 rounded px-1">category,name,industries,aliases,description</code>.
             <br />
             <code className="bg-gray-100 rounded px-1">industries</code> is comma-separated within the cell (so the cell needs double quotes), e.g.{' '}
@@ -587,7 +587,7 @@ function MotifLibraryImporter() {
             }}
             className="text-sm"
           />
-          {busy && <p className="text-xs text-[#555555] mt-2">Importing…</p>}
+          {busy && <p className="text-xs text-[var(--brand-text-mid)] mt-2">Importing…</p>}
           {message && <p className="text-xs text-green-700 mt-2">{message}</p>}
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
         </div>
