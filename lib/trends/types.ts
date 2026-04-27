@@ -1,4 +1,4 @@
-export type IndustryId = 'tattoo' | 'fashion' | 'walkin' | 'music' | 'interior'
+export type IndustryId = 'tattoo' | 'fashion' | 'walkin' | 'hawaii-souvenir' | 'music' | 'interior'
 
 export interface Industry {
   id: IndustryId

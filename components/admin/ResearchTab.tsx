@@ -10,6 +10,7 @@ const INDUSTRIES: Industry[] = [
   { id: 'tattoo', label: 'Tattoo', blurb: 'Cycle window 18-25 years, compressing toward 6-10 since 2017.', status: 'active' },
   { id: 'fashion', label: 'Fashion', blurb: 'Cycle window 20-25 years for silhouettes, 5-7 years for microtrends post-2010.', status: 'active' },
   { id: 'walkin', label: 'Walk-in / Flash', blurb: 'Motif-level cycles tied to films, celebrities, and viral moments.', status: 'active' },
+  { id: 'hawaii-souvenir', label: 'Hawaii Souvenir', blurb: 'Hawaii tourist + local motifs. Many evergreen because they signify the trip.', status: 'active' },
   { id: 'music', label: 'Music', blurb: 'Scaffold — drop genre curves to predict the next sonic revival.', status: 'scaffold' },
   { id: 'interior', label: 'Interior', blurb: 'Scaffold — add mid-century, brutalist, cottagecore strands here.', status: 'scaffold' },
 ]
