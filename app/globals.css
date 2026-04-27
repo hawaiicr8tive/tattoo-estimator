@@ -1,29 +1,85 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Style Prediction Model — dark dashboard theme
+ *
+ * Default look is dark slate with an indigo accent. The accent is
+ * swappable at runtime via the AccentPicker, which sets
+ * `data-accent="<id>"` on <html> and persists to localStorage.
+ *
+ * Components copied from the estimator use a mix of Tailwind utility
+ * classes (bg-white, text-gray-900, etc.) and CSS variables. Rather than
+ * rewrite every component, the bottom of this file overrides the most
+ * common Tailwind grays so they read correctly on dark surfaces. Tinted
+ * status colors (amber/emerald/rose for "rising", "cresting", etc.) get
+ * their own translucent dark equivalents so the badges still mean what
+ * they did.
+ */
 
-  --brand-primary:      #7B0000;
-  --brand-primary-rgb:  123,0,0;
-  --brand-primary-5:    rgba(123,0,0,0.05);
-  --brand-primary-10:   rgba(123,0,0,0.10);
-  --brand-primary-20:   rgba(123,0,0,0.20);
-  --brand-primary-50:   rgba(123,0,0,0.50);
-  --brand-primary-text: #ffffff;
-  --brand-hover:        #7B0000;
-  --brand-hover-50:     rgba(123,0,0,0.50);
-  --brand-button:       #7B0000;
-  --brand-button-text:  #ffffff;
-  --brand-pill-rgb:     123,0,0;
-  --brand-pill-opacity: 1;
-  --brand-pill-text:    #ffffff;
-  --brand-bg:           #F5F5F0;
-  --brand-card:         #ffffff;
-  --brand-text:         #0A0A0A;
-  --brand-text-mid:     #555555;
-  --brand-border:       #e5e7eb;
-  --brand-result-price-text: #0A0A0A;
+:root {
+  --background:               #0b0f19;
+  --foreground:               #f1f5f9;
+
+  --brand-bg:                 #0b0f19;
+  --brand-card:               #111827;
+  --brand-card-elev:          #1f2937;
+  --brand-text:               #f1f5f9;
+  --brand-text-mid:           #94a3b8;
+  --brand-border:             #1f2937;
+  --brand-border-strong:      #334155;
+
+  /* Accent — overridden via [data-accent="..."] selectors below. */
+  --brand-primary:            #6366f1;
+  --brand-primary-rgb:        99,102,241;
+  --brand-primary-5:          rgba(99,102,241,0.05);
+  --brand-primary-10:         rgba(99,102,241,0.10);
+  --brand-primary-20:         rgba(99,102,241,0.20);
+  --brand-primary-50:         rgba(99,102,241,0.50);
+  --brand-primary-text:       #ffffff;
+  --brand-hover:              #6366f1;
+  --brand-button:             #6366f1;
+  --brand-button-text:        #ffffff;
+}
+
+:root[data-accent="teal"] {
+  --brand-primary: #14b8a6;
+  --brand-primary-rgb: 20,184,166;
+  --brand-primary-5:  rgba(20,184,166,0.05);
+  --brand-primary-10: rgba(20,184,166,0.10);
+  --brand-primary-20: rgba(20,184,166,0.20);
+  --brand-primary-50: rgba(20,184,166,0.50);
+  --brand-hover: #14b8a6;
+  --brand-button: #14b8a6;
+}
+:root[data-accent="amber"] {
+  --brand-primary: #f59e0b;
+  --brand-primary-rgb: 245,158,11;
+  --brand-primary-5:  rgba(245,158,11,0.05);
+  --brand-primary-10: rgba(245,158,11,0.10);
+  --brand-primary-20: rgba(245,158,11,0.20);
+  --brand-primary-50: rgba(245,158,11,0.50);
+  --brand-hover: #f59e0b;
+  --brand-button: #f59e0b;
+}
+:root[data-accent="rose"] {
+  --brand-primary: #f43f5e;
+  --brand-primary-rgb: 244,63,94;
+  --brand-primary-5:  rgba(244,63,94,0.05);
+  --brand-primary-10: rgba(244,63,94,0.10);
+  --brand-primary-20: rgba(244,63,94,0.20);
+  --brand-primary-50: rgba(244,63,94,0.50);
+  --brand-hover: #f43f5e;
+  --brand-button: #f43f5e;
+}
+:root[data-accent="emerald"] {
+  --brand-primary: #10b981;
+  --brand-primary-rgb: 16,185,129;
+  --brand-primary-5:  rgba(16,185,129,0.05);
+  --brand-primary-10: rgba(16,185,129,0.10);
+  --brand-primary-20: rgba(16,185,129,0.20);
+  --brand-primary-50: rgba(16,185,129,0.50);
+  --brand-hover: #10b981;
+  --brand-button: #10b981;
 }
 
 @theme inline {
@@ -33,16 +89,77 @@
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  background: transparent;
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html, body {
+  background: var(--brand-bg);
+  color: var(--brand-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 input, textarea, select {
-  color: #0A0A0A;
+  color: var(--brand-text);
+  background-color: var(--brand-card-elev);
+  border-color: var(--brand-border-strong);
 }
 
 input::placeholder, textarea::placeholder {
-  color: #9ca3af;
+  color: var(--brand-text-mid);
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Tailwind utility overrides — re-skin the light-mode classes used by
+ * the dashboard components for dark backgrounds. Importance kept low
+ * (no !important) to allow per-component overrides via CSS vars.
+ * ────────────────────────────────────────────────────────────────────── */
+
+.bg-white         { background-color: var(--brand-card); }
+.bg-gray-50       { background-color: var(--brand-card-elev); }
+.bg-gray-100      { background-color: var(--brand-card-elev); }
+
+.border-gray-100  { border-color: var(--brand-border); }
+.border-gray-200  { border-color: var(--brand-border); }
+.border-gray-300  { border-color: var(--brand-border-strong); }
+
+.divide-gray-100 > * + * { border-color: var(--brand-border); }
+.divide-gray-200 > * + * { border-color: var(--brand-border); }
+
+.text-gray-900    { color: var(--brand-text); }
+.text-gray-800    { color: #e2e8f0; }
+.text-gray-700    { color: #cbd5e1; }
+.text-gray-600    { color: #94a3b8; }
+.text-gray-500    { color: #94a3b8; }
+.text-gray-400    { color: #64748b; }
+
+/* Status pills: keep meaning, restyle for dark */
+.bg-amber-50      { background-color: rgba(245, 158, 11, 0.1); }
+.bg-amber-100     { background-color: rgba(245, 158, 11, 0.18); }
+.border-amber-200 { border-color: rgba(245, 158, 11, 0.45); }
+.text-amber-800   { color: #fcd34d; }
+.text-amber-900   { color: #fcd34d; }
+
+.bg-emerald-50    { background-color: rgba(16, 185, 129, 0.1); }
+.bg-emerald-100   { background-color: rgba(16, 185, 129, 0.18); }
+.border-emerald-200 { border-color: rgba(16, 185, 129, 0.45); }
+.text-emerald-800 { color: #6ee7b7; }
+
+.bg-rose-50       { background-color: rgba(244, 63, 94, 0.1); }
+.bg-rose-100      { background-color: rgba(244, 63, 94, 0.18); }
+.border-rose-200  { border-color: rgba(244, 63, 94, 0.45); }
+.border-rose-300  { border-color: rgba(244, 63, 94, 0.55); }
+.text-rose-800    { color: #fca5a5; }
+.text-red-600     { color: #fca5a5; }
+.text-red-500     { color: #fca5a5; }
+
+.bg-orange-50     { background-color: rgba(249, 115, 22, 0.1); }
+.border-orange-200 { border-color: rgba(249, 115, 22, 0.45); }
+.text-orange-800  { color: #fdba74; }
+
+.bg-slate-50      { background-color: rgba(148, 163, 184, 0.08); }
+.bg-slate-100     { background-color: rgba(148, 163, 184, 0.18); }
+.border-slate-200 { border-color: rgba(148, 163, 184, 0.45); }
+.text-slate-700   { color: #cbd5e1; }
+
+.bg-blue-50       { background-color: rgba(59, 130, 246, 0.1); }
+.text-blue-800    { color: #93c5fd; }
+
+.text-green-600   { color: #6ee7b7; }
+.text-green-700   { color: #6ee7b7; }

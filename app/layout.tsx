@@ -10,6 +10,19 @@ export const metadata: Metadata = {
   description: 'Trend cycle dashboard, fusion lab, and AI research for style intelligence.',
 }
 
+/**
+ * Inline boot script — applies the saved accent to <html> before the page
+ * paints, so changing accents doesn't flash the default on every reload.
+ * Kept minimal; safe to inline because it only reads localStorage and
+ * sets one attribute.
+ */
+const ACCENT_BOOTSTRAP = `
+try {
+  var a = localStorage.getItem('spm-accent');
+  if (a && /^[a-z-]+$/.test(a)) document.documentElement.setAttribute('data-accent', a);
+} catch (e) {}
+`.trim()
+
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -18,8 +31,11 @@ export default async function RootLayout({
   const authed = verifyAdminToken(token)
 
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-[var(--brand-bg)]">
+    <html lang="en" className="h-full antialiased dark" data-accent="indigo">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: ACCENT_BOOTSTRAP }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-[var(--brand-bg)] text-[var(--brand-text)]">
         {authed ? (
           <>
             <TabNav />
