@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  --brand-primary:      #7B0000;
+  --brand-primary-rgb:  123,0,0;
+  --brand-primary-5:    rgba(123,0,0,0.05);
+  --brand-primary-10:   rgba(123,0,0,0.10);
+  --brand-primary-20:   rgba(123,0,0,0.20);
+  --brand-primary-50:   rgba(123,0,0,0.50);
+  --brand-primary-text: #ffffff;
+  --brand-hover:        #7B0000;
+  --brand-hover-50:     rgba(123,0,0,0.50);
+  --brand-button:       #7B0000;
+  --brand-button-text:  #ffffff;
+  --brand-pill-rgb:     123,0,0;
+  --brand-pill-opacity: 1;
+  --brand-pill-text:    #ffffff;
+  --brand-bg:           #F5F5F0;
+  --brand-card:         #ffffff;
+  --brand-text:         #0A0A0A;
+  --brand-text-mid:     #555555;
+  --brand-border:       #e5e7eb;
+  --brand-result-price-text: #0A0A0A;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: transparent;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+input, textarea, select {
+  color: #0A0A0A;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9ca3af;
+}
