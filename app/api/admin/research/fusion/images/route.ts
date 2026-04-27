@@ -15,8 +15,8 @@ import { fuseStyles } from '@/lib/trends/engine'
 
 const STORAGE_BUCKET = 'fusion-images'
 const MAX_PER_REQUEST = 4
-/** Soft per-day cap to keep accidental loops cheap. */
-const MAX_PER_DAY = 30
+/** Soft per-day cap to keep accidental loops cheap. Override via env var. */
+const MAX_PER_DAY = Number(process.env.FUSION_IMAGE_DAILY_CAP ?? '200')
 
 function clamp(n: unknown, min: number, max: number, fallback: number): number {
   const v = typeof n === 'number' ? n : Number(n)
