@@ -126,7 +126,7 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
                 Blend two strands and tune the social-media accelerant and anomaly sliders to forecast a style that isn&apos;t on the radar yet.
               </p>
             </div>
-            <FusionLab styles={dataset.styles} currentYear={currentYear} />
+            <FusionLab styles={dataset.styles} currentYear={currentYear} industryId={dataset.industry.id} />
           </section>
         </>
       )}

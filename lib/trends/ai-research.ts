@@ -127,6 +127,97 @@ function firstTextBlock(content: Anthropic.ContentBlock[]): string | null {
   return null
 }
 
+/* ------------------------------------------------------------------ */
+/* Fusion research                                                     */
+/* ------------------------------------------------------------------ */
+
+export interface RunFusionResearchOptions {
+  apiKey: string
+  model: ResearchModelId
+  dataset: IndustryDataset
+  baseStrand: StyleStrand
+  blendStrand: StyleStrand
+  blendWeight: number
+  socialAccelerant: number
+  anomaly: number
+  extraSignals: string[]
+  fusionName: string
+}
+
+export interface RunFusionResearchOutcome {
+  analysis: string
+  usage: {
+    input_tokens: number
+    output_tokens: number
+    cache_creation_input_tokens: number
+    cache_read_input_tokens: number
+  }
+}
+
+const FUSION_SYSTEM_PROMPT = `You are a trend-cycle research analyst. The user is exploring a hypothetical fusion of two existing strands from their dataset and wants a deep, grounded analysis — not new strand suggestions.
+
+Your output is a 4-6 paragraph prose analysis covering:
+1. Who is already producing work in this direction (specific artists, scenes, references where credible).
+2. The carrier signals — cultural ingredients, platforms, demographics — that would push this fusion forward.
+3. Comparable historical fusions and how they played out (what they peaked at, how long they took, what came after).
+4. Likely emergence timeline and the early-adopter window.
+5. What could kill it (saturation risk, visible aging at 5-7 years, backlash patterns, generational handoff problems).
+
+Constraints:
+- Ground every claim. If you cannot ground a claim, say so plainly. Do not invent artist names or movement timelines.
+- Use plain prose. Light Markdown is fine (paragraph breaks, occasional bold). No headings, no bullet lists, no code blocks.
+- Do NOT propose new strands. The user has a separate tool for that.
+- 400-600 words. Tight, opinionated, useful.`
+
+export async function runFusionResearch(opts: RunFusionResearchOptions): Promise<RunFusionResearchOutcome> {
+  const client = new Anthropic({ apiKey: opts.apiKey })
+  const datasetContext = buildDatasetContext(opts.dataset)
+
+  const baseShare = 100 - Math.round(opts.blendWeight)
+  const blendShare = Math.round(opts.blendWeight)
+  const fusionContext = [
+    `Hypothetical fusion under analysis:`,
+    `- Working name: "${opts.fusionName}"`,
+    `- Base strand: ${opts.baseStrand.label} (id=${opts.baseStrand.id}) — ${opts.baseStrand.tagline}`,
+    `- Blend strand: ${opts.blendStrand.label} (id=${opts.blendStrand.id}) — ${opts.blendStrand.tagline}`,
+    `- Mix: ${baseShare}% base / ${blendShare}% blend`,
+    `- Social accelerant: ${Math.round(opts.socialAccelerant)}/100 (higher = more algorithm-amplified)`,
+    `- Anomaly / rule-breaking: ${Math.round(opts.anomaly)}/100 (higher = further from canon)`,
+    opts.extraSignals.length > 0 ? `- Extra carrier signals supplied by user: ${opts.extraSignals.join(', ')}` : null,
+  ].filter(Boolean).join('\n')
+
+  const response = await client.messages.create({
+    model: opts.model,
+    max_tokens: 4000,
+    thinking: { type: 'adaptive' },
+    system: [
+      { type: 'text', text: FUSION_SYSTEM_PROMPT },
+      // Cache the dataset context — same key as runResearch, so it shares the cache hit window.
+      { type: 'text', text: datasetContext, cache_control: { type: 'ephemeral' } },
+    ],
+    messages: [
+      { role: 'user', content: fusionContext },
+    ],
+  })
+
+  const text = firstTextBlock(response.content)
+  if (!text) throw new Error('Model returned no text content.')
+
+  return {
+    analysis: text,
+    usage: {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_creation_input_tokens: response.usage.cache_creation_input_tokens ?? 0,
+      cache_read_input_tokens: response.usage.cache_read_input_tokens ?? 0,
+    },
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Strand-suggestion research                                          */
+/* ------------------------------------------------------------------ */
+
 export interface RunResearchOptions {
   apiKey: string
   model: ResearchModelId
