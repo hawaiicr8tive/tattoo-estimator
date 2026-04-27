@@ -5,6 +5,7 @@ import IndustrySwitcher from './IndustrySwitcher'
 import TimelineChart from './TimelineChart'
 import TrendRadar from './TrendRadar'
 import StrandMap from './StrandMap'
+import StrandDetail from './StrandDetail'
 import FusionLab from './FusionLab'
 import type { IndustryDataset } from '@/lib/trends/types'
 import { forecastDataset } from '@/lib/trends/engine'
@@ -80,6 +81,19 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
             />
           </section>
 
+          {highlightId && (() => {
+            const selected = dataset.styles.find(s => s.id === highlightId)
+            if (!selected) return null
+            const selectedForecast = forecasts.find(f => f.styleId === highlightId)
+            return (
+              <StrandDetail
+                strand={selected}
+                forecast={selectedForecast}
+                onClose={() => setHighlightId(null)}
+              />
+            )
+          })()}
+
           <div className="grid lg:grid-cols-3 gap-5">
             <section className="lg:col-span-2 rounded-2xl border border-gray-200 bg-white p-4 md:p-5">
               <h2 className="text-lg font-bold text-gray-900 mb-1">What&apos;s around the corner</h2>
@@ -106,27 +120,6 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
                   </ul>
                 )}
               </div>
-              {highlightId && (() => {
-                const highlightedStrand = dataset.styles.find(s => s.id === highlightId)
-                const trigs = highlightedStrand?.triggers ?? []
-                if (trigs.length === 0) return null
-                return (
-                  <div className="mt-4">
-                    <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-1">Cultural triggers — {highlightedStrand?.label}</h3>
-                    <ul className="text-sm text-gray-800 space-y-1">
-                      {trigs
-                        .slice()
-                        .sort((a, b) => a.year - b.year)
-                        .map((t, i) => (
-                          <li key={`${t.year}-${i}`}>
-                            <span className="font-medium tabular-nums">{t.year}</span> · {t.name}
-                            <span className="ml-1 text-xs text-gray-500">({t.medium}, {t.impact} impact)</span>
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                )
-              })()}
             </section>
           </div>
 
