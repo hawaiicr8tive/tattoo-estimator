@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
-import { attachFusionImages, loadFusionHistory } from '@/lib/trends/fusion-history'
+import { appendFusionHistory, attachFusionImages, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
 import {
   buildFusionImagePrompt,
@@ -16,12 +16,49 @@ import { fuseStyles } from '@/lib/trends/engine'
 const STORAGE_BUCKET = 'fusion-images'
 const MAX_PER_REQUEST = 4
 /** Soft per-day cap to keep accidental loops cheap. */
-const MAX_PER_DAY = 200
+const MAX_PER_DAY = 30
 
 function clamp(n: unknown, min: number, max: number, fallback: number): number {
   const v = typeof n === 'number' ? n : Number(n)
   if (!Number.isFinite(v)) return fallback
   return Math.max(min, Math.min(max, v))
+}
+
+/**
+ * Validate a client-provided fusion entry snapshot, used as a fallback when
+ * the DB lookup for `entryId` misses (e.g. the original persist failed
+ * silently or hasn't propagated yet). Mirrors the FusionHistoryEntry shape
+ * but is intentionally tolerant — we accept anything we can use and reject
+ * the rest.
+ */
+function readEntrySnapshot(v: unknown): FusionHistoryEntry | null {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  if (typeof o.id !== 'string' || !o.id) return null
+  if (typeof o.industryId !== 'string') return null
+  if (typeof o.baseStyleId !== 'string' || typeof o.blendStyleId !== 'string') return null
+  return {
+    id: o.id,
+    timestamp: typeof o.timestamp === 'string' ? o.timestamp : new Date().toISOString(),
+    industryId: o.industryId,
+    baseStyleId: o.baseStyleId,
+    blendStyleId: o.blendStyleId,
+    blendWeight: typeof o.blendWeight === 'number' ? o.blendWeight : 50,
+    socialAccelerant: typeof o.socialAccelerant === 'number' ? o.socialAccelerant : 50,
+    anomaly: typeof o.anomaly === 'number' ? o.anomaly : 50,
+    extraSignals: Array.isArray(o.extraSignals) ? o.extraSignals.filter((s): s is string => typeof s === 'string') : [],
+    fusionName: typeof o.fusionName === 'string' ? o.fusionName : 'fusion',
+    model: typeof o.model === 'string' ? o.model : 'claude-opus-4-7',
+    analysis: typeof o.analysis === 'string' ? o.analysis : '',
+    visualDescriptor: typeof o.visualDescriptor === 'string' ? o.visualDescriptor : undefined,
+    contentFocus: readContentFocus(o.contentFocus),
+    usage: (o.usage && typeof o.usage === 'object' ? o.usage : { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }) as FusionHistoryEntry['usage'],
+    images: undefined,
+  }
+}
+
+async function appendFusionHistoryFromSnapshot(snap: FusionHistoryEntry): Promise<void> {
+  await appendFusionHistory(snap)
 }
 
 function readContentFocus(v: unknown): { categoryLabel: string; itemLabel: string } | undefined {
@@ -85,11 +122,30 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Load the fusion entry.
+  // Load the fusion entry. Falls back to a client-provided snapshot if the
+  // history row hasn't caught up yet (or the persist for this entry failed
+  // earlier). The snapshot carries everything we need to rebuild the prompt
+  // and run the image gen — only the daily cap and history attach actually
+  // need a DB-resident entry.
   const history = await loadFusionHistory()
-  const entry = history.find(e => e.id === entryId)
+  let entry = history.find(e => e.id === entryId)
   if (!entry) {
-    return NextResponse.json({ error: `Fusion entry ${entryId} not found` }, { status: 404 })
+    const snap = readEntrySnapshot(x.entrySnapshot)
+    if (snap && snap.id === entryId) {
+      // Persist a synthetic entry so the daily cap counter and history list
+      // stay accurate. If THAT also fails, surface the error clearly.
+      entry = snap
+      try {
+        await appendFusionHistoryFromSnapshot(snap)
+      } catch (e) {
+        console.error('fusion image gen — snapshot persist failed:', e)
+        // Continue anyway — image gen itself doesn't need the DB write.
+      }
+    } else {
+      return NextResponse.json({
+        error: `Fusion entry ${entryId} not found, and no usable client snapshot was provided. Re-run the deep research and try again.`,
+      }, { status: 404 })
+    }
   }
 
   // Reload dataset and locate strands so we can rebuild the original FusionResult deterministically.

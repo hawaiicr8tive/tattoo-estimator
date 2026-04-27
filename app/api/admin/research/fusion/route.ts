@@ -136,7 +136,10 @@ export async function POST(req: NextRequest) {
     await appendFusionHistory(entry)
   } catch (e) {
     console.error('fusion research append history error:', e)
-    // Non-fatal — return the result even if persistence fails.
+    return NextResponse.json(
+      { error: e instanceof Error ? `Failed to save research: ${e.message}` : 'Failed to save research.' },
+      { status: 500 },
+    )
   }
 
   return NextResponse.json({ entry })

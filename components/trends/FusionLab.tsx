@@ -234,6 +234,28 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     setGeneratingImages(true)
     setImageError(null)
     try {
+      // Send the full entry as a snapshot fallback. The server prefers a
+      // DB-resident lookup by entryId, but if the persist for this entry
+      // failed silently or hasn't propagated, the snapshot lets image gen
+      // proceed without losing the user's research call.
+      const fullEntry = history.find(h => h.id === analysis.entryId)
+      const entrySnapshot = fullEntry ?? {
+        id: analysis.entryId,
+        timestamp: new Date().toISOString(),
+        industryId,
+        baseStyleId: base?.id ?? '',
+        blendStyleId: blend?.id ?? '',
+        blendWeight,
+        socialAccelerant,
+        anomaly,
+        extraSignals,
+        fusionName: analysis.fusionName,
+        model: analysis.model,
+        analysis: analysis.analysis,
+        visualDescriptor: analysis.visualDescriptor,
+        contentFocus: selectedContent ?? undefined,
+        usage: analysis.usage,
+      }
       const res = await fetch('/api/admin/research/fusion/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -247,6 +269,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
             ? editedVisualDescriptor
             : undefined,
           contentFocus: selectedContent ?? undefined,
+          entrySnapshot,
         }),
       })
       const data = await res.json()
