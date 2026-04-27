@@ -1,34 +1,28 @@
 @import "tailwindcss";
 
 /*
- * Style Prediction Model — dark dashboard theme
+ * Style Prediction Model — dark dashboard with electric accents
  *
- * Default look is dark slate with an indigo accent. The accent is
- * swappable at runtime via the AccentPicker, which sets
- * `data-accent="<id>"` on <html> and persists to localStorage.
- *
- * Components copied from the estimator use a mix of Tailwind utility
- * classes (bg-white, text-gray-900, etc.) and CSS variables. Rather than
- * rewrite every component, the bottom of this file overrides the most
- * common Tailwind grays so they read correctly on dark surfaces. Tinted
- * status colors (amber/emerald/rose for "rising", "cresting", etc.) get
- * their own translucent dark equivalents so the badges still mean what
- * they did.
+ * Default look: deep-navy background, clearly elevated card surfaces, and
+ * an indigo→violet gradient as the primary accent. Five accent themes
+ * are swappable at runtime via [data-accent="..."] on <html>; each ships
+ * a different gradient + glow color so buttons, active tabs, and pills
+ * pick up the right hue without per-component logic.
  */
 
 :root {
-  --background:               #0b0f19;
-  --foreground:               #f1f5f9;
+  --background:               #04060d;
+  --foreground:               #f8fafc;
 
-  --brand-bg:                 #0b0f19;
-  --brand-card:               #111827;
-  --brand-card-elev:          #1f2937;
-  --brand-text:               #f1f5f9;
-  --brand-text-mid:           #94a3b8;
-  --brand-border:             #1f2937;
-  --brand-border-strong:      #334155;
+  --brand-bg:                 #04060d;
+  --brand-card:               #131c2e;
+  --brand-card-elev:          #1f2c45;
+  --brand-text:               #f8fafc;
+  --brand-text-mid:           #a3afc2;
+  --brand-border:             #1f2c45;
+  --brand-border-strong:      #3b4863;
 
-  /* Accent — overridden via [data-accent="..."] selectors below. */
+  /* Accent — overridden via [data-accent] selectors. */
   --brand-primary:            #6366f1;
   --brand-primary-rgb:        99,102,241;
   --brand-primary-5:          rgba(99,102,241,0.05);
@@ -39,17 +33,22 @@
   --brand-hover:              #6366f1;
   --brand-button:             #6366f1;
   --brand-button-text:        #ffffff;
+
+  --brand-gradient:           linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --brand-glow:               rgba(99, 102, 241, 0.55);
 }
 
 :root[data-accent="teal"] {
-  --brand-primary: #14b8a6;
-  --brand-primary-rgb: 20,184,166;
-  --brand-primary-5:  rgba(20,184,166,0.05);
-  --brand-primary-10: rgba(20,184,166,0.10);
-  --brand-primary-20: rgba(20,184,166,0.20);
-  --brand-primary-50: rgba(20,184,166,0.50);
-  --brand-hover: #14b8a6;
-  --brand-button: #14b8a6;
+  --brand-primary: #06b6d4;
+  --brand-primary-rgb: 6,182,212;
+  --brand-primary-5:  rgba(6,182,212,0.05);
+  --brand-primary-10: rgba(6,182,212,0.10);
+  --brand-primary-20: rgba(6,182,212,0.20);
+  --brand-primary-50: rgba(6,182,212,0.50);
+  --brand-hover: #06b6d4;
+  --brand-button: #06b6d4;
+  --brand-gradient: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
+  --brand-glow: rgba(20, 184, 166, 0.55);
 }
 :root[data-accent="amber"] {
   --brand-primary: #f59e0b;
@@ -60,6 +59,8 @@
   --brand-primary-50: rgba(245,158,11,0.50);
   --brand-hover: #f59e0b;
   --brand-button: #f59e0b;
+  --brand-gradient: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  --brand-glow: rgba(245, 158, 11, 0.55);
 }
 :root[data-accent="rose"] {
   --brand-primary: #f43f5e;
@@ -70,6 +71,8 @@
   --brand-primary-50: rgba(244,63,94,0.50);
   --brand-hover: #f43f5e;
   --brand-button: #f43f5e;
+  --brand-gradient: linear-gradient(135deg, #f43f5e 0%, #d946ef 100%);
+  --brand-glow: rgba(244, 63, 94, 0.55);
 }
 :root[data-accent="emerald"] {
   --brand-primary: #10b981;
@@ -80,6 +83,8 @@
   --brand-primary-50: rgba(16,185,129,0.50);
   --brand-hover: #10b981;
   --brand-button: #10b981;
+  --brand-gradient: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  --brand-glow: rgba(16, 185, 129, 0.55);
 }
 
 @theme inline {
@@ -106,14 +111,62 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- * Tailwind utility overrides — re-skin the light-mode classes used by
- * the dashboard components for dark backgrounds. Importance kept low
- * (no !important) to allow per-component overrides via CSS vars.
+ * Gradient promotion — any element using bg-[var(--brand-primary)]
+ * (the standard primary-CTA pattern across the dashboard) gets the
+ * accent gradient + a soft glow. Buttons, active pills, etc. opt in
+ * automatically just by using the existing class.
+ * ────────────────────────────────────────────────────────────────────── */
+
+.bg-\[var\(--brand-primary\)\] {
+  background: var(--brand-gradient) !important;
+  box-shadow: 0 4px 18px var(--brand-glow);
+}
+
+.text-\[var\(--brand-primary\)\] {
+  color: var(--brand-primary) !important;
+  text-shadow: 0 0 14px var(--brand-glow);
+}
+
+.border-\[var\(--brand-primary\)\] {
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 16px var(--brand-glow);
+}
+
+/* Hardcoded estimator-red references — re-skin to the active accent. */
+.bg-\[\#7B0000\] {
+  background: var(--brand-gradient) !important;
+  box-shadow: 0 4px 18px var(--brand-glow);
+}
+.border-\[\#7B0000\] {
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 14px var(--brand-glow);
+}
+.bg-\[\#7B0000\]\/5 {
+  background-color: rgba(var(--brand-primary-rgb), 0.12) !important;
+}
+.accent-\[\#7B0000\] {
+  accent-color: var(--brand-primary);
+}
+
+/* Inline SVG fills/strokes hardcoded in chart components. */
+svg [stroke="#7B0000"] { stroke: var(--brand-primary); }
+svg [fill="#7B0000"]   { fill: var(--brand-primary); }
+svg [fill="#ffffff"]   { fill: var(--brand-card); }
+svg [stroke="#cbd5e1"] { stroke: var(--brand-border-strong); }
+svg [stroke="#94a3b8"] { stroke: var(--brand-text-mid); }
+svg text[fill="#0f172a"] { fill: var(--brand-text); }
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Tailwind utility overrides — re-skin the dashboard's hardcoded
+ * light-mode classes for the dark theme, with stronger contrast against
+ * the new deep-navy background.
  * ────────────────────────────────────────────────────────────────────── */
 
 .bg-white         { background-color: var(--brand-card); }
 .bg-gray-50       { background-color: var(--brand-card-elev); }
 .bg-gray-100      { background-color: var(--brand-card-elev); }
+.bg-gray-200      { background-color: var(--brand-border-strong); }
+.bg-gray-900      { background: var(--brand-gradient); }
 
 .border-gray-100  { border-color: var(--brand-border); }
 .border-gray-200  { border-color: var(--brand-border); }
@@ -123,43 +176,53 @@ input::placeholder, textarea::placeholder {
 .divide-gray-200 > * + * { border-color: var(--brand-border); }
 
 .text-gray-900    { color: var(--brand-text); }
-.text-gray-800    { color: #e2e8f0; }
-.text-gray-700    { color: #cbd5e1; }
-.text-gray-600    { color: #94a3b8; }
-.text-gray-500    { color: #94a3b8; }
-.text-gray-400    { color: #64748b; }
+.text-gray-800    { color: #f1f5f9; }
+.text-gray-700    { color: #d8e0ee; }
+.text-gray-600    { color: #b6c1d4; }
+.text-gray-500    { color: var(--brand-text-mid); }
+.text-gray-400    { color: #7588a0; }
 
-/* Status pills: keep meaning, restyle for dark */
-.bg-amber-50      { background-color: rgba(245, 158, 11, 0.1); }
-.bg-amber-100     { background-color: rgba(245, 158, 11, 0.18); }
-.border-amber-200 { border-color: rgba(245, 158, 11, 0.45); }
-.text-amber-800   { color: #fcd34d; }
-.text-amber-900   { color: #fcd34d; }
+/* Status pills: bigger contrast, electric-friendly. */
+.bg-amber-50      { background-color: rgba(245, 158, 11, 0.12); }
+.bg-amber-100     { background-color: rgba(245, 158, 11, 0.28); }
+.border-amber-200 { border-color: rgba(245, 158, 11, 0.6); }
+.text-amber-800   { color: #fde047; }
+.text-amber-900   { color: #facc15; }
 
-.bg-emerald-50    { background-color: rgba(16, 185, 129, 0.1); }
-.bg-emerald-100   { background-color: rgba(16, 185, 129, 0.18); }
-.border-emerald-200 { border-color: rgba(16, 185, 129, 0.45); }
-.text-emerald-800 { color: #6ee7b7; }
+.bg-emerald-50    { background-color: rgba(16, 185, 129, 0.12); }
+.bg-emerald-100   { background-color: rgba(16, 185, 129, 0.28); }
+.border-emerald-200 { border-color: rgba(16, 185, 129, 0.6); }
+.text-emerald-800 { color: #86efac; }
 
-.bg-rose-50       { background-color: rgba(244, 63, 94, 0.1); }
-.bg-rose-100      { background-color: rgba(244, 63, 94, 0.18); }
-.border-rose-200  { border-color: rgba(244, 63, 94, 0.45); }
-.border-rose-300  { border-color: rgba(244, 63, 94, 0.55); }
-.text-rose-800    { color: #fca5a5; }
-.text-red-600     { color: #fca5a5; }
-.text-red-500     { color: #fca5a5; }
+.bg-rose-50       { background-color: rgba(244, 63, 94, 0.12); }
+.bg-rose-100      { background-color: rgba(244, 63, 94, 0.28); }
+.border-rose-200  { border-color: rgba(244, 63, 94, 0.6); }
+.border-rose-300  { border-color: rgba(244, 63, 94, 0.7); }
+.text-rose-800    { color: #fda4af; }
+.text-red-600     { color: #fda4af; }
+.text-red-500     { color: #fda4af; }
 
-.bg-orange-50     { background-color: rgba(249, 115, 22, 0.1); }
-.border-orange-200 { border-color: rgba(249, 115, 22, 0.45); }
+.bg-orange-50     { background-color: rgba(249, 115, 22, 0.12); }
+.bg-orange-100    { background-color: rgba(249, 115, 22, 0.28); }
+.border-orange-200 { border-color: rgba(249, 115, 22, 0.6); }
 .text-orange-800  { color: #fdba74; }
 
-.bg-slate-50      { background-color: rgba(148, 163, 184, 0.08); }
-.bg-slate-100     { background-color: rgba(148, 163, 184, 0.18); }
-.border-slate-200 { border-color: rgba(148, 163, 184, 0.45); }
+.bg-slate-50      { background-color: rgba(148, 163, 184, 0.1); }
+.bg-slate-100     { background-color: rgba(148, 163, 184, 0.2); }
+.border-slate-200 { border-color: rgba(148, 163, 184, 0.5); }
 .text-slate-700   { color: #cbd5e1; }
 
-.bg-blue-50       { background-color: rgba(59, 130, 246, 0.1); }
+.bg-blue-50       { background-color: rgba(59, 130, 246, 0.18); }
 .text-blue-800    { color: #93c5fd; }
 
-.text-green-600   { color: #6ee7b7; }
-.text-green-700   { color: #6ee7b7; }
+.text-green-600   { color: #86efac; }
+.text-green-700   { color: #86efac; }
+
+/* SVG strokes / fills referenced by hex in the chart components — they
+ * read OK on dark already, but a few near-white grids need toning down. */
+svg line[stroke="#e5e7eb"], svg line[stroke="#f3f4f6"] {
+  stroke: var(--brand-border) !important;
+}
+svg text[fill="#6b7280"] {
+  fill: var(--brand-text-mid) !important;
+}

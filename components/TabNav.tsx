@@ -45,13 +45,22 @@ export default function TabNav() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                className={`relative px-4 py-3 text-sm font-semibold transition-colors ${
                   active
-                    ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]'
-                    : 'border-transparent text-[var(--brand-text-mid)] hover:text-[var(--brand-text)]'
+                    ? 'text-[var(--brand-primary)]'
+                    : 'text-[var(--brand-text-mid)] hover:text-[var(--brand-text)]'
                 }`}
               >
                 {tab.label}
+                {active && (
+                  <span
+                    className="absolute left-0 right-0 bottom-0 h-[3px] rounded-t"
+                    style={{
+                      background: 'var(--brand-gradient)',
+                      boxShadow: '0 0 14px var(--brand-glow)',
+                    }}
+                  />
+                )}
               </Link>
             )
           })}

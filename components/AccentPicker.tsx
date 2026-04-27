@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 
 const ACCENTS = [
-  { id: 'indigo',  label: 'Indigo',  color: '#6366f1' },
-  { id: 'teal',    label: 'Teal',    color: '#14b8a6' },
-  { id: 'amber',   label: 'Amber',   color: '#f59e0b' },
-  { id: 'rose',    label: 'Rose',    color: '#f43f5e' },
-  { id: 'emerald', label: 'Emerald', color: '#10b981' },
+  { id: 'indigo',  label: 'Indigo',  gradient: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', glow: 'rgba(99, 102, 241, 0.6)' },
+  { id: 'teal',    label: 'Teal',    gradient: 'linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%)', glow: 'rgba(20, 184, 166, 0.6)' },
+  { id: 'amber',   label: 'Amber',   gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)', glow: 'rgba(245, 158, 11, 0.6)' },
+  { id: 'rose',    label: 'Rose',    gradient: 'linear-gradient(135deg, #f43f5e 0%, #d946ef 100%)', glow: 'rgba(244, 63, 94, 0.6)' },
+  { id: 'emerald', label: 'Emerald', gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)', glow: 'rgba(16, 185, 129, 0.6)' },
 ] as const
 
 const STORAGE_KEY = 'spm-accent'
@@ -44,10 +44,13 @@ export default function AccentPicker() {
             aria-label={a.label}
             aria-pressed={active}
             title={a.label}
-            className={`w-4 h-4 rounded-full border transition-transform ${
-              active ? 'scale-110 border-white' : 'border-transparent opacity-60 hover:opacity-100'
+            className={`w-5 h-5 rounded-full border-2 transition-transform ${
+              active ? 'scale-125 border-white' : 'border-transparent opacity-65 hover:opacity-100 hover:scale-110'
             }`}
-            style={{ backgroundColor: a.color }}
+            style={{
+              background: a.gradient,
+              boxShadow: active ? `0 0 14px ${a.glow}` : undefined,
+            }}
           />
         )
       })}
