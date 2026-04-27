@@ -1,4 +1,4 @@
-import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai'
+import { GoogleGenAI } from '@google/genai'
 import type { FusionResult, IndustryDataset, StyleStrand } from './types'
 
 export const NANO_BANANA_MODEL = 'gemini-3.1-flash-image-preview'
@@ -71,16 +71,14 @@ export async function generateFusionImages(opts: GenerateFusionImagesOptions): P
 
   // Gemini image preview returns one image per generateContent call. Loop for variety.
   for (let i = 0; i < opts.count; i++) {
+    // Defaults are fine for most tattoo prompts. The image-prefixed HarmCategory
+    // enum members in the SDK aren't accepted by the v1beta endpoint as of writing.
+    // If you start hitting Layer-1 blocks for benign tattoo motifs, the workaround
+    // is to send safetySettings as raw strings using the non-image-prefixed names
+    // (e.g. category: 'HARM_CATEGORY_DANGEROUS_CONTENT') with an 'as never' cast.
     const res = await ai.models.generateContent({
       model: NANO_BANANA_MODEL,
       contents: opts.prompt,
-      // Two-layer safety; relax DANGEROUS_CONTENT so common tattoo motifs pass Layer 1.
-      config: {
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-          { category: HarmCategory.HARM_CATEGORY_IMAGE_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-        ],
-      },
     })
 
     const parts = res.candidates?.[0]?.content?.parts ?? []
