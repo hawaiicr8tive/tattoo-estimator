@@ -1,0 +1,110 @@
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai'
+import type { FusionResult, IndustryDataset, StyleStrand } from './types'
+
+export const NANO_BANANA_MODEL = 'gemini-3.1-flash-image-preview'
+
+export interface FusionImagePromptInput {
+  baseStrand: StyleStrand
+  blendStrand: StyleStrand
+  fusion: FusionResult
+  /** Optional: the prose analysis from runFusionResearch — used to keep the image prompt grounded. */
+  analysis?: string
+}
+
+/**
+ * Build a single tattoo-flash image prompt from a fusion. Keeps the prompt
+ * inside the design domain (flash-sheet illustration of a tattoo, not a
+ * person wearing one) to stay clear of Gemini's body-skin / nudity layer.
+ *
+ * The prose analysis is intentionally truncated — Gemini image gen weights
+ * the first ~1200 chars of the prompt and the analysis can run 2-3K.
+ */
+export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
+  const { baseStrand, blendStrand, fusion, analysis } = input
+  const baseTags = baseStrand.tags.join(', ')
+  const blendTags = blendStrand.tags.join(', ')
+  const ingredients = fusion.ingredients.slice(0, 3).join('. ')
+  const analysisSnippet = analysis ? sanitizeForImageGen(analysis).slice(0, 600) : ''
+  return [
+    'A black-ink tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the inked design centered on paper.',
+    `Working name: "${fusion.name}".`,
+    `Fusion of ${baseStrand.label} (${baseStrand.tagline}) and ${blendStrand.label} (${blendStrand.tagline}).`,
+    `Tag mix: ${baseTags} blended with ${blendTags}.`,
+    `Visual ingredients: ${ingredients}`,
+    analysisSnippet ? `Style notes: ${analysisSnippet}` : '',
+    'Style: traditional flash-sheet illustration, fine ink work, crisp lines, the kind of drawing a tattoo artist pins to a studio wall as reference. Subtle paper texture. No watermarks, no text annotations, no signatures.',
+  ].filter(Boolean).join(' ')
+}
+
+/**
+ * Strip wording that frequently triggers Gemini's Layer 2 image-safety filter
+ * for tattoo prompts. We keep tattoo-canon vocabulary (skull, snake, dagger,
+ * blood-drops as a stylistic motif) but replace medical/violent words.
+ */
+function sanitizeForImageGen(text: string): string {
+  return text
+    .replace(/\bgore\b/gi, 'dark imagery')
+    .replace(/\bgory\b/gi, 'dark')
+    .replace(/\bwound(s|ed|ing)?\b/gi, 'mark')
+    .replace(/\bcorpse(s)?\b/gi, 'figure')
+    .replace(/\bcadaver(s)?\b/gi, 'figure')
+    .replace(/\bgraphic violence\b/gi, 'dramatic imagery')
+    .replace(/\bbleeding\b/gi, 'ink-dripping')
+}
+
+export interface GenerateFusionImagesOptions {
+  apiKey: string
+  prompt: string
+  count: number
+}
+
+export interface GeneratedImage {
+  /** PNG bytes from Gemini. Caller decides whether to save. */
+  bytes: Buffer
+  /** Mime type Gemini reports — typically "image/png". */
+  mime: string
+}
+
+export async function generateFusionImages(opts: GenerateFusionImagesOptions): Promise<GeneratedImage[]> {
+  const ai = new GoogleGenAI({ apiKey: opts.apiKey })
+  const out: GeneratedImage[] = []
+
+  // Gemini image preview returns one image per generateContent call. Loop for variety.
+  for (let i = 0; i < opts.count; i++) {
+    const res = await ai.models.generateContent({
+      model: NANO_BANANA_MODEL,
+      contents: opts.prompt,
+      // Two-layer safety; relax DANGEROUS_CONTENT so common tattoo motifs pass Layer 1.
+      config: {
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+          { category: HarmCategory.HARM_CATEGORY_IMAGE_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+        ],
+      },
+    })
+
+    const parts = res.candidates?.[0]?.content?.parts ?? []
+    const imagePart = parts.find(p => p.inlineData?.data && p.inlineData?.mimeType?.startsWith('image/'))
+    if (!imagePart?.inlineData?.data) {
+      // Layer 2 filter or empty response — surface the reason if present.
+      const reason = res.promptFeedback?.blockReason || res.candidates?.[0]?.finishReason || 'no_image_returned'
+      throw new Error(`Image generation blocked or empty (${reason})`)
+    }
+    out.push({
+      bytes: Buffer.from(imagePart.inlineData.data, 'base64'),
+      mime: imagePart.inlineData.mimeType ?? 'image/png',
+    })
+  }
+  return out
+}
+
+export interface FusionImageRecord {
+  url: string
+  prompt: string
+  /** ISO 8601 of generation. */
+  createdAt: string
+  model: string
+}
+
+// Re-export for callers
+export type { IndustryDataset, FusionResult, StyleStrand }

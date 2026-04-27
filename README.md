@@ -37,7 +37,8 @@ Copy `.env.example` → `.env.local` and fill the values. All variables are read
 | `ADMIN_PASSWORD` | `/admin`, `/trends` | Picked by you; used to derive the session cookie HMAC |
 | `RESEND_API_KEY` | Lead submission + verification | Resend API key |
 | `STUDIO_EMAIL` | Lead notifications | Fallback if no studio email is set in `/admin → Leads` |
-| `ANTHROPIC_API_KEY` | `/admin → AI Research` | Anthropic API key for Claude |
+| `ANTHROPIC_API_KEY` | `/admin → AI Research`, Fusion Lab deep research | Anthropic API key for Claude |
+| `GEMINI_API_KEY` | Fusion Lab "Generate flash designs" | Google Gemini API key for Nano Banana 2 image generation |
 
 Supabase migrations live in `supabase/migrations/` — apply them in order before the first run.
 

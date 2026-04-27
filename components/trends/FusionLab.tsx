@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FusionInput, FusionResult, StyleStrand } from '@/lib/trends/types'
 import { fuseStyles } from '@/lib/trends/engine'
 
@@ -11,6 +11,26 @@ const RESEARCH_MODELS = [
 ] as const
 type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
 
+interface FusionImage {
+  url: string
+  prompt: string
+  createdAt: string
+  model: string
+}
+
+interface FusionHistoryEntry {
+  id: string
+  timestamp: string
+  industryId: string
+  baseStyleId: string
+  blendStyleId: string
+  fusionName: string
+  model: string
+  analysis: string
+  usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
+  images?: FusionImage[]
+}
+
 interface Props {
   styles: StyleStrand[]
   currentYear: number
@@ -18,12 +38,14 @@ interface Props {
 }
 
 interface AnalysisState {
+  entryId: string
   analysis: string
   model: string
   fusionName: string
   baseLabel: string
   blendLabel: string
   usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
+  images: FusionImage[]
 }
 
 export default function FusionLab({ styles, currentYear, industryId }: Props) {
@@ -38,6 +60,11 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [researching, setResearching] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null)
   const [researchError, setResearchError] = useState<string | null>(null)
+  const [imageCount, setImageCount] = useState(4)
+  const [generatingImages, setGeneratingImages] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [history, setHistory] = useState<FusionHistoryEntry[]>([])
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const base = styles.find(s => s.id === baseId)
   const blend = styles.find(s => s.id === blendId)
@@ -48,11 +75,49 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     return fuseStyles(base, blend, input, currentYear)
   }, [base, blend, blendWeight, socialAccelerant, anomaly, extraSignals, currentYear])
 
+  // Pull fusion-research history once on mount; refresh after writes.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/research/fusion')
+      .then(r => r.json())
+      .then((d: { history?: FusionHistoryEntry[] }) => {
+        if (!cancelled) setHistory(d.history ?? [])
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  function entryToAnalysisState(entry: FusionHistoryEntry, baseLabel: string, blendLabel: string): AnalysisState {
+    return {
+      entryId: entry.id,
+      analysis: entry.analysis,
+      model: entry.model,
+      fusionName: entry.fusionName,
+      baseLabel,
+      blendLabel,
+      usage: entry.usage,
+      images: entry.images ?? [],
+    }
+  }
+
+  async function refreshHistory(): Promise<FusionHistoryEntry[]> {
+    try {
+      const r = await fetch('/api/admin/research/fusion')
+      const d = (await r.json()) as { history?: FusionHistoryEntry[] }
+      const next = d.history ?? []
+      setHistory(next)
+      return next
+    } catch {
+      return history
+    }
+  }
+
   async function handleResearch() {
     if (!base || !blend || !result) return
     setResearching(true)
     setResearchError(null)
     setAnalysis(null)
+    setImageError(null)
     try {
       const res = await fetch('/api/admin/research/fusion', {
         method: 'POST',
@@ -71,19 +136,49 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Research failed')
-      setAnalysis({
-        analysis: data.entry.analysis,
-        model: data.entry.model,
-        fusionName: data.entry.fusionName,
-        baseLabel: base.label,
-        blendLabel: blend.label,
-        usage: data.entry.usage,
-      })
+      setAnalysis(entryToAnalysisState(data.entry, base.label, blend.label))
+      refreshHistory()
     } catch (e) {
       setResearchError(e instanceof Error ? e.message : 'Research failed')
     } finally {
       setResearching(false)
     }
+  }
+
+  async function handleGenerateImages() {
+    if (!analysis) return
+    setGeneratingImages(true)
+    setImageError(null)
+    try {
+      const res = await fetch('/api/admin/research/fusion/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: analysis.entryId, count: imageCount }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Image generation failed')
+      const updated = data.entry as FusionHistoryEntry | null
+      if (updated) {
+        setAnalysis(prev => (prev ? { ...prev, images: updated.images ?? [] } : prev))
+      }
+      refreshHistory()
+    } catch (e) {
+      setImageError(e instanceof Error ? e.message : 'Image generation failed')
+    } finally {
+      setGeneratingImages(false)
+    }
+  }
+
+  function reopenHistoryEntry(entry: FusionHistoryEntry) {
+    const baseStrand = styles.find(s => s.id === entry.baseStyleId)
+    const blendStrand = styles.find(s => s.id === entry.blendStyleId)
+    setAnalysis(entryToAnalysisState(
+      entry,
+      baseStrand?.label ?? entry.baseStyleId,
+      blendStrand?.label ?? entry.blendStyleId,
+    ))
+    setImageError(null)
+    setResearchError(null)
   }
 
   function addSignal() {
@@ -230,11 +325,96 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                   </span>
                 </div>
                 <AnalysisProse text={analysis.analysis} />
+
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs uppercase tracking-wide text-gray-500">Flash designs</span>
+                    <select
+                      value={imageCount}
+                      onChange={e => setImageCount(Number(e.target.value))}
+                      className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
+                      disabled={generatingImages}
+                    >
+                      {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleGenerateImages}
+                      disabled={generatingImages}
+                      className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+                    >
+                      {generatingImages ? 'Generating…' : 'Generate flash designs'}
+                    </button>
+                    <span className="text-[10px] text-gray-500">Nano Banana 2 · ~$0.07/image</span>
+                  </div>
+                  {imageError && <p className="mt-2 text-xs text-red-600">{imageError}</p>}
+                  {analysis.images.length > 0 && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {analysis.images.map(img => (
+                        <a key={img.url} href={img.url} target="_blank" rel="noopener noreferrer" className="block rounded overflow-hidden border border-gray-200 hover:border-gray-400">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={img.url} alt="Flash design" className="w-full aspect-square object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>
         ) : (
           <p className="text-sm text-gray-500">Pick a base and a blend strand.</p>
+        )}
+      </div>
+
+      <div className="md:col-span-2">
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(o => !o)}
+          className="text-xs text-gray-700 hover:text-gray-900 underline"
+        >
+          {historyOpen ? '▾' : '▸'} Recent fusion research ({history.length})
+        </button>
+        {historyOpen && (
+          <ul className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+            {history.length === 0 ? (
+              <li className="p-3 text-xs text-gray-500">No fusion research yet — run one above.</li>
+            ) : (
+              history.slice(0, 25).map(h => {
+                const baseStrand = styles.find(s => s.id === h.baseStyleId)
+                const blendStrand = styles.find(s => s.id === h.blendStyleId)
+                const imgCount = h.images?.length ?? 0
+                const isCurrent = analysis?.entryId === h.id
+                return (
+                  <li
+                    key={h.id}
+                    onClick={() => reopenHistoryEntry(h)}
+                    className={`p-3 cursor-pointer text-sm flex items-start gap-3 transition-colors ${isCurrent ? 'bg-[#7B0000]/5' : 'hover:bg-gray-50'}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 truncate">{h.fusionName}</div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {(baseStrand?.label ?? h.baseStyleId)} × {(blendStrand?.label ?? h.blendStyleId)}
+                        <span className="ml-2">{new Date(h.timestamp).toLocaleString()}</span>
+                        <span className="ml-2">· {h.model}</span>
+                      </div>
+                    </div>
+                    {imgCount > 0 ? (
+                      <div className="shrink-0 flex -space-x-1.5">
+                        {h.images!.slice(0, 3).map(img => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={img.url} src={img.url} alt="" className="w-8 h-8 rounded border border-white object-cover" />
+                        ))}
+                        {imgCount > 3 && <span className="text-[10px] text-gray-500 self-center ml-1">+{imgCount - 3}</span>}
+                      </div>
+                    ) : (
+                      <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-400">no images</span>
+                    )}
+                  </li>
+                )
+              })
+            )}
+          </ul>
         )}
       </div>
     </div>
