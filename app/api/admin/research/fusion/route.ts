@@ -9,6 +9,14 @@ function newId(): string {
   return `fr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+function readContentFocus(v: unknown): { categoryLabel: string; itemLabel: string } | undefined {
+  if (!v || typeof v !== 'object') return undefined
+  const o = v as Record<string, unknown>
+  if (typeof o.categoryLabel !== 'string' || typeof o.itemLabel !== 'string') return undefined
+  if (!o.categoryLabel.trim() || !o.itemLabel.trim()) return undefined
+  return { categoryLabel: o.categoryLabel.slice(0, 80), itemLabel: o.itemLabel.slice(0, 80) }
+}
+
 function clamp(n: unknown, min: number, max: number, fallback: number): number {
   const v = typeof n === 'number' ? n : Number(n)
   if (!Number.isFinite(v)) return fallback
@@ -53,6 +61,7 @@ export async function POST(req: NextRequest) {
     : []
   const fusionName = typeof x.fusionName === 'string' ? x.fusionName.slice(0, 200) : ''
   const model: ResearchModelId = isValidModel(x.model) ? (x.model as ResearchModelId) : 'claude-opus-4-7'
+  const contentFocus = readContentFocus(x.contentFocus)
 
   if (!industryId) return NextResponse.json({ error: 'industryId is required' }, { status: 400 })
   if (!baseStyleId || !blendStyleId) {
@@ -86,6 +95,7 @@ export async function POST(req: NextRequest) {
       anomaly,
       extraSignals,
       fusionName: fusionName || `${baseStrand.label} × ${blendStrand.label}`,
+      contentFocus,
     })
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) {
@@ -118,6 +128,7 @@ export async function POST(req: NextRequest) {
     model,
     analysis: outcome.analysis,
     visualDescriptor: outcome.visualDescriptor,
+    contentFocus,
     usage: outcome.usage,
   }
 

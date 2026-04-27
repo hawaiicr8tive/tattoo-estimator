@@ -29,6 +29,8 @@ export interface FusionImagePromptInput {
   visualDescriptor?: string
   /** 0-100. Higher values inject deliberate compositional rule-breaking. */
   chaos?: number
+  /** Optional motif focus — forced central subject (e.g. "Rose"). */
+  contentFocus?: { categoryLabel: string; itemLabel: string }
 }
 
 const CHAOS_DIRECTIVES: { min: number; text: string }[] = [
@@ -54,7 +56,7 @@ function chaosDirective(chaos: number): string {
  * kill it) doesn't translate to image style and dilutes the prompt.
  */
 export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
-  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0 } = input
+  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0, contentFocus } = input
   const baseTags = baseStrand.tags.join(', ')
   const blendTags = blendStrand.tags.join(', ')
   const ingredients = fusion.ingredients.slice(0, 3).join('. ')
@@ -62,6 +64,7 @@ export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
   const chaosText = chaosDirective(Math.max(0, Math.min(100, Math.round(chaos))))
   return [
     'A black-ink tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the inked design centered on paper.',
+    contentFocus ? `Central subject: ${contentFocus.itemLabel} (${contentFocus.categoryLabel}). The design MUST feature this as the primary motif.` : '',
     `Working name: "${fusion.name}".`,
     `Fusion of ${baseStrand.label} (${baseStrand.tagline}) and ${blendStrand.label} (${blendStrand.tagline}).`,
     `Tag mix: ${baseTags} blended with ${blendTags}.`,

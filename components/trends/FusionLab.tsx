@@ -24,6 +24,14 @@ interface FusionImage {
   model: string
 }
 
+interface MotifCategory { id: string; label: string; description?: string }
+interface MotifItem { id: string; label: string; categoryId: string; industries: string[] }
+interface MotifLibrary { categories: MotifCategory[]; items: MotifItem[] }
+
+function itemAppliesToIndustry(item: MotifItem, industryId: string): boolean {
+  return item.industries.includes('*') || item.industries.includes(industryId)
+}
+
 interface FusionHistoryEntry {
   id: string
   timestamp: string
@@ -77,15 +85,62 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [editedVisualDescriptor, setEditedVisualDescriptor] = useState('')
   const [history, setHistory] = useState<FusionHistoryEntry[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [library, setLibrary] = useState<MotifLibrary | null>(null)
+  const [contentCategoryId, setContentCategoryId] = useState<string>('')
+  const [contentItemId, setContentItemId] = useState<string>('')
 
   const base = styles.find(s => s.id === baseId)
   const blend = styles.find(s => s.id === blendId)
 
+  const filteredLibrary = useMemo(() => {
+    if (!library) return null
+    const items = library.items.filter(i => itemAppliesToIndustry(i, industryId))
+    const usedCategoryIds = new Set(items.map(i => i.categoryId))
+    const categories = library.categories.filter(c => usedCategoryIds.has(c.id))
+    return { categories, items }
+  }, [library, industryId])
+
+  // Derived effective ids — when industry changes, stale category/item ids
+  // are silently treated as "Auto / N/A" without triggering a state-reset effect.
+  const effectiveCategoryId = useMemo(
+    () => (filteredLibrary?.categories.some(c => c.id === contentCategoryId) ? contentCategoryId : ''),
+    [filteredLibrary, contentCategoryId],
+  )
+  const effectiveItemId = useMemo(
+    () => (
+      effectiveCategoryId && filteredLibrary?.items.some(i => i.id === contentItemId && i.categoryId === effectiveCategoryId)
+        ? contentItemId
+        : ''
+    ),
+    [filteredLibrary, contentItemId, effectiveCategoryId],
+  )
+
+  const itemsInSelectedCategory = useMemo(() => {
+    if (!filteredLibrary || !effectiveCategoryId) return []
+    return filteredLibrary.items.filter(i => i.categoryId === effectiveCategoryId)
+  }, [filteredLibrary, effectiveCategoryId])
+
+  const selectedContent = useMemo(() => {
+    if (!filteredLibrary || !effectiveItemId) return null
+    const item = filteredLibrary.items.find(i => i.id === effectiveItemId)
+    if (!item) return null
+    const cat = filteredLibrary.categories.find(c => c.id === item.categoryId)
+    return { itemLabel: item.label, categoryLabel: cat?.label ?? item.categoryId }
+  }, [filteredLibrary, effectiveItemId])
+
   const result: FusionResult | null = useMemo(() => {
     if (!base || !blend) return null
-    const input: FusionInput = { baseStyleId: base.id, blendStyleId: blend.id, blendWeight, socialAccelerant, anomaly, extraSignals }
+    const input: FusionInput = {
+      baseStyleId: base.id,
+      blendStyleId: blend.id,
+      blendWeight,
+      socialAccelerant,
+      anomaly,
+      extraSignals,
+      contentFocus: selectedContent ?? undefined,
+    }
     return fuseStyles(base, blend, input, currentYear)
-  }, [base, blend, blendWeight, socialAccelerant, anomaly, extraSignals, currentYear])
+  }, [base, blend, blendWeight, socialAccelerant, anomaly, extraSignals, currentYear, selectedContent])
 
   // Pull fusion-research history once on mount; refresh after writes.
   useEffect(() => {
@@ -98,6 +153,17 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  // Pull the motif library once.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/motif-library')
+      .then(r => r.json())
+      .then((d: MotifLibrary) => { if (!cancelled) setLibrary(d) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
 
   function entryToAnalysisState(entry: FusionHistoryEntry, baseLabel: string, blendLabel: string): AnalysisState {
     return {
@@ -145,6 +211,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           extraSignals,
           fusionName: result.name,
           model,
+          contentFocus: selectedContent ?? undefined,
         }),
       })
       const data = await res.json()
@@ -177,6 +244,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
             ? editedVisualDescriptor
             : undefined,
+          contentFocus: selectedContent ?? undefined,
         }),
       })
       const data = await res.json()
@@ -243,6 +311,38 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
             </select>
           </label>
         </div>
+
+        {filteredLibrary && filteredLibrary.categories.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Content focus — category</div>
+              <select
+                value={effectiveCategoryId}
+                onChange={e => { setContentCategoryId(e.target.value); setContentItemId('') }}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
+              >
+                <option value="">Auto / N/A</option>
+                {filteredLibrary.categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Content focus — item</div>
+              <select
+                value={effectiveItemId}
+                onChange={e => setContentItemId(e.target.value)}
+                disabled={!effectiveCategoryId}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white disabled:opacity-60"
+              >
+                <option value="">{effectiveCategoryId ? 'Auto / N/A' : 'pick a category'}</option>
+                {itemsInSelectedCategory.map(i => (
+                  <option key={i.id} value={i.id}>{i.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
 
         <Slider label="Blend weight (toward blend strand)" value={blendWeight} setValue={setBlendWeight} hint={`${100 - blendWeight}% / ${blendWeight}%`} />
         <Slider label="Social accelerant" value={socialAccelerant} setValue={setSocialAccelerant} hint="How hard the algorithm is pushing this aesthetic" />

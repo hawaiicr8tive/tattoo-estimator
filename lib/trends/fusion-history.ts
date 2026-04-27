@@ -19,6 +19,8 @@ export interface FusionHistoryEntry {
   analysis: string
   /** ~100-word visual descriptor used as the primary signal for image generation. */
   visualDescriptor?: string
+  /** Optional motif focus the user pinned via the library dropdown. */
+  contentFocus?: { categoryLabel: string; itemLabel: string }
   usage: {
     input_tokens: number
     output_tokens: number

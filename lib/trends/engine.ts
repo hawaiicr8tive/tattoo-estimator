@@ -383,6 +383,7 @@ export function fuseStyles(
   const signals = uniq([...baseSignals, ...blendSignals, ...(input.extraSignals ?? [])])
   if (input.socialAccelerant > 60) signals.push('platform-native virality')
   if (input.anomaly > 60) signals.push('anti-canon mutation')
+  if (input.contentFocus) signals.push(`primary motif: ${input.contentFocus.itemLabel}`)
 
   const blendShare = Math.round(input.blendWeight)
   const baseShare = 100 - blendShare

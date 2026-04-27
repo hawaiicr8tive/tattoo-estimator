@@ -114,6 +114,12 @@ export interface FusionInput {
   anomaly: number
   /** Optional extra signals the user wants to inject. */
   extraSignals?: string[]
+  /**
+   * Optional motif content type to push the fusion toward. Comes from the
+   * shared motif library — pulled into the engine and AI Research / image
+   * prompt to bias the output toward a specific subject (rose, manta ray, etc.).
+   */
+  contentFocus?: { categoryLabel: string; itemLabel: string }
 }
 
 export interface FusionResult {

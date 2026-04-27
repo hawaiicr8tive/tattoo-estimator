@@ -163,6 +163,8 @@ export interface RunFusionResearchOptions {
   anomaly: number
   extraSignals: string[]
   fusionName: string
+  /** Optional motif focus from the shared library (Flowers → Rose, etc.). */
+  contentFocus?: { categoryLabel: string; itemLabel: string }
 }
 
 export interface RunFusionResearchOutcome {
@@ -227,6 +229,7 @@ export async function runFusionResearch(opts: RunFusionResearchOptions): Promise
     `- Social accelerant: ${Math.round(opts.socialAccelerant)}/100 (higher = more algorithm-amplified)`,
     `- Anomaly / rule-breaking: ${Math.round(opts.anomaly)}/100 (higher = further from canon)`,
     opts.extraSignals.length > 0 ? `- Extra carrier signals supplied by user: ${opts.extraSignals.join(', ')}` : null,
+    opts.contentFocus ? `- Primary content focus (a specific motif the user wants the fusion to render): ${opts.contentFocus.itemLabel} (${opts.contentFocus.categoryLabel} category). The visualDescriptor MUST feature this motif as the central subject.` : null,
   ].filter(Boolean).join('\n')
 
   const response = await client.messages.create({

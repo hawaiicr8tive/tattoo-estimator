@@ -143,6 +143,8 @@ export default function TrendsTab() {
         </p>
       </div>
 
+      <MotifLibraryImporter />
+
       {loading && <p className="text-[#555555] py-12 text-center">Loading dataset…</p>}
 
       {!loading && dataset && (
@@ -524,6 +526,70 @@ function TriggersEditor({ triggers, onChange }: { triggers: CulturalTrigger[]; o
               <button type="button" onClick={() => remove(i)} className="text-xs text-red-600 hover:text-red-800">×</button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MotifLibraryImporter() {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleFile(file: File) {
+    setBusy(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/motif-library/import', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Import failed')
+      const errs = Array.isArray(data.parseErrors) ? data.parseErrors.length : 0
+      setMessage(`Imported ${data.addedItems} items, ${data.addedCategories} categories.${errs > 0 ? ` ${errs} row(s) skipped — see browser console.` : ''}`)
+      if (errs > 0) console.warn('Motif CSV parse errors:', data.parseErrors)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Import failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl bg-white border border-gray-200 p-3 mb-4">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 text-sm font-medium text-[#0A0A0A]"
+      >
+        <span className="text-[#555555] text-xs">{open ? '▾' : '▸'}</span>
+        Motif library — import CSV
+      </button>
+      {open && (
+        <div className="mt-3 text-sm">
+          <p className="text-xs text-[#555555] mb-2">
+            CSV header: <code className="bg-gray-100 rounded px-1">category,name,industries,aliases,description</code>.
+            <br />
+            <code className="bg-gray-100 rounded px-1">industries</code> is comma-separated within the cell (so the cell needs double quotes), e.g.{' '}
+            <code className="bg-gray-100 rounded px-1">{`"tattoo,walkin,hawaii-souvenir"`}</code>. Empty industries = applies to all (<code className="bg-gray-100 rounded px-1">*</code>).
+          </p>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            disabled={busy}
+            onChange={e => {
+              const f = e.target.files?.[0]
+              if (f) handleFile(f)
+              e.target.value = ''
+            }}
+            className="text-sm"
+          />
+          {busy && <p className="text-xs text-[#555555] mt-2">Importing…</p>}
+          {message && <p className="text-xs text-green-700 mt-2">{message}</p>}
+          {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
         </div>
       )}
     </div>

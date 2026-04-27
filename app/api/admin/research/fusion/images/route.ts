@@ -24,6 +24,14 @@ function clamp(n: unknown, min: number, max: number, fallback: number): number {
   return Math.max(min, Math.min(max, v))
 }
 
+function readContentFocus(v: unknown): { categoryLabel: string; itemLabel: string } | undefined {
+  if (!v || typeof v !== 'object') return undefined
+  const o = v as Record<string, unknown>
+  if (typeof o.categoryLabel !== 'string' || typeof o.itemLabel !== 'string') return undefined
+  if (!o.categoryLabel.trim() || !o.itemLabel.trim()) return undefined
+  return { categoryLabel: o.categoryLabel.slice(0, 80), itemLabel: o.itemLabel.slice(0, 80) }
+}
+
 async function imagesGeneratedToday(): Promise<number> {
   const all = await loadFusionHistory()
   const todayUtc = new Date().toISOString().slice(0, 10)
@@ -61,6 +69,7 @@ export async function POST(req: NextRequest) {
     typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
       ? x.visualDescriptor.slice(0, 2000)
       : undefined
+  const contentFocusOverride = readContentFocus(x.contentFocus)
   if (!entryId) {
     return NextResponse.json({ error: 'entryId is required' }, { status: 400 })
   }
@@ -106,7 +115,8 @@ export async function POST(req: NextRequest) {
 
   // Prefer override → entry's stored visualDescriptor → fall back to engine outlook (handled inside builder).
   const visualDescriptor = visualDescriptorOverride ?? entry.visualDescriptor
-  const prompt = buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos })
+  const contentFocus = contentFocusOverride ?? entry.contentFocus
+  const prompt = buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos, contentFocus })
 
   // Generate.
   let generated
