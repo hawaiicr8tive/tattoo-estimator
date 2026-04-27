@@ -171,6 +171,18 @@ h1 {
 .accent-\[\#7B0000\] {
   accent-color: var(--brand-primary);
 }
+.text-\[\#7B0000\] {
+  color: var(--brand-primary) !important;
+  text-shadow: 0 0 14px var(--brand-glow);
+}
+
+/* Hardcoded estimator near-black + mid-gray text colors used inside the
+ * admin tab components. Re-skin to brand text colors so they read on the
+ * dark background. */
+.text-\[\#0A0A0A\] { color: var(--brand-text) !important; }
+.text-\[\#555555\] { color: var(--brand-text-mid) !important; }
+.bg-\[\#F5F5F0\]   { background-color: var(--brand-bg); }
+.bg-\[\#F9F9F7\]   { background-color: var(--brand-card-elev); }
 
 /* Active strong CTA dark color (`bg-gray-900` is the IndustrySwitcher's
  * active pill background) — flip to solid accent. */
