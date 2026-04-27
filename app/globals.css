@@ -1,41 +1,45 @@
 @import "tailwindcss";
 
 /*
- * Style Prediction Model — dark dashboard with electric accents
+ * Style Prediction Model — electric dark dashboard
  *
- * Default look: deep-navy background, clearly elevated card surfaces, and
- * an indigo→violet gradient as the primary accent. Five accent themes
- * are swappable at runtime via [data-accent="..."] on <html>; each ships
- * a different gradient + glow color so buttons, active tabs, and pills
- * pick up the right hue without per-component logic.
+ * Default look: deep near-black bg, lighter blue-violet-tinted card
+ * surfaces, and a vibrant violet→magenta gradient accent. Active CTAs
+ * use the SOLID accent color with a glow shadow (not a gradient — that
+ * read muted in the previous pass). Gradients are reserved for big
+ * title text, active tab indicators, and subtle card halos.
+ *
+ * Five accent themes are swappable at runtime via [data-accent] on
+ * <html>. Each ships its own solid color + two-stop gradient + glow.
  */
 
 :root {
-  --background:               #04060d;
+  --background:               #08080d;
   --foreground:               #f8fafc;
 
-  --brand-bg:                 #04060d;
-  --brand-card:               #131c2e;
-  --brand-card-elev:          #1f2c45;
+  --brand-bg:                 #08080d;
+  --brand-card:               #15172a;
+  --brand-card-elev:          #1e2138;
   --brand-text:               #f8fafc;
-  --brand-text-mid:           #a3afc2;
-  --brand-border:             #1f2c45;
-  --brand-border-strong:      #3b4863;
+  --brand-text-mid:           #b1bbd0;
+  --brand-border:             #25283f;
+  --brand-border-strong:      #3a3f5c;
 
   /* Accent — overridden via [data-accent] selectors. */
-  --brand-primary:            #6366f1;
-  --brand-primary-rgb:        99,102,241;
-  --brand-primary-5:          rgba(99,102,241,0.05);
-  --brand-primary-10:         rgba(99,102,241,0.10);
-  --brand-primary-20:         rgba(99,102,241,0.20);
-  --brand-primary-50:         rgba(99,102,241,0.50);
+  --brand-primary:            #a855f7;
+  --brand-primary-rgb:        168,85,247;
+  --brand-primary-5:          rgba(168,85,247,0.05);
+  --brand-primary-10:         rgba(168,85,247,0.10);
+  --brand-primary-20:         rgba(168,85,247,0.20);
+  --brand-primary-50:         rgba(168,85,247,0.50);
   --brand-primary-text:       #ffffff;
-  --brand-hover:              #6366f1;
-  --brand-button:             #6366f1;
+  --brand-hover:              #a855f7;
+  --brand-button:             #a855f7;
   --brand-button-text:        #ffffff;
 
-  --brand-gradient:           linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  --brand-glow:               rgba(99, 102, 241, 0.55);
+  --brand-gradient:           linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --brand-glow:               rgba(168, 85, 247, 0.55);
+  --brand-glow-soft:          rgba(168, 85, 247, 0.18);
 }
 
 :root[data-accent="teal"] {
@@ -47,44 +51,48 @@
   --brand-primary-50: rgba(6,182,212,0.50);
   --brand-hover: #06b6d4;
   --brand-button: #06b6d4;
-  --brand-gradient: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
-  --brand-glow: rgba(20, 184, 166, 0.55);
+  --brand-gradient: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
+  --brand-glow: rgba(6, 182, 212, 0.55);
+  --brand-glow-soft: rgba(6, 182, 212, 0.18);
 }
 :root[data-accent="amber"] {
-  --brand-primary: #f59e0b;
-  --brand-primary-rgb: 245,158,11;
-  --brand-primary-5:  rgba(245,158,11,0.05);
-  --brand-primary-10: rgba(245,158,11,0.10);
-  --brand-primary-20: rgba(245,158,11,0.20);
-  --brand-primary-50: rgba(245,158,11,0.50);
-  --brand-hover: #f59e0b;
-  --brand-button: #f59e0b;
-  --brand-gradient: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
-  --brand-glow: rgba(245, 158, 11, 0.55);
+  --brand-primary: #f97316;
+  --brand-primary-rgb: 249,115,22;
+  --brand-primary-5:  rgba(249,115,22,0.05);
+  --brand-primary-10: rgba(249,115,22,0.10);
+  --brand-primary-20: rgba(249,115,22,0.20);
+  --brand-primary-50: rgba(249,115,22,0.50);
+  --brand-hover: #f97316;
+  --brand-button: #f97316;
+  --brand-gradient: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+  --brand-glow: rgba(249, 115, 22, 0.55);
+  --brand-glow-soft: rgba(249, 115, 22, 0.18);
 }
 :root[data-accent="rose"] {
-  --brand-primary: #f43f5e;
-  --brand-primary-rgb: 244,63,94;
-  --brand-primary-5:  rgba(244,63,94,0.05);
-  --brand-primary-10: rgba(244,63,94,0.10);
-  --brand-primary-20: rgba(244,63,94,0.20);
-  --brand-primary-50: rgba(244,63,94,0.50);
-  --brand-hover: #f43f5e;
-  --brand-button: #f43f5e;
-  --brand-gradient: linear-gradient(135deg, #f43f5e 0%, #d946ef 100%);
-  --brand-glow: rgba(244, 63, 94, 0.55);
+  --brand-primary: #ec4899;
+  --brand-primary-rgb: 236,72,153;
+  --brand-primary-5:  rgba(236,72,153,0.05);
+  --brand-primary-10: rgba(236,72,153,0.10);
+  --brand-primary-20: rgba(236,72,153,0.20);
+  --brand-primary-50: rgba(236,72,153,0.50);
+  --brand-hover: #ec4899;
+  --brand-button: #ec4899;
+  --brand-gradient: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+  --brand-glow: rgba(236, 72, 153, 0.55);
+  --brand-glow-soft: rgba(236, 72, 153, 0.18);
 }
 :root[data-accent="emerald"] {
-  --brand-primary: #10b981;
-  --brand-primary-rgb: 16,185,129;
-  --brand-primary-5:  rgba(16,185,129,0.05);
-  --brand-primary-10: rgba(16,185,129,0.10);
-  --brand-primary-20: rgba(16,185,129,0.20);
-  --brand-primary-50: rgba(16,185,129,0.50);
-  --brand-hover: #10b981;
-  --brand-button: #10b981;
-  --brand-gradient: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-  --brand-glow: rgba(16, 185, 129, 0.55);
+  --brand-primary: #22c55e;
+  --brand-primary-rgb: 34,197,94;
+  --brand-primary-5:  rgba(34,197,94,0.05);
+  --brand-primary-10: rgba(34,197,94,0.10);
+  --brand-primary-20: rgba(34,197,94,0.20);
+  --brand-primary-50: rgba(34,197,94,0.50);
+  --brand-hover: #22c55e;
+  --brand-button: #22c55e;
+  --brand-gradient: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%);
+  --brand-glow: rgba(34, 197, 94, 0.55);
+  --brand-glow-soft: rgba(34, 197, 94, 0.18);
 }
 
 @theme inline {
@@ -110,16 +118,29 @@ input::placeholder, textarea::placeholder {
   color: var(--brand-text-mid);
 }
 
+/* Big title gradient — applies to all h1 (Dashboard headings, etc.) */
+h1 {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  letter-spacing: -0.01em;
+}
+
 /* ─────────────────────────────────────────────────────────────────────
- * Gradient promotion — any element using bg-[var(--brand-primary)]
- * (the standard primary-CTA pattern across the dashboard) gets the
- * accent gradient + a soft glow. Buttons, active pills, etc. opt in
- * automatically just by using the existing class.
+ * Solid vibrant CTAs — buttons using bg-[var(--brand-primary)] (the
+ * standard primary-CTA pattern across the dashboard) get the SOLID
+ * accent color + a halo glow. Gradients on buttons read muted at this
+ * size; solid pops harder.
  * ────────────────────────────────────────────────────────────────────── */
 
 .bg-\[var\(--brand-primary\)\] {
-  background: var(--brand-gradient) !important;
-  box-shadow: 0 4px 18px var(--brand-glow);
+  background-color: var(--brand-primary) !important;
+  background-image: none !important;
+  box-shadow:
+    0 8px 24px -6px var(--brand-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .text-\[var\(--brand-primary\)\] {
@@ -132,10 +153,13 @@ input::placeholder, textarea::placeholder {
   box-shadow: 0 0 16px var(--brand-glow);
 }
 
-/* Hardcoded estimator-red references — re-skin to the active accent. */
+/* Hardcoded estimator-red references — re-skin to active accent. */
 .bg-\[\#7B0000\] {
-  background: var(--brand-gradient) !important;
-  box-shadow: 0 4px 18px var(--brand-glow);
+  background-color: var(--brand-primary) !important;
+  background-image: none !important;
+  box-shadow:
+    0 8px 24px -6px var(--brand-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 .border-\[\#7B0000\] {
   border-color: var(--brand-primary) !important;
@@ -148,6 +172,15 @@ input::placeholder, textarea::placeholder {
   accent-color: var(--brand-primary);
 }
 
+/* Active strong CTA dark color (`bg-gray-900` is the IndustrySwitcher's
+ * active pill background) — flip to solid accent. */
+.bg-gray-900 {
+  background-color: var(--brand-primary) !important;
+  box-shadow:
+    0 8px 24px -6px var(--brand-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
 /* Inline SVG fills/strokes hardcoded in chart components. */
 svg [stroke="#7B0000"] { stroke: var(--brand-primary); }
 svg [fill="#7B0000"]   { fill: var(--brand-primary); }
@@ -157,16 +190,27 @@ svg [stroke="#94a3b8"] { stroke: var(--brand-text-mid); }
 svg text[fill="#0f172a"] { fill: var(--brand-text); }
 
 /* ─────────────────────────────────────────────────────────────────────
- * Tailwind utility overrides — re-skin the dashboard's hardcoded
- * light-mode classes for the dark theme, with stronger contrast against
- * the new deep-navy background.
+ * Card halos — every "card-like" surface (rounded white panels) picks
+ * up a subtle accent halo + a soft bottom-edge glow that blends into
+ * the bg. Gives the inspiration's "glowing-card" feel without per-
+ * component edits.
  * ────────────────────────────────────────────────────────────────────── */
 
-.bg-white         { background-color: var(--brand-card); }
-.bg-gray-50       { background-color: var(--brand-card-elev); }
-.bg-gray-100      { background-color: var(--brand-card-elev); }
-.bg-gray-200      { background-color: var(--brand-border-strong); }
-.bg-gray-900      { background: var(--brand-gradient); }
+.bg-white {
+  background-color: var(--brand-card);
+  background-image: radial-gradient(
+    140% 100% at 50% 110%,
+    var(--brand-glow-soft) 0%,
+    transparent 55%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 4px 24px -10px rgba(var(--brand-primary-rgb), 0.18);
+}
+
+.bg-gray-50  { background-color: var(--brand-card-elev); }
+.bg-gray-100 { background-color: var(--brand-card-elev); }
+.bg-gray-200 { background-color: var(--brand-border-strong); }
 
 .border-gray-100  { border-color: var(--brand-border); }
 .border-gray-200  { border-color: var(--brand-border); }
@@ -175,40 +219,40 @@ svg text[fill="#0f172a"] { fill: var(--brand-text); }
 .divide-gray-100 > * + * { border-color: var(--brand-border); }
 .divide-gray-200 > * + * { border-color: var(--brand-border); }
 
-.text-gray-900    { color: var(--brand-text); }
-.text-gray-800    { color: #f1f5f9; }
-.text-gray-700    { color: #d8e0ee; }
-.text-gray-600    { color: #b6c1d4; }
-.text-gray-500    { color: var(--brand-text-mid); }
-.text-gray-400    { color: #7588a0; }
+.text-gray-900 { color: var(--brand-text); }
+.text-gray-800 { color: #f1f5f9; }
+.text-gray-700 { color: #d8e0ee; }
+.text-gray-600 { color: #b6c1d4; }
+.text-gray-500 { color: var(--brand-text-mid); }
+.text-gray-400 { color: #7588a0; }
 
-/* Status pills: bigger contrast, electric-friendly. */
-.bg-amber-50      { background-color: rgba(245, 158, 11, 0.12); }
-.bg-amber-100     { background-color: rgba(245, 158, 11, 0.28); }
-.border-amber-200 { border-color: rgba(245, 158, 11, 0.6); }
-.text-amber-800   { color: #fde047; }
+/* Status pills — saturated, electric. */
+.bg-amber-50      { background-color: rgba(249, 115, 22, 0.12); }
+.bg-amber-100     { background-color: rgba(249, 115, 22, 0.32); }
+.border-amber-200 { border-color: rgba(249, 115, 22, 0.65); }
+.text-amber-800   { color: #fcd34d; }
 .text-amber-900   { color: #facc15; }
 
-.bg-emerald-50    { background-color: rgba(16, 185, 129, 0.12); }
-.bg-emerald-100   { background-color: rgba(16, 185, 129, 0.28); }
-.border-emerald-200 { border-color: rgba(16, 185, 129, 0.6); }
+.bg-emerald-50    { background-color: rgba(34, 197, 94, 0.12); }
+.bg-emerald-100   { background-color: rgba(34, 197, 94, 0.32); }
+.border-emerald-200 { border-color: rgba(34, 197, 94, 0.65); }
 .text-emerald-800 { color: #86efac; }
 
-.bg-rose-50       { background-color: rgba(244, 63, 94, 0.12); }
-.bg-rose-100      { background-color: rgba(244, 63, 94, 0.28); }
-.border-rose-200  { border-color: rgba(244, 63, 94, 0.6); }
-.border-rose-300  { border-color: rgba(244, 63, 94, 0.7); }
+.bg-rose-50       { background-color: rgba(236, 72, 153, 0.12); }
+.bg-rose-100      { background-color: rgba(236, 72, 153, 0.32); }
+.border-rose-200  { border-color: rgba(236, 72, 153, 0.65); }
+.border-rose-300  { border-color: rgba(236, 72, 153, 0.75); }
 .text-rose-800    { color: #fda4af; }
 .text-red-600     { color: #fda4af; }
 .text-red-500     { color: #fda4af; }
 
 .bg-orange-50     { background-color: rgba(249, 115, 22, 0.12); }
-.bg-orange-100    { background-color: rgba(249, 115, 22, 0.28); }
-.border-orange-200 { border-color: rgba(249, 115, 22, 0.6); }
+.bg-orange-100    { background-color: rgba(249, 115, 22, 0.32); }
+.border-orange-200 { border-color: rgba(249, 115, 22, 0.65); }
 .text-orange-800  { color: #fdba74; }
 
 .bg-slate-50      { background-color: rgba(148, 163, 184, 0.1); }
-.bg-slate-100     { background-color: rgba(148, 163, 184, 0.2); }
+.bg-slate-100     { background-color: rgba(148, 163, 184, 0.22); }
 .border-slate-200 { border-color: rgba(148, 163, 184, 0.5); }
 .text-slate-700   { color: #cbd5e1; }
 
@@ -217,12 +261,3 @@ svg text[fill="#0f172a"] { fill: var(--brand-text); }
 
 .text-green-600   { color: #86efac; }
 .text-green-700   { color: #86efac; }
-
-/* SVG strokes / fills referenced by hex in the chart components — they
- * read OK on dark already, but a few near-white grids need toning down. */
-svg line[stroke="#e5e7eb"], svg line[stroke="#f3f4f6"] {
-  stroke: var(--brand-border) !important;
-}
-svg text[fill="#6b7280"] {
-  fill: var(--brand-text-mid) !important;
-}
