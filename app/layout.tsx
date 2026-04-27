@@ -44,7 +44,7 @@ export default async function RootLayout({
   const authed = verifyAdminToken(token)
 
   return (
-    <html lang="en" className="h-full antialiased dark" data-accent="indigo">
+    <html lang="en" className="h-full antialiased dark" data-accent="indigo" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: ACCENT_BOOTSTRAP }} />
       </head>
