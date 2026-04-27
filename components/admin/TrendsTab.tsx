@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import SaveBar from './SaveBar'
-import type { CulturalTrigger, IndustryDataset, PopularityPoint, StyleStrand, TriggerImpact, TriggerMedium } from '@/lib/trends/types'
+import IndustrySwitcher from '@/components/trends/IndustrySwitcher'
+import type { CulturalTrigger, Industry, IndustryDataset, PopularityPoint, StyleStrand, TriggerImpact, TriggerMedium } from '@/lib/trends/types'
 
-const INDUSTRIES = [
-  { id: 'tattoo', label: 'Tattoo' },
-  { id: 'fashion', label: 'Fashion' },
-  { id: 'walkin', label: 'Walk-in / Flash' },
-  { id: 'music', label: 'Music' },
-  { id: 'interior', label: 'Interior' },
-] as const
+const INDUSTRIES: Industry[] = [
+  { id: 'tattoo', label: 'Tattoo', blurb: 'Cycle window 18-25 years, compressing toward 6-10 since 2017.', status: 'active' },
+  { id: 'fashion', label: 'Fashion', blurb: 'Cycle window 20-25 years for silhouettes, 5-7 years for microtrends post-2010.', status: 'active' },
+  { id: 'walkin', label: 'Walk-in / Flash', blurb: 'Motif-level cycles tied to films, celebrities, and viral moments.', status: 'active' },
+  { id: 'music', label: 'Music', blurb: 'Scaffold — drop genre curves to predict the next sonic revival.', status: 'scaffold' },
+  { id: 'interior', label: 'Interior', blurb: 'Scaffold — add mid-century, brutalist, cottagecore strands here.', status: 'scaffold' },
+]
 
 function toSlug(label: string): string {
   return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -132,18 +133,10 @@ export default function TrendsTab() {
         onSave={handleSave}
       />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <label className="text-sm">
-          <span className="block text-xs text-[#555555] mb-1">Industry</span>
-          <select
-            value={industryId}
-            onChange={e => setIndustryId(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 text-sm bg-white"
-          >
-            {INDUSTRIES.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
-          </select>
-        </label>
-        <p className="text-xs text-[#555555] flex-1">
+      <div className="mb-4">
+        <span className="block text-xs text-[#555555] mb-2">Industry</span>
+        <IndustrySwitcher industries={INDUSTRIES} current={industryId} onChange={setIndustryId} />
+        <p className="text-xs text-[#555555] mt-2">
           Edits save to <code className="bg-gray-100 rounded px-1">admin_config[trends:{industryId}]</code>.
           The public <code className="bg-gray-100 rounded px-1">/trends</code> dashboard reads from there with seed fallback.
         </p>

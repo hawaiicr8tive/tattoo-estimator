@@ -1,17 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { IndustryDataset } from '@/lib/trends/types'
+import IndustrySwitcher from '@/components/trends/IndustrySwitcher'
+import type { Industry, IndustryDataset } from '@/lib/trends/types'
 import { RESEARCH_MODELS, suggestionToStrand, type ResearchModelId, type SuggestedStrand } from '@/lib/trends/ai-research'
 import type { ResearchHistoryEntry } from '@/lib/trends/research-history'
 
-const INDUSTRIES = [
-  { id: 'tattoo', label: 'Tattoo' },
-  { id: 'fashion', label: 'Fashion' },
-  { id: 'walkin', label: 'Walk-in / Flash' },
-  { id: 'music', label: 'Music' },
-  { id: 'interior', label: 'Interior' },
-] as const
+const INDUSTRIES: Industry[] = [
+  { id: 'tattoo', label: 'Tattoo', blurb: 'Cycle window 18-25 years, compressing toward 6-10 since 2017.', status: 'active' },
+  { id: 'fashion', label: 'Fashion', blurb: 'Cycle window 20-25 years for silhouettes, 5-7 years for microtrends post-2010.', status: 'active' },
+  { id: 'walkin', label: 'Walk-in / Flash', blurb: 'Motif-level cycles tied to films, celebrities, and viral moments.', status: 'active' },
+  { id: 'music', label: 'Music', blurb: 'Scaffold — drop genre curves to predict the next sonic revival.', status: 'scaffold' },
+  { id: 'interior', label: 'Interior', blurb: 'Scaffold — add mid-century, brutalist, cottagecore strands here.', status: 'scaffold' },
+]
 
 interface ApiHistoryResponse { history?: ResearchHistoryEntry[] }
 interface ApiRunResponse { entry?: ResearchHistoryEntry; error?: string }
@@ -137,18 +138,12 @@ export default function ResearchTab() {
       </p>
 
       <section className="rounded-xl bg-white border border-gray-200 p-4 mb-5 space-y-3">
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div>
+          <span className="block text-xs text-[#555555] mb-2">Industry</span>
+          <IndustrySwitcher industries={INDUSTRIES} current={industryId} onChange={setIndustryId} />
+        </div>
+        <div>
           <label className="block text-sm">
-            <span className="block text-xs text-[#555555] mb-1">Industry</span>
-            <select
-              value={industryId}
-              onChange={e => setIndustryId(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
-            >
-              {INDUSTRIES.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm sm:col-span-2">
             <span className="block text-xs text-[#555555] mb-1">Model</span>
             <select
               value={model}
