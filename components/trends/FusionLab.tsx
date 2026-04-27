@@ -290,7 +290,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
 
   return (
     <div className="grid md:grid-cols-2 gap-4 md:gap-5">
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Base strand</div>
@@ -384,7 +384,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 min-w-0">
         {result ? (
           <>
             <div className="flex items-baseline justify-between gap-4">
@@ -560,7 +560,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
         )}
       </div>
 
-      <div className="md:col-span-2">
+      <div className="md:col-span-2 min-w-0">
         <button
           type="button"
           onClick={() => setHistoryOpen(o => !o)}
@@ -569,7 +569,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           {historyOpen ? '▾' : '▸'} Recent fusion research ({history.length})
         </button>
         {historyOpen && (
-          <ul className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+          <ul className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white overflow-hidden">
             {history.length === 0 ? (
               <li className="p-3 text-xs text-gray-500">No fusion research yet — run one above.</li>
             ) : (
@@ -578,6 +578,9 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                 const blendStrand = styles.find(s => s.id === h.blendStyleId)
                 const imgCount = h.images?.length ?? 0
                 const isCurrent = analysis?.entryId === h.id
+                const ts = new Date(h.timestamp)
+                const tsShort = ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                const tsFull = ts.toLocaleString()
                 return (
                   <li
                     key={h.id}
@@ -587,9 +590,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-900 truncate">{h.fusionName}</div>
                       <div className="text-xs text-gray-500 truncate">
-                        {(baseStrand?.label ?? h.baseStyleId)} × {(blendStrand?.label ?? h.blendStyleId)}
-                        <span className="ml-2">{new Date(h.timestamp).toLocaleString()}</span>
-                        <span className="ml-2">· {h.model}</span>
+                        <span>{(baseStrand?.label ?? h.baseStyleId)} × {(blendStrand?.label ?? h.blendStyleId)}</span>
+                        <span className="hidden sm:inline ml-2">{tsFull}</span>
+                        <span className="sm:hidden ml-2">{tsShort}</span>
+                        <span className="hidden sm:inline ml-2">· {h.model}</span>
                       </div>
                     </div>
                     {imgCount > 0 ? (
