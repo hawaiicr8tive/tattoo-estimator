@@ -1,7 +1,21 @@
 import { GoogleGenAI } from '@google/genai'
 import type { FusionResult, IndustryDataset, StyleStrand } from './types'
 
-export const NANO_BANANA_MODEL = 'gemini-3.1-flash-image-preview'
+export const IMAGE_MODELS = [
+  { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
+  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
+] as const
+
+export type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
+
+export const DEFAULT_IMAGE_MODEL: ImageModelId = 'gemini-3.1-flash-image-preview'
+
+export function isValidImageModel(id: unknown): id is ImageModelId {
+  return typeof id === 'string' && IMAGE_MODELS.some(m => m.id === id)
+}
+
+/** Backwards-compat alias — earlier code referenced this name. */
+export const NANO_BANANA_MODEL: ImageModelId = DEFAULT_IMAGE_MODEL
 
 export interface FusionImagePromptInput {
   baseStrand: StyleStrand
@@ -78,6 +92,8 @@ export interface GenerateFusionImagesOptions {
   apiKey: string
   prompt: string
   count: number
+  /** Defaults to Nano Banana 2. */
+  model?: ImageModelId
 }
 
 export interface GeneratedImage {
@@ -89,6 +105,7 @@ export interface GeneratedImage {
 
 export async function generateFusionImages(opts: GenerateFusionImagesOptions): Promise<GeneratedImage[]> {
   const ai = new GoogleGenAI({ apiKey: opts.apiKey })
+  const model = opts.model ?? DEFAULT_IMAGE_MODEL
   const out: GeneratedImage[] = []
 
   // Gemini image preview returns one image per generateContent call. Loop for variety.
@@ -99,7 +116,7 @@ export async function generateFusionImages(opts: GenerateFusionImagesOptions): P
     // is to send safetySettings as raw strings using the non-image-prefixed names
     // (e.g. category: 'HARM_CATEGORY_DANGEROUS_CONTENT') with an 'as never' cast.
     const res = await ai.models.generateContent({
-      model: NANO_BANANA_MODEL,
+      model,
       contents: opts.prompt,
     })
 

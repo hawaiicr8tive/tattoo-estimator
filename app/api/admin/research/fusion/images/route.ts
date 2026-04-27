@@ -5,9 +5,11 @@ import { attachFusionImages, loadFusionHistory } from '@/lib/trends/fusion-histo
 import { loadIndustryDataset } from '@/lib/trends/store'
 import {
   buildFusionImagePrompt,
+  DEFAULT_IMAGE_MODEL,
   generateFusionImages,
-  NANO_BANANA_MODEL,
+  isValidImageModel,
   type FusionImageRecord,
+  type ImageModelId,
 } from '@/lib/trends/fusion-images'
 import { fuseStyles } from '@/lib/trends/engine'
 
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
   const entryId = typeof x.entryId === 'string' ? x.entryId : ''
   const count = clamp(x.count, 1, MAX_PER_REQUEST, 4)
   const chaos = clamp(x.chaos, 0, 100, 0)
+  const imageModel: ImageModelId = isValidImageModel(x.imageModel) ? (x.imageModel as ImageModelId) : DEFAULT_IMAGE_MODEL
   const visualDescriptorOverride =
     typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
       ? x.visualDescriptor.slice(0, 2000)
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
   // Generate.
   let generated
   try {
-    generated = await generateFusionImages({ apiKey, prompt, count })
+    generated = await generateFusionImages({ apiKey, prompt, count, model: imageModel })
   } catch (e) {
     console.error('fusion image gen error:', e)
     return NextResponse.json(
@@ -137,7 +140,7 @@ export async function POST(req: NextRequest) {
       url: publicUrl,
       prompt,
       createdAt: new Date(createdAtBase + i).toISOString(),
-      model: NANO_BANANA_MODEL,
+      model: imageModel,
     })
   }
 

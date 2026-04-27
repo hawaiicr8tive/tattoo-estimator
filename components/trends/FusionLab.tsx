@@ -11,6 +11,12 @@ const RESEARCH_MODELS = [
 ] as const
 type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
 
+const IMAGE_MODELS = [
+  { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
+  { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
+] as const
+type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
+
 interface FusionImage {
   url: string
   prompt: string
@@ -63,6 +69,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [analysis, setAnalysis] = useState<AnalysisState | null>(null)
   const [researchError, setResearchError] = useState<string | null>(null)
   const [imageCount, setImageCount] = useState(4)
+  const [imageModel, setImageModel] = useState<ImageModelId>('gemini-3.1-flash-image-preview')
   const [generatingImages, setGeneratingImages] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [chaos, setChaos] = useState(0)
@@ -165,6 +172,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           entryId: analysis.entryId,
           count: imageCount,
           chaos,
+          imageModel,
           // Override only if the user has edited away from the stored value.
           visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
             ? editedVisualDescriptor
@@ -397,6 +405,14 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     >
                       {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
+                    <select
+                      value={imageModel}
+                      onChange={e => setImageModel(e.target.value as ImageModelId)}
+                      className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
+                      disabled={generatingImages}
+                    >
+                      {IMAGE_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    </select>
                     <button
                       type="button"
                       onClick={handleGenerateImages}
@@ -405,7 +421,9 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     >
                       {generatingImages ? 'Generating…' : 'Generate flash designs'}
                     </button>
-                    <span className="text-[10px] text-gray-500">Nano Banana 2 · ~$0.07/image</span>
+                    <span className="text-[10px] text-gray-500">
+                      {IMAGE_MODELS.find(m => m.id === imageModel)?.priceHint}
+                    </span>
                   </div>
                   {imageError && <p className="mt-2 text-xs text-red-600">{imageError}</p>}
                   {analysis.images.length > 0 && (
