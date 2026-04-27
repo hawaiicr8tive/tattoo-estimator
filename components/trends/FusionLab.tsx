@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FusionInput, FusionResult, StyleStrand } from '@/lib/trends/types'
 import { fuseStyles } from '@/lib/trends/engine'
+import ImageLightbox from './ImageLightbox'
 
 const RESEARCH_MODELS = [
   { id: 'claude-opus-4-7', label: 'Opus 4.7' },
@@ -88,6 +89,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [library, setLibrary] = useState<MotifLibrary | null>(null)
   const [contentCategoryId, setContentCategoryId] = useState<string>('')
   const [contentItemId, setContentItemId] = useState<string>('')
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const base = styles.find(s => s.id === baseId)
   const blend = styles.find(s => s.id === blendId)
@@ -528,11 +530,24 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                   {imageError && <p className="mt-2 text-xs text-red-600">{imageError}</p>}
                   {analysis.images.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {analysis.images.map(img => (
-                        <a key={img.url} href={img.url} target="_blank" rel="noopener noreferrer" className="block rounded overflow-hidden border border-gray-200 hover:border-gray-400">
+                      {analysis.images.map((img, i) => (
+                        <button
+                          key={img.url}
+                          type="button"
+                          onClick={() => setLightboxIndex(i)}
+                          className="group block rounded overflow-hidden border border-gray-200 hover:border-gray-400 relative cursor-zoom-in"
+                          aria-label={`Preview flash design ${i + 1} of ${analysis.images.length}`}
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={img.url} alt="Flash design" className="w-full aspect-square object-cover" />
-                        </a>
+                          <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <circle cx="11" cy="11" r="7" />
+                              <path d="M21 21l-4.3-4.3" />
+                              <path d="M11 8v6M8 11h6" />
+                            </svg>
+                          </span>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -595,6 +610,15 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           </ul>
         )}
       </div>
+
+      {analysis && analysis.images.length > 0 && (
+        <ImageLightbox
+          images={analysis.images}
+          activeIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
+      )}
     </div>
   )
 }
