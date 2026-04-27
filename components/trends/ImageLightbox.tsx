@@ -79,7 +79,7 @@ export default function ImageLightbox({ images, activeIndex, onClose, onNavigate
             <button
               type="button"
               onClick={onClose}
-              className="rounded bg-white/10 hover:bg-white/20 px-2 py-1"
+              className="rounded bg-white/10 hover:bg-white/20 w-9 h-9 flex items-center justify-center touch-manipulation"
               aria-label="Close"
             >
               ✕
@@ -92,7 +92,7 @@ export default function ImageLightbox({ images, activeIndex, onClose, onNavigate
             <button
               type="button"
               onClick={() => onNavigate((activeIndex - 1 + images.length) % images.length)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 hover:bg-black/70 text-white w-9 h-9 flex items-center justify-center text-lg z-10"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 hover:bg-black/80 text-white w-11 h-11 flex items-center justify-center text-2xl z-10 touch-manipulation"
               aria-label="Previous"
             >
               ‹
@@ -108,7 +108,7 @@ export default function ImageLightbox({ images, activeIndex, onClose, onNavigate
             <button
               type="button"
               onClick={() => onNavigate((activeIndex + 1) % images.length)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 hover:bg-black/70 text-white w-9 h-9 flex items-center justify-center text-lg z-10"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 hover:bg-black/80 text-white w-11 h-11 flex items-center justify-center text-2xl z-10 touch-manipulation"
               aria-label="Next"
             >
               ›

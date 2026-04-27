@@ -494,24 +494,35 @@ function TriggersEditor({ triggers, onChange }: { triggers: CulturalTrigger[]; o
       {triggers.length === 0 ? (
         <p className="text-xs text-[var(--brand-text-mid)] italic">No triggers — add film releases, celebrity moments, or viral waves that pushed this strand.</p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-2">
           {triggers.map((t, i) => (
-            <div key={i} className="grid grid-cols-[80px_1fr_110px_90px_24px] items-center gap-2">
+            <div key={i} className="grid grid-cols-2 sm:grid-cols-[80px_1fr_110px_90px_24px] items-center gap-2 rounded border border-gray-200 p-2 sm:p-0 sm:border-0">
               <input
                 type="number"
                 value={t.year}
                 onChange={e => update(i, { year: Number(e.target.value) })}
+                aria-label="Year"
                 className="rounded border border-gray-300 px-2 py-1 text-sm"
               />
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                aria-label="Remove trigger"
+                className="text-xs text-red-600 hover:text-red-800 justify-self-end sm:order-last sm:justify-self-center"
+              >
+                ×
+              </button>
               <input
                 value={t.name}
                 onChange={e => update(i, { name: e.target.value })}
                 placeholder="e.g. Lilo & Stitch (live action)"
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                aria-label="Name"
+                className="rounded border border-gray-300 px-2 py-1 text-sm col-span-2 sm:col-span-1"
               />
               <select
                 value={t.medium}
                 onChange={e => update(i, { medium: e.target.value as TriggerMedium })}
+                aria-label="Medium"
                 className="rounded border border-gray-300 px-2 py-1 text-sm bg-white"
               >
                 {TRIGGER_MEDIA.map(m => <option key={m} value={m}>{m}</option>)}
@@ -519,11 +530,11 @@ function TriggersEditor({ triggers, onChange }: { triggers: CulturalTrigger[]; o
               <select
                 value={t.impact}
                 onChange={e => update(i, { impact: e.target.value as TriggerImpact })}
+                aria-label="Impact"
                 className="rounded border border-gray-300 px-2 py-1 text-sm bg-white"
               >
                 {TRIGGER_IMPACTS.map(im => <option key={im} value={im}>{im}</option>)}
               </select>
-              <button type="button" onClick={() => remove(i)} className="text-xs text-red-600 hover:text-red-800">×</button>
             </div>
           ))}
         </div>

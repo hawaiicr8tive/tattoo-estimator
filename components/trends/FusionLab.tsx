@@ -289,7 +289,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   }
 
   return (
-    <div className="grid md:grid-cols-2 gap-5">
+    <div className="grid md:grid-cols-2 gap-4 md:gap-5">
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <label className="block">

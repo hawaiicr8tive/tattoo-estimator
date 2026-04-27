@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { cookies } from 'next/headers'
 import './globals.css'
 import LoginForm from '@/components/LoginForm'
@@ -8,6 +8,19 @@ import { ADMIN_COOKIE, verifyAdminToken } from '@/lib/admin-auth'
 export const metadata: Metadata = {
   title: 'Style Prediction Model',
   description: 'Trend cycle dashboard, fusion lab, and AI research for style intelligence.',
+}
+
+/**
+ * iPhone-friendly viewport — covers the safe area cutout, prevents the
+ * page from zooming when the user taps an input, and lets the dark theme
+ * tint the iOS status bar and Android browser chrome.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: '#08080d',
 }
 
 /**
