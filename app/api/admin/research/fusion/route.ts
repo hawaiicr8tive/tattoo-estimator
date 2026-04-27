@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
     fusionName: fusionName || `${baseStrand.label} × ${blendStrand.label}`,
     model,
     analysis: outcome.analysis,
+    visualDescriptor: outcome.visualDescriptor,
     usage: outcome.usage,
   }
 

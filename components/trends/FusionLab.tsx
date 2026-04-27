@@ -27,6 +27,7 @@ interface FusionHistoryEntry {
   fusionName: string
   model: string
   analysis: string
+  visualDescriptor?: string
   usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens: number; cache_creation_input_tokens: number }
   images?: FusionImage[]
 }
@@ -40,6 +41,7 @@ interface Props {
 interface AnalysisState {
   entryId: string
   analysis: string
+  visualDescriptor: string
   model: string
   fusionName: string
   baseLabel: string
@@ -63,6 +65,9 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [imageCount, setImageCount] = useState(4)
   const [generatingImages, setGeneratingImages] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [chaos, setChaos] = useState(0)
+  /** Editable copy of the visualDescriptor — synced from analysis on load, then user-mutable. */
+  const [editedVisualDescriptor, setEditedVisualDescriptor] = useState('')
   const [history, setHistory] = useState<FusionHistoryEntry[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
 
@@ -91,6 +96,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     return {
       entryId: entry.id,
       analysis: entry.analysis,
+      visualDescriptor: entry.visualDescriptor ?? '',
       model: entry.model,
       fusionName: entry.fusionName,
       baseLabel,
@@ -136,7 +142,9 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Research failed')
-      setAnalysis(entryToAnalysisState(data.entry, base.label, blend.label))
+      const next = entryToAnalysisState(data.entry, base.label, blend.label)
+      setAnalysis(next)
+      setEditedVisualDescriptor(next.visualDescriptor)
       refreshHistory()
     } catch (e) {
       setResearchError(e instanceof Error ? e.message : 'Research failed')
@@ -153,7 +161,15 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       const res = await fetch('/api/admin/research/fusion/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entryId: analysis.entryId, count: imageCount }),
+        body: JSON.stringify({
+          entryId: analysis.entryId,
+          count: imageCount,
+          chaos,
+          // Override only if the user has edited away from the stored value.
+          visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
+            ? editedVisualDescriptor
+            : undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Image generation failed')
@@ -172,11 +188,13 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   function reopenHistoryEntry(entry: FusionHistoryEntry) {
     const baseStrand = styles.find(s => s.id === entry.baseStyleId)
     const blendStrand = styles.find(s => s.id === entry.blendStyleId)
-    setAnalysis(entryToAnalysisState(
+    const next = entryToAnalysisState(
       entry,
       baseStrand?.label ?? entry.baseStyleId,
       blendStrand?.label ?? entry.blendStyleId,
-    ))
+    )
+    setAnalysis(next)
+    setEditedVisualDescriptor(next.visualDescriptor)
     setImageError(null)
     setResearchError(null)
   }
@@ -327,6 +345,48 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                 <AnalysisProse text={analysis.analysis} />
 
                 <div className="mt-4 pt-3 border-t border-gray-200">
+                  <div className="flex items-baseline justify-between gap-3 mb-1">
+                    <span className="text-xs uppercase tracking-wide text-gray-500">Visual descriptor (image-gen prompt)</span>
+                    {analysis.visualDescriptor && editedVisualDescriptor !== analysis.visualDescriptor && (
+                      <button
+                        type="button"
+                        onClick={() => setEditedVisualDescriptor(analysis.visualDescriptor)}
+                        className="text-[10px] text-gray-500 hover:text-gray-800 underline"
+                      >
+                        revert
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={editedVisualDescriptor}
+                    onChange={e => setEditedVisualDescriptor(e.target.value)}
+                    placeholder="A 100-word visual descriptor will appear here after research…"
+                    className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed"
+                  />
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-xs uppercase tracking-wide text-gray-500">Chaos</span>
+                    <span className="text-xs tabular-nums text-gray-700">{chaos}</span>
+                  </div>
+                  <input
+                    type="range" min={0} max={100} step={1}
+                    value={chaos}
+                    onChange={e => setChaos(Number(e.target.value))}
+                    className="w-full accent-[#7B0000]"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    {chaos === 0 && 'Faithful to the descriptor.'}
+                    {chaos > 0 && chaos < 25 && 'Faithful to the descriptor.'}
+                    {chaos >= 25 && chaos < 50 && 'Subtle compositional choices: light variation in line weight, slightly off-axis composition.'}
+                    {chaos >= 50 && chaos < 75 && 'Compositional risks: noticeable line-weight variation, looser symmetry, an unexpected accent element.'}
+                    {chaos >= 75 && 'Deliberate rule-breaking: unconventional proportions, abstracted forms, experimental linework.'}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-200">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs uppercase tracking-wide text-gray-500">Flash designs</span>
                     <select

@@ -7,8 +7,25 @@ export interface FusionImagePromptInput {
   baseStrand: StyleStrand
   blendStrand: StyleStrand
   fusion: FusionResult
-  /** Optional: the prose analysis from runFusionResearch — used to keep the image prompt grounded. */
-  analysis?: string
+  /**
+   * Visual descriptor — the ~100-word art-direction note returned by the deep
+   * research call. This is the primary signal for image generation; if missing,
+   * we fall back to the engine's `outlook` and visual ingredients.
+   */
+  visualDescriptor?: string
+  /** 0-100. Higher values inject deliberate compositional rule-breaking. */
+  chaos?: number
+}
+
+const CHAOS_DIRECTIVES: { min: number; text: string }[] = [
+  { min: 75, text: 'Deliberate rule-breaking: unconventional proportions, abstracted forms, unexpected motif placements, experimental linework that reads as intentional art-direction rather than a mistake. Push the composition off-center.' },
+  { min: 50, text: 'Compositional risks: noticeable variations in line weight, looser symmetry, an unexpected accent element that surprises but still works on a flash sheet.' },
+  { min: 25, text: 'Subtle compositional choices: light variation in line weight, a slightly off-axis composition, one unexpected supporting motif.' },
+]
+
+function chaosDirective(chaos: number): string {
+  for (const d of CHAOS_DIRECTIVES) if (chaos >= d.min) return d.text
+  return ''
 }
 
 /**
@@ -16,22 +33,27 @@ export interface FusionImagePromptInput {
  * inside the design domain (flash-sheet illustration of a tattoo, not a
  * person wearing one) to stay clear of Gemini's body-skin / nudity layer.
  *
- * The prose analysis is intentionally truncated — Gemini image gen weights
- * the first ~1200 chars of the prompt and the analysis can run 2-3K.
+ * Primary visual signal is the user-editable `visualDescriptor` field — Claude
+ * generates a tight ~100-word art-direction note alongside the prose analysis,
+ * specifically for image gen. The prose analysis itself is intentionally NOT
+ * included because most of it (market dynamics, comparable history, what could
+ * kill it) doesn't translate to image style and dilutes the prompt.
  */
 export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
-  const { baseStrand, blendStrand, fusion, analysis } = input
+  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0 } = input
   const baseTags = baseStrand.tags.join(', ')
   const blendTags = blendStrand.tags.join(', ')
   const ingredients = fusion.ingredients.slice(0, 3).join('. ')
-  const analysisSnippet = analysis ? sanitizeForImageGen(analysis).slice(0, 600) : ''
+  const safeDescriptor = visualDescriptor ? sanitizeForImageGen(visualDescriptor).slice(0, 1200) : ''
+  const chaosText = chaosDirective(Math.max(0, Math.min(100, Math.round(chaos))))
   return [
     'A black-ink tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the inked design centered on paper.',
     `Working name: "${fusion.name}".`,
     `Fusion of ${baseStrand.label} (${baseStrand.tagline}) and ${blendStrand.label} (${blendStrand.tagline}).`,
     `Tag mix: ${baseTags} blended with ${blendTags}.`,
     `Visual ingredients: ${ingredients}`,
-    analysisSnippet ? `Style notes: ${analysisSnippet}` : '',
+    safeDescriptor ? `Visual descriptor: ${safeDescriptor}` : `Outlook: ${fusion.outlook}`,
+    chaosText ? `Chaos modifier: ${chaosText}` : '',
     'Style: traditional flash-sheet illustration, fine ink work, crisp lines, the kind of drawing a tattoo artist pins to a studio wall as reference. Subtle paper texture. No watermarks, no text annotations, no signatures.',
   ].filter(Boolean).join(' ')
 }

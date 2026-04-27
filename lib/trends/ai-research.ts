@@ -167,6 +167,7 @@ export interface RunFusionResearchOptions {
 
 export interface RunFusionResearchOutcome {
   analysis: string
+  visualDescriptor: string
   usage: {
     input_tokens: number
     output_tokens: number
@@ -175,20 +176,41 @@ export interface RunFusionResearchOutcome {
   }
 }
 
-const FUSION_SYSTEM_PROMPT = `You are a trend-cycle research analyst. The user is exploring a hypothetical fusion of two existing strands from their dataset and wants a deep, grounded analysis — not new strand suggestions.
+const FUSION_SYSTEM_PROMPT = `You are a trend-cycle research analyst. The user is exploring a hypothetical fusion of two existing strands from their dataset and wants two outputs returned together.
 
-Your output is a 4-6 paragraph prose analysis covering:
+Output 1 — "analysis": a 4-6 paragraph prose analysis covering:
 1. Who is already producing work in this direction (specific artists, scenes, references where credible).
 2. The carrier signals — cultural ingredients, platforms, demographics — that would push this fusion forward.
-3. Comparable historical fusions and how they played out (what they peaked at, how long they took, what came after).
+3. Comparable historical fusions and how they played out.
 4. Likely emergence timeline and the early-adopter window.
-5. What could kill it (saturation risk, visible aging at 5-7 years, backlash patterns, generational handoff problems).
+5. What could kill it.
+
+Output 2 — "visualDescriptor": a tight ~100-word visual description of what a tattoo flash design of this fusion would actually LOOK like. Concrete visual elements only — subject matter, line weight, palette/black-ink-only, composition, decorative motifs, surface treatment. NO market commentary, NO history, NO timeline. This text feeds an image generator directly so it must be unambiguous and visually grounded.
 
 Constraints:
-- Ground every claim. If you cannot ground a claim, say so plainly. Do not invent artist names or movement timelines.
-- Use plain prose. Light Markdown is fine (paragraph breaks, occasional bold). No headings, no bullet lists, no code blocks.
-- Do NOT propose new strands. The user has a separate tool for that.
-- 400-600 words. Tight, opinionated, useful.`
+- Ground every claim in the analysis. If you cannot ground a claim, say so plainly.
+- Light Markdown is fine in the analysis (paragraph breaks, bold). No headings, no bullets.
+- Do NOT propose new strands.
+- visualDescriptor stays under ~120 words and reads like an art-direction note for a flash sheet.
+- Avoid words like "gore", "wound", "corpse" in the visual descriptor — they trip image-gen safety filters.
+
+Return JSON matching the output schema.`
+
+const FUSION_OUTPUT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    analysis: {
+      type: 'string',
+      description: 'The grounded 4-6 paragraph prose analysis.',
+    },
+    visualDescriptor: {
+      type: 'string',
+      description: 'A ~100-word visual-only description suitable as direct input to an image generator. No market or historical commentary.',
+    },
+  },
+  required: ['analysis', 'visualDescriptor'],
+} as const
 
 export async function runFusionResearch(opts: RunFusionResearchOptions): Promise<RunFusionResearchOutcome> {
   const client = new Anthropic({ apiKey: opts.apiKey })
@@ -219,13 +241,31 @@ export async function runFusionResearch(opts: RunFusionResearchOptions): Promise
     messages: [
       { role: 'user', content: fusionContext },
     ],
+    output_config: {
+      format: {
+        type: 'json_schema',
+        schema: FUSION_OUTPUT_SCHEMA,
+      },
+    },
   })
 
   const text = firstTextBlock(response.content)
   if (!text) throw new Error('Model returned no text content.')
 
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch (e) {
+    throw new Error(`Model returned invalid JSON: ${e instanceof Error ? e.message : 'unknown'}`)
+  }
+  const obj = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>
+  const analysis = typeof obj.analysis === 'string' ? obj.analysis : ''
+  const visualDescriptor = typeof obj.visualDescriptor === 'string' ? obj.visualDescriptor : ''
+  if (!analysis || !visualDescriptor) throw new Error('Fusion result missing analysis or visualDescriptor.')
+
   return {
-    analysis: text,
+    analysis,
+    visualDescriptor,
     usage: {
       input_tokens: response.usage.input_tokens,
       output_tokens: response.usage.output_tokens,

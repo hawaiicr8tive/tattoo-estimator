@@ -53,6 +53,11 @@ export async function POST(req: NextRequest) {
 
   const entryId = typeof x.entryId === 'string' ? x.entryId : ''
   const count = clamp(x.count, 1, MAX_PER_REQUEST, 4)
+  const chaos = clamp(x.chaos, 0, 100, 0)
+  const visualDescriptorOverride =
+    typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
+      ? x.visualDescriptor.slice(0, 2000)
+      : undefined
   if (!entryId) {
     return NextResponse.json({ error: 'entryId is required' }, { status: 400 })
   }
@@ -96,7 +101,9 @@ export async function POST(req: NextRequest) {
     new Date().getFullYear(),
   )
 
-  const prompt = buildFusionImagePrompt({ baseStrand, blendStrand, fusion, analysis: entry.analysis })
+  // Prefer override → entry's stored visualDescriptor → fall back to engine outlook (handled inside builder).
+  const visualDescriptor = visualDescriptorOverride ?? entry.visualDescriptor
+  const prompt = buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos })
 
   // Generate.
   let generated

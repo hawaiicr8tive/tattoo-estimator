@@ -17,6 +17,8 @@ export interface FusionHistoryEntry {
   fusionName: string
   model: string
   analysis: string
+  /** ~100-word visual descriptor used as the primary signal for image generation. */
+  visualDescriptor?: string
   usage: {
     input_tokens: number
     output_tokens: number
