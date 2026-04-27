@@ -20,10 +20,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 | `/` | Public | Tattoo price estimator (lead form) |
 | `/results` | Public (one-shot) | Estimate result page following a submission |
 | `/embed` | Public | Iframe-embeddable estimator (for Wix etc.) |
-| `/admin` | Admin password | Leads, pricing, styles, sizes, placements, artists, branding, **Trends**, **AI Research** |
-| `/trends` | Admin cookie | Style cycle dashboard — forecasts, lineage map, fusion lab |
+| `/admin` | Admin password | Leads, pricing, styles, sizes, placements, artists, branding |
 
-Both `/admin` and `/trends` are gated by an HTTP-only HMAC cookie set by `POST /api/admin/auth`. Logging in once at `/admin` unlocks both for 24 hours.
+`/admin` is gated by an HTTP-only HMAC cookie set by `POST /api/admin/auth` and lasts 24 hours.
 
 ## Environment variables
 
@@ -34,10 +33,9 @@ Copy `.env.example` → `.env.local` and fill the values. All variables are read
 | `NEXT_PUBLIC_SUPABASE_URL` | Everything except `/` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Everything except `/` | Public anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server routes | Bypasses RLS — server-side only |
-| `ADMIN_PASSWORD` | `/admin`, `/trends` | Picked by you; used to derive the session cookie HMAC |
+| `ADMIN_PASSWORD` | `/admin` | Picked by you; used to derive the session cookie HMAC |
 | `RESEND_API_KEY` | Lead submission + verification | Resend API key |
 | `STUDIO_EMAIL` | Lead notifications | Fallback if no studio email is set in `/admin → Leads` |
-| `ANTHROPIC_API_KEY` | `/admin → AI Research` | Anthropic API key for Claude |
 
 Supabase migrations live in `supabase/migrations/` — apply them in order before the first run.
 
