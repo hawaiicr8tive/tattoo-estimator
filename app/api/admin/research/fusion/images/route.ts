@@ -14,7 +14,7 @@ import {
 import { fuseStyles } from '@/lib/trends/engine'
 
 const STORAGE_BUCKET = 'fusion-images'
-const MAX_PER_REQUEST = 4
+const MAX_PER_REQUEST = 20
 /** Soft per-day cap to keep accidental loops cheap. Override via env var. */
 const MAX_PER_DAY = Number(process.env.FUSION_IMAGE_DAILY_CAP ?? '200')
 

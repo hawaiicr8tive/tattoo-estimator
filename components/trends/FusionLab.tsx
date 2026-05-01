@@ -528,7 +528,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                       className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
                       disabled={generatingImages}
                     >
-                      {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                     <select
                       value={imageModel}
