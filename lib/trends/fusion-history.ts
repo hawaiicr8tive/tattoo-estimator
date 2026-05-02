@@ -2,7 +2,7 @@ import { getServiceClient } from '@/lib/supabase'
 import type { FusionImageRecord } from './fusion-images'
 
 const HISTORY_KEY = 'trends:fusion-history'
-const MAX_HISTORY = 50
+const MAX_HISTORY = Infinity
 
 export interface FusionHistoryEntry {
   id: string
