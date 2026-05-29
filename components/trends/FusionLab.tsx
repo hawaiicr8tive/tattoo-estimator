@@ -25,6 +25,7 @@ interface FusionImage {
   prompt: string
   createdAt: string
   model: string
+  chaos?: number
 }
 
 interface MotifCategory { id: string; label: string; description?: string }
@@ -231,7 +232,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     }
   }
 
-  async function handleGenerateImages() {
+  async function handleGenerateImages(chaosSweep = false) {
     if (!analysis) return
     setGeneratingImages(true)
     setImageError(null)
@@ -265,6 +266,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           entryId: analysis.entryId,
           count: imageCount,
           chaos,
+          chaosSweep,
           imageModel,
           // Override only if the user has edited away from the stored value.
           visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
@@ -542,16 +544,28 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     </select>
                     <button
                       type="button"
-                      onClick={handleGenerateImages}
+                      onClick={() => handleGenerateImages(false)}
                       disabled={generatingImages}
                       className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
                     >
                       {generatingImages ? 'Generating…' : 'Generate flash designs'}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateImages(true)}
+                      disabled={generatingImages || imageCount < 2}
+                      title="Generate the batch with chaos ramped from 0 to 100 across the images"
+                      className="rounded border border-[#7B0000] text-[#7B0000] text-xs px-3 py-1.5 hover:bg-[#7B0000]/5 disabled:opacity-50"
+                    >
+                      Chaos sweep
+                    </button>
                     <span className="text-[10px] text-gray-500">
                       {IMAGE_MODELS.find(m => m.id === imageModel)?.priceHint}
                     </span>
                   </div>
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Chaos sweep ramps chaos 0→100 across the {imageCount} image{imageCount === 1 ? '' : 's'} (pick 2+). Plain generate uses the slider value for every image.
+                  </p>
                   {imageError && <p className="mt-2 text-xs text-red-600">{imageError}</p>}
                   {analysis.images.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -565,6 +579,11 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={img.url} alt="Flash design" className="w-full aspect-square object-cover" />
+                          {typeof img.chaos === 'number' && (
+                            <span className="absolute top-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums">
+                              chaos {img.chaos}
+                            </span>
+                          )}
                           <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                               <circle cx="11" cy="11" r="7" />

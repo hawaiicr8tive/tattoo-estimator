@@ -6,7 +6,7 @@ import { loadIndustryDataset } from '@/lib/trends/store'
 import {
   buildFusionImagePrompt,
   DEFAULT_IMAGE_MODEL,
-  generateFusionImages,
+  generateFusionImagesFromPrompts,
   isValidImageModel,
   type FusionImageRecord,
   type ImageModelId,
@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
   const entryId = typeof x.entryId === 'string' ? x.entryId : ''
   const count = clamp(x.count, 1, MAX_PER_REQUEST, 4)
   const chaos = clamp(x.chaos, 0, 100, 0)
+  const chaosSweep = x.chaosSweep === true
   const imageModel: ImageModelId = isValidImageModel(x.imageModel) ? (x.imageModel as ImageModelId) : DEFAULT_IMAGE_MODEL
   const visualDescriptorOverride =
     typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
@@ -172,12 +173,21 @@ export async function POST(req: NextRequest) {
   // Prefer override → entry's stored visualDescriptor → fall back to engine outlook (handled inside builder).
   const visualDescriptor = visualDescriptorOverride ?? entry.visualDescriptor
   const contentFocus = contentFocusOverride ?? entry.contentFocus
-  const prompt = buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos, contentFocus })
 
-  // Generate.
+  // Build a chaos level per image. In sweep mode chaos ramps linearly 0→100
+  // across the batch, so the images show the design evolving from faithful to
+  // experimental. Otherwise every image uses the single requested chaos value.
+  const chaosLevels: number[] = chaosSweep
+    ? Array.from({ length: count }, (_, i) => (count === 1 ? chaos : Math.round((i / (count - 1)) * 100)))
+    : Array.from({ length: count }, () => chaos)
+  const prompts = chaosLevels.map(c =>
+    buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos: c, contentFocus }),
+  )
+
+  // Generate (one image per prompt).
   let generated
   try {
-    generated = await generateFusionImages({ apiKey, prompt, count, model: imageModel })
+    generated = await generateFusionImagesFromPrompts({ apiKey, prompts, model: imageModel })
   } catch (e) {
     console.error('fusion image gen error:', e)
     return NextResponse.json(
@@ -204,9 +214,10 @@ export async function POST(req: NextRequest) {
     const { data: { publicUrl } } = db.storage.from(STORAGE_BUCKET).getPublicUrl(filename)
     uploaded.push({
       url: publicUrl,
-      prompt,
+      prompt: prompts[i],
       createdAt: new Date(createdAtBase + i).toISOString(),
       model: imageModel,
+      chaos: chaosLevels[i],
     })
   }
 

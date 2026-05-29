@@ -106,34 +106,54 @@ export interface GeneratedImage {
   mime: string
 }
 
+async function generateOne(ai: GoogleGenAI, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
+  // Defaults are fine for most tattoo prompts. The image-prefixed HarmCategory
+  // enum members in the SDK aren't accepted by the v1beta endpoint as of writing.
+  // If you start hitting Layer-1 blocks for benign tattoo motifs, the workaround
+  // is to send safetySettings as raw strings using the non-image-prefixed names
+  // (e.g. category: 'HARM_CATEGORY_DANGEROUS_CONTENT') with an 'as never' cast.
+  const res = await ai.models.generateContent({ model, contents: prompt })
+
+  const parts = res.candidates?.[0]?.content?.parts ?? []
+  const imagePart = parts.find(p => p.inlineData?.data && p.inlineData?.mimeType?.startsWith('image/'))
+  if (!imagePart?.inlineData?.data) {
+    // Layer 2 filter or empty response — surface the reason if present.
+    const reason = res.promptFeedback?.blockReason || res.candidates?.[0]?.finishReason || 'no_image_returned'
+    throw new Error(`Image generation blocked or empty (${reason})`)
+  }
+  return {
+    bytes: Buffer.from(imagePart.inlineData.data, 'base64'),
+    mime: imagePart.inlineData.mimeType ?? 'image/png',
+  }
+}
+
 export async function generateFusionImages(opts: GenerateFusionImagesOptions): Promise<GeneratedImage[]> {
+  // Gemini image preview returns one image per generateContent call. Loop for variety.
+  return generateFusionImagesFromPrompts({
+    apiKey: opts.apiKey,
+    prompts: Array.from({ length: opts.count }, () => opts.prompt),
+    model: opts.model,
+  })
+}
+
+export interface GenerateFromPromptsOptions {
+  apiKey: string
+  /** One image is generated per prompt, in order. */
+  prompts: string[]
+  model?: ImageModelId
+}
+
+/**
+ * Generate one image per prompt. Used by the chaos sweep, where each image
+ * gets a prompt built at a different chaos level so the batch shows the design
+ * evolving from faithful → experimental.
+ */
+export async function generateFusionImagesFromPrompts(opts: GenerateFromPromptsOptions): Promise<GeneratedImage[]> {
   const ai = new GoogleGenAI({ apiKey: opts.apiKey })
   const model = opts.model ?? DEFAULT_IMAGE_MODEL
   const out: GeneratedImage[] = []
-
-  // Gemini image preview returns one image per generateContent call. Loop for variety.
-  for (let i = 0; i < opts.count; i++) {
-    // Defaults are fine for most tattoo prompts. The image-prefixed HarmCategory
-    // enum members in the SDK aren't accepted by the v1beta endpoint as of writing.
-    // If you start hitting Layer-1 blocks for benign tattoo motifs, the workaround
-    // is to send safetySettings as raw strings using the non-image-prefixed names
-    // (e.g. category: 'HARM_CATEGORY_DANGEROUS_CONTENT') with an 'as never' cast.
-    const res = await ai.models.generateContent({
-      model,
-      contents: opts.prompt,
-    })
-
-    const parts = res.candidates?.[0]?.content?.parts ?? []
-    const imagePart = parts.find(p => p.inlineData?.data && p.inlineData?.mimeType?.startsWith('image/'))
-    if (!imagePart?.inlineData?.data) {
-      // Layer 2 filter or empty response — surface the reason if present.
-      const reason = res.promptFeedback?.blockReason || res.candidates?.[0]?.finishReason || 'no_image_returned'
-      throw new Error(`Image generation blocked or empty (${reason})`)
-    }
-    out.push({
-      bytes: Buffer.from(imagePart.inlineData.data, 'base64'),
-      mime: imagePart.inlineData.mimeType ?? 'image/png',
-    })
+  for (const prompt of opts.prompts) {
+    out.push(await generateOne(ai, model, prompt))
   }
   return out
 }
@@ -144,6 +164,8 @@ export interface FusionImageRecord {
   /** ISO 8601 of generation. */
   createdAt: string
   model: string
+  /** Chaos level (0-100) used for this specific image, when known. */
+  chaos?: number
 }
 
 // Re-export for callers
