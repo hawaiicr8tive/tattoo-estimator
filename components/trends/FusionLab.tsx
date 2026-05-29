@@ -17,10 +17,12 @@ type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
 const IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
-  { id: 'openrouter/black-forest-labs/flux.2-klein-4b', label: 'FLUX.2 Klein 4B (OpenRouter)', priceHint: '~$0.014/MP · cheapest' },
-  { id: 'openrouter/black-forest-labs/flux.2-pro', label: 'FLUX.2 Pro (OpenRouter)', priceHint: '~$0.03/MP · standard' },
-  { id: 'openrouter/black-forest-labs/flux.2-flex', label: 'FLUX.2 Flex (OpenRouter)', priceHint: '~$0.06/MP · flexible / edits' },
-  { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · highest detail' },
+  { id: 'openrouter/ideogram-ai/ideogram-v3', label: 'Ideogram V3 (OpenRouter)', priceHint: '~$0.08/image · clean text + illustration' },
+  { id: 'openrouter/openai/gpt-5-image', label: 'GPT-5 Image (OpenRouter)', priceHint: '~$0.08/image · best instruction-following' },
+  { id: 'openrouter/recraft/recraft-v3', label: 'Recraft V3 (OpenRouter)', priceHint: '~$0.04/image · illustration / vector style' },
+  { id: 'openrouter/bytedance-seed/seedream-4.5', label: 'Seedream 4.5 (OpenRouter)', priceHint: '~$0.04/image · ByteDance aesthetic' },
+  { id: 'openrouter/stabilityai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (OpenRouter)', priceHint: '~$0.04/image · open-source SDXL successor' },
+  { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · best FLUX so far' },
 ] as const
 type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
 
