@@ -3,10 +3,15 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
 import { appendFusionHistory, attachFusionImages, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
+
+// Vercel Pro caps function execution at 300s; the previous default could clip
+// long sweeps. Explicit is better. (Hobby caps at 60s; this flag is a no-op
+// there and the function still gets cut at the plan limit.)
+export const maxDuration = 300
 import {
   buildFusionImagePrompt,
   DEFAULT_IMAGE_MODEL,
-  generateFusionImagesFromPrompts,
+  generateBatchWithConcurrency,
   isValidImageModel,
   type FusionImageRecord,
   type ImageModelId,
@@ -184,10 +189,12 @@ export async function POST(req: NextRequest) {
     buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos: c, contentFocus }),
   )
 
-  // Generate (one image per prompt).
-  let generated
+  // Generate (one image per prompt) — parallel with concurrency cap and
+  // per-call retry on transient errors so a single hiccup doesn't kill the
+  // whole batch.
+  let batch
   try {
-    generated = await generateFusionImagesFromPrompts({ apiKey, prompts, model: imageModel })
+    batch = await generateBatchWithConcurrency({ apiKey, prompts, model: imageModel, concurrency: 3 })
   } catch (e) {
     console.error('fusion image gen error:', e)
     return NextResponse.json(
@@ -195,15 +202,34 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     )
   }
+  const generated = batch.images
+  const failures = batch.slots
+    .filter(s => !s.image)
+    .map(s => ({ index: s.index, chaos: chaosLevels[s.index], error: s.error ?? 'unknown' }))
 
-  // Upload each image to Supabase Storage and collect public URLs.
+  // Surface a clean error if literally everything failed — usually a key /
+  // auth / quota issue rather than transient infra blips.
+  if (generated.length === 0) {
+    const firstErr = failures[0]?.error ?? 'Image generation failed.'
+    console.error('fusion image gen — all calls failed:', failures)
+    return NextResponse.json(
+      { error: `All ${prompts.length} image generations failed: ${firstErr}` },
+      { status: 502 },
+    )
+  }
+
+  // Upload each surviving image to Supabase Storage. We walk the per-slot
+  // result so each upload carries the right prompt + chaos value (failed
+  // slots are skipped).
   const db = getServiceClient()
   await db.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => {})
   const uploaded: FusionImageRecord[] = []
   const createdAtBase = Date.now()
-  for (let i = 0; i < generated.length; i++) {
-    const img = generated[i]
-    const filename = `${entryId}/${createdAtBase}-${i}.${img.mime === 'image/jpeg' ? 'jpg' : 'png'}`
+  let uploadIdx = 0
+  for (const slot of batch.slots) {
+    if (!slot.image) continue
+    const img = slot.image
+    const filename = `${entryId}/${createdAtBase}-${slot.index}.${img.mime === 'image/jpeg' ? 'jpg' : 'png'}`
     const { error: uploadError } = await db.storage
       .from(STORAGE_BUCKET)
       .upload(filename, img.bytes, { contentType: img.mime, upsert: false })
@@ -214,16 +240,22 @@ export async function POST(req: NextRequest) {
     const { data: { publicUrl } } = db.storage.from(STORAGE_BUCKET).getPublicUrl(filename)
     uploaded.push({
       url: publicUrl,
-      prompt: prompts[i],
-      createdAt: new Date(createdAtBase + i).toISOString(),
+      prompt: prompts[slot.index],
+      createdAt: new Date(createdAtBase + uploadIdx).toISOString(),
       model: imageModel,
-      chaos: chaosLevels[i],
+      chaos: chaosLevels[slot.index],
     })
+    uploadIdx++
   }
 
   // Merge: keep existing images + append new ones.
   const allImages = [...(entry.images ?? []), ...uploaded]
   const updated = await attachFusionImages(entryId, allImages)
 
-  return NextResponse.json({ entry: updated, addedCount: uploaded.length })
+  return NextResponse.json({
+    entry: updated,
+    addedCount: uploaded.length,
+    requestedCount: prompts.length,
+    failures, // [{ index, chaos, error }] — empty when all succeeded
+  })
 }
