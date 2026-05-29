@@ -10,6 +10,8 @@ export const IMAGE_MODELS = [
   { id: 'openrouter/bytedance-seed/seedream-4.5', label: 'Seedream 4.5 (OpenRouter)', priceHint: '~$0.04/image · ByteDance aesthetic' },
   { id: 'openrouter/stabilityai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (OpenRouter)', priceHint: '~$0.04/image · open-source SDXL successor' },
   { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · best FLUX so far' },
+  { id: 'openrouter/qwen/qwen-image', label: 'Qwen Image (OpenRouter)', priceHint: 'TBD · Alibaba aesthetic' },
+  { id: 'openrouter/deepseek/janus-pro-7b', label: 'Janus Pro 7B (OpenRouter)', priceHint: 'TBD · DeepSeek multimodal' },
 ] as const
 
 export type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
