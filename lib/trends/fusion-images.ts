@@ -6,12 +6,13 @@ export const IMAGE_MODELS = [
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
   { id: 'openrouter/openai/gpt-5-image', label: 'GPT-5 Image (OpenRouter)', priceHint: '~$0.08/image · best instruction-following' },
   { id: 'openrouter/recraft/recraft-v3', label: 'Recraft V3 (OpenRouter)', priceHint: '~$0.04/image · illustration / vector style' },
+  { id: 'openrouter/recraft/recraft-v4', label: 'Recraft V4 (OpenRouter)', priceHint: '~$0.05/image · 1K · stronger composition + text' },
   { id: 'openrouter/bytedance-seed/seedream-4.5', label: 'Seedream 4.5 (OpenRouter)', priceHint: '~$0.04/image · ByteDance aesthetic' },
   { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · best FLUX so far' },
   { id: 'replicate/ideogram-ai/ideogram-v3-turbo', label: 'Ideogram V3 Turbo (Replicate)', priceHint: '~$0.03/image · clean illustration + text · fast' },
   { id: 'replicate/stability-ai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (Replicate)', priceHint: '~$0.04/image · open-source SDXL successor' },
   { id: 'replicate/qwen/qwen-image', label: 'Qwen Image (Replicate)', priceHint: '~$0.02/image · Alibaba aesthetic' },
-  { id: 'replicate/deepseek-ai/janus-pro-7b', label: 'Janus Pro 7B (Replicate)', priceHint: '~$0.02/image · DeepSeek multimodal' },
+  { id: 'replicate/nvidia/sana-sprint-1.6b', label: 'NVIDIA SANA-Sprint 1.6B (Replicate)', priceHint: '~$0.01/image · fastest text-to-image' },
 ] as const
 
 export type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
@@ -235,15 +236,44 @@ async function generateOneReplicate(apiKey: string, model: ImageModelId, prompt:
   const name = rest.join('/')
   if (!owner || !name) throw new Error(`Bad Replicate model id: ${slug}`)
 
-  const res = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}/predictions`, {
+  const headers = {
+    Authorization: `Token ${apiKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'wait',
+  }
+
+  // First try the official-model endpoint (works for models with a published
+  // "official version"). 404 here usually means the model exists but isn't
+  // tagged official — community models in particular.
+  let res = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}/predictions`, {
     method: 'POST',
-    headers: {
-      Authorization: `Token ${apiKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'wait',
-    },
+    headers,
     body: JSON.stringify({ input: { prompt } }),
   })
+
+  // Fallback: look up the latest version of the model and submit via the
+  // generic predictions endpoint. Handles community/non-official models.
+  if (res.status === 404) {
+    const modelRes = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}`, {
+      headers: { Authorization: `Token ${apiKey}` },
+    })
+    if (modelRes.status === 404) {
+      throw new Error(`Replicate model "${slug}" not found.`)
+    }
+    if (!modelRes.ok) {
+      throw new Error(`Replicate model lookup failed (${modelRes.status}).`)
+    }
+    const modelData = await modelRes.json()
+    const versionId = modelData?.latest_version?.id
+    if (!versionId) {
+      throw new Error(`Replicate model "${slug}" has no available version.`)
+    }
+    res = await fetch(`https://api.replicate.com/v1/predictions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ version: versionId, input: { prompt } }),
+    })
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
