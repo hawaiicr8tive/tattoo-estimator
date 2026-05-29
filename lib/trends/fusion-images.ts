@@ -4,6 +4,8 @@ import type { FusionResult, IndustryDataset, StyleStrand } from './types'
 export const IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
+  { id: 'openrouter/black-forest-labs/flux-1.1-pro', label: 'FLUX 1.1 Pro (OpenRouter)', priceHint: '~$0.04/image · different aesthetic' },
+  { id: 'openrouter/black-forest-labs/flux-1.1-pro-ultra', label: 'FLUX 1.1 Pro Ultra (OpenRouter)', priceHint: '~$0.06/image · highest detail' },
 ] as const
 
 export type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
@@ -12,6 +14,13 @@ export const DEFAULT_IMAGE_MODEL: ImageModelId = 'gemini-3.1-flash-image-preview
 
 export function isValidImageModel(id: unknown): id is ImageModelId {
   return typeof id === 'string' && IMAGE_MODELS.some(m => m.id === id)
+}
+
+const OPENROUTER_IMAGE_PREFIX = 'openrouter/'
+
+/** True for image models routed through OpenRouter rather than Google direct. */
+export function isOpenRouterImageModel(model: string): boolean {
+  return model.startsWith(OPENROUTER_IMAGE_PREFIX)
 }
 
 /** Backwards-compat alias — earlier code referenced this name. */
@@ -106,12 +115,13 @@ export interface GeneratedImage {
   mime: string
 }
 
-async function generateOne(ai: GoogleGenAI, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
+async function generateOneGemini(apiKey: string, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
   // Defaults are fine for most tattoo prompts. The image-prefixed HarmCategory
   // enum members in the SDK aren't accepted by the v1beta endpoint as of writing.
   // If you start hitting Layer-1 blocks for benign tattoo motifs, the workaround
   // is to send safetySettings as raw strings using the non-image-prefixed names
   // (e.g. category: 'HARM_CATEGORY_DANGEROUS_CONTENT') with an 'as never' cast.
+  const ai = new GoogleGenAI({ apiKey })
   const res = await ai.models.generateContent({ model, contents: prompt })
 
   const parts = res.candidates?.[0]?.content?.parts ?? []
@@ -125,6 +135,80 @@ async function generateOne(ai: GoogleGenAI, model: ImageModelId, prompt: string)
     bytes: Buffer.from(imagePart.inlineData.data, 'base64'),
     mime: imagePart.inlineData.mimeType ?? 'image/png',
   }
+}
+
+/**
+ * Extract a usable image (base64 data URL or remote https URL) from an
+ * OpenRouter chat-completion response. Different image models put the image
+ * in slightly different fields — message.images, message.content array of
+ * parts, or a single content string with a data URL. Try all of them.
+ */
+function extractImageRefFromOpenRouter(message: unknown): string | null {
+  if (!message || typeof message !== 'object') return null
+  const m = message as Record<string, unknown>
+  const candidates: unknown[] = []
+  if (Array.isArray(m.images)) candidates.push(...m.images)
+  if (Array.isArray(m.content)) candidates.push(...m.content)
+  if (typeof m.content === 'string' && m.content.startsWith('data:image/')) return m.content
+  for (const c of candidates) {
+    if (!c || typeof c !== 'object') continue
+    const part = c as Record<string, unknown>
+    const inner = part.image_url
+    let url: string | null = null
+    if (typeof inner === 'string') url = inner
+    else if (inner && typeof inner === 'object' && typeof (inner as { url?: unknown }).url === 'string') url = (inner as { url: string }).url
+    else if (typeof part.url === 'string') url = part.url as string
+    if (url && (url.startsWith('data:image/') || url.startsWith('http'))) return url
+  }
+  return null
+}
+
+async function generateOneOpenRouter(apiKey: string, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
+  const realModel = model.slice(OPENROUTER_IMAGE_PREFIX.length)
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://style-prediction-model.vercel.app',
+      'X-Title': 'Style Prediction Model',
+    },
+    body: JSON.stringify({
+      model: realModel,
+      messages: [{ role: 'user', content: prompt }],
+      modalities: ['image', 'text'],
+    }),
+  })
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    let msg = errText.slice(0, 500)
+    try {
+      const parsed = JSON.parse(errText)
+      if (parsed?.error?.message) msg = parsed.error.message
+    } catch { /* keep raw */ }
+    throw new Error(`OpenRouter image error (${res.status}): ${msg}`)
+  }
+  const data = await res.json()
+  const ref = extractImageRefFromOpenRouter(data?.choices?.[0]?.message)
+  if (!ref) throw new Error('OpenRouter image response had no usable image data.')
+
+  // data URL → decode in-place; remote URL → fetch the bytes.
+  if (ref.startsWith('data:image/')) {
+    const match = ref.match(/^data:(image\/[\w+.-]+);base64,(.+)$/)
+    if (!match) throw new Error('OpenRouter returned a malformed data URL.')
+    return { bytes: Buffer.from(match[2], 'base64'), mime: match[1] }
+  }
+  const imgRes = await fetch(ref)
+  if (!imgRes.ok) throw new Error(`Failed to download hosted image (${imgRes.status})`)
+  const buf = Buffer.from(await imgRes.arrayBuffer())
+  const mime = imgRes.headers.get('content-type') ?? 'image/png'
+  return { bytes: buf, mime }
+}
+
+async function generateOne(apiKey: string, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
+  return isOpenRouterImageModel(model)
+    ? generateOneOpenRouter(apiKey, model, prompt)
+    : generateOneGemini(apiKey, model, prompt)
 }
 
 /** Gemini preview models occasionally return 500/503/504/DEADLINE_EXCEEDED under
@@ -150,7 +234,7 @@ async function sleep(ms: number) {
 }
 
 async function generateOneWithRetry(
-  ai: GoogleGenAI,
+  apiKey: string,
   model: ImageModelId,
   prompt: string,
   maxAttempts = 3,
@@ -158,7 +242,7 @@ async function generateOneWithRetry(
   let lastErr: unknown
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      return await generateOne(ai, model, prompt)
+      return await generateOne(apiKey, model, prompt)
     } catch (e) {
       lastErr = e
       if (attempt >= maxAttempts - 1 || !isTransientError(e)) break
@@ -214,7 +298,6 @@ export interface BatchGenerationResult {
  * pressure on the preview backend. Lower = safer but slower.
  */
 export async function generateBatchWithConcurrency(opts: GenerateFromPromptsOptions & { concurrency?: number }): Promise<BatchGenerationResult> {
-  const ai = new GoogleGenAI({ apiKey: opts.apiKey })
   const model = opts.model ?? DEFAULT_IMAGE_MODEL
   const concurrency = Math.max(1, Math.min(opts.concurrency ?? 3, opts.prompts.length))
   const slots: BatchGenerationResult['slots'] = opts.prompts.map((_, index) => ({ index, image: null, error: null }))
@@ -225,7 +308,7 @@ export async function generateBatchWithConcurrency(opts: GenerateFromPromptsOpti
       const idx = next++
       if (idx >= opts.prompts.length) return
       try {
-        slots[idx].image = await generateOneWithRetry(ai, model, opts.prompts[idx])
+        slots[idx].image = await generateOneWithRetry(opts.apiKey, model, opts.prompts[idx])
       } catch (e) {
         slots[idx].error = e instanceof Error ? e.message : 'Image generation failed.'
       }
