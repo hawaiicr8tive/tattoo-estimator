@@ -235,15 +235,44 @@ async function generateOneReplicate(apiKey: string, model: ImageModelId, prompt:
   const name = rest.join('/')
   if (!owner || !name) throw new Error(`Bad Replicate model id: ${slug}`)
 
-  const res = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}/predictions`, {
+  const headers = {
+    Authorization: `Token ${apiKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'wait',
+  }
+
+  // First try the official-model endpoint (works for models with a published
+  // "official version"). 404 here usually means the model exists but isn't
+  // tagged official — community models in particular.
+  let res = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}/predictions`, {
     method: 'POST',
-    headers: {
-      Authorization: `Token ${apiKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'wait',
-    },
+    headers,
     body: JSON.stringify({ input: { prompt } }),
   })
+
+  // Fallback: look up the latest version of the model and submit via the
+  // generic predictions endpoint. Handles community/non-official models.
+  if (res.status === 404) {
+    const modelRes = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}`, {
+      headers: { Authorization: `Token ${apiKey}` },
+    })
+    if (modelRes.status === 404) {
+      throw new Error(`Replicate model "${slug}" not found.`)
+    }
+    if (!modelRes.ok) {
+      throw new Error(`Replicate model lookup failed (${modelRes.status}).`)
+    }
+    const modelData = await modelRes.json()
+    const versionId = modelData?.latest_version?.id
+    if (!versionId) {
+      throw new Error(`Replicate model "${slug}" has no available version.`)
+    }
+    res = await fetch(`https://api.replicate.com/v1/predictions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ version: versionId, input: { prompt } }),
+    })
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
