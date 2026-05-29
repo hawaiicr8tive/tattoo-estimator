@@ -17,8 +17,8 @@ type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
 const IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
-  { id: 'openrouter/black-forest-labs/flux-1.1-pro', label: 'FLUX 1.1 Pro (OpenRouter)', priceHint: '~$0.04/image · different aesthetic' },
-  { id: 'openrouter/black-forest-labs/flux-1.1-pro-ultra', label: 'FLUX 1.1 Pro Ultra (OpenRouter)', priceHint: '~$0.06/image · highest detail' },
+  { id: 'openrouter/black-forest-labs/flux.2-pro', label: 'FLUX.2 Pro (OpenRouter)', priceHint: '~$0.03/MP · different aesthetic' },
+  { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · highest detail' },
 ] as const
 type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
 
