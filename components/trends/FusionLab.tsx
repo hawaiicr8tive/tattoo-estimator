@@ -21,7 +21,7 @@ const IMAGE_MODELS = [
   { id: 'openrouter/recraft/recraft-v3', label: 'Recraft V3 (OpenRouter)', priceHint: '~$0.04/image · illustration / vector style' },
   { id: 'openrouter/bytedance-seed/seedream-4.5', label: 'Seedream 4.5 (OpenRouter)', priceHint: '~$0.04/image · ByteDance aesthetic' },
   { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · best FLUX so far' },
-  { id: 'replicate/ideogram-ai/ideogram-v3', label: 'Ideogram V3 (Replicate)', priceHint: '~$0.05/image · clean illustration + text' },
+  { id: 'replicate/ideogram-ai/ideogram-v3-turbo', label: 'Ideogram V3 Turbo (Replicate)', priceHint: '~$0.03/image · clean illustration + text · fast' },
   { id: 'replicate/stability-ai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (Replicate)', priceHint: '~$0.04/image · open-source SDXL successor' },
   { id: 'replicate/qwen/qwen-image', label: 'Qwen Image (Replicate)', priceHint: '~$0.02/image · Alibaba aesthetic' },
   { id: 'replicate/deepseek-ai/janus-pro-7b', label: 'Janus Pro 7B (Replicate)', priceHint: '~$0.02/image · DeepSeek multimodal' },
