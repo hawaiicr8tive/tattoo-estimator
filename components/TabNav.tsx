@@ -8,6 +8,7 @@ const TABS = [
   { href: '/',         label: 'Dashboard' },
   { href: '/data',     label: 'Trends' },
   { href: '/research', label: 'AI Research' },
+  { href: '/library',  label: 'Library' },
 ] as const
 
 export default function TabNav() {
