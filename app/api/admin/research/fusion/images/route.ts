@@ -12,6 +12,7 @@ import {
   buildFusionImagePrompt,
   DEFAULT_IMAGE_MODEL,
   generateBatchWithConcurrency,
+  isOpenRouterImageModel,
   isValidImageModel,
   type FusionImageRecord,
   type ImageModelId,
@@ -87,14 +88,6 @@ export async function POST(req: NextRequest) {
   const denied = requireAdmin(req)
   if (denied) return denied
 
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'GEMINI_API_KEY is not configured on the server.' },
-      { status: 500 },
-    )
-  }
-
   let body: unknown
   try {
     body = await req.json()
@@ -108,6 +101,17 @@ export async function POST(req: NextRequest) {
   const chaos = clamp(x.chaos, 0, 100, 0)
   const chaosSweep = x.chaosSweep === true
   const imageModel: ImageModelId = isValidImageModel(x.imageModel) ? (x.imageModel as ImageModelId) : DEFAULT_IMAGE_MODEL
+
+  // Pick the right provider key based on the chosen model. FLUX models go
+  // through OpenRouter; Gemini stays on Google direct.
+  const isOR = isOpenRouterImageModel(imageModel)
+  const apiKey = isOR ? process.env.OPENROUTER_API_KEY : (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY)
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: `${isOR ? 'OPENROUTER_API_KEY' : 'GEMINI_API_KEY'} is not configured on the server.` },
+      { status: 500 },
+    )
+  }
   const visualDescriptorOverride =
     typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
       ? x.visualDescriptor.slice(0, 2000)
