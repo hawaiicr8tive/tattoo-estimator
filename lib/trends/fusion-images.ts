@@ -348,8 +348,10 @@ async function generateOne(apiKey: string, model: ImageModelId, prompt: string):
   return generateOneGemini(apiKey, model, prompt)
 }
 
-/** Gemini preview models occasionally return 500/503/504/DEADLINE_EXCEEDED under
- * load. Those are transient — retry with backoff before giving up. */
+/** Transient errors that should retry with backoff:
+ * - Gemini preview 500/503/504/DEADLINE_EXCEEDED under load
+ * - Replicate 429 throttling (resets in ~10s on the free/low-volume tier)
+ * - OpenRouter rate-limits */
 function isTransientError(e: unknown): boolean {
   if (!e || typeof e !== 'object') return false
   const msg = ((e as { message?: string }).message ?? '').toLowerCase()
@@ -359,11 +361,26 @@ function isTransientError(e: unknown): boolean {
     msg.includes('internal error') ||
     msg.includes('overloaded') ||
     msg.includes('unavailable') ||
+    msg.includes('throttled') ||
+    msg.includes('rate limit') ||
+    msg.includes('rate-limit') ||
+    msg.includes('"code":429') ||
     msg.includes('"code":500') ||
     msg.includes('"code":502') ||
     msg.includes('"code":503') ||
-    msg.includes('"code":504')
+    msg.includes('"code":504') ||
+    msg.includes('(429)') ||
+    msg.includes('(500)') ||
+    msg.includes('(502)') ||
+    msg.includes('(503)') ||
+    msg.includes('(504)')
   )
+}
+
+function isThrottleError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false
+  const msg = ((e as { message?: string }).message ?? '').toLowerCase()
+  return msg.includes('throttled') || msg.includes('rate limit') || msg.includes('(429)') || msg.includes('"code":429')
 }
 
 async function sleep(ms: number) {
@@ -383,7 +400,10 @@ async function generateOneWithRetry(
     } catch (e) {
       lastErr = e
       if (attempt >= maxAttempts - 1 || !isTransientError(e)) break
-      await sleep(1500 * Math.pow(2, attempt)) // 1.5s, 3s, 6s
+      // Throttling needs a longer wait — Replicate's free tier resets in
+      // ~10s; the other transient errors are typically over in a few seconds.
+      const baseMs = isThrottleError(e) ? 12000 : 1500
+      await sleep(baseMs * Math.pow(2, attempt))
     }
   }
   throw lastErr
