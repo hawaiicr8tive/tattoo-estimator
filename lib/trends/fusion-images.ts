@@ -127,13 +127,54 @@ async function generateOne(ai: GoogleGenAI, model: ImageModelId, prompt: string)
   }
 }
 
+/** Gemini preview models occasionally return 500/503/504/DEADLINE_EXCEEDED under
+ * load. Those are transient — retry with backoff before giving up. */
+function isTransientError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false
+  const msg = ((e as { message?: string }).message ?? '').toLowerCase()
+  return (
+    msg.includes('deadline_exceeded') ||
+    msg.includes('deadline exceeded') ||
+    msg.includes('internal error') ||
+    msg.includes('overloaded') ||
+    msg.includes('unavailable') ||
+    msg.includes('"code":500') ||
+    msg.includes('"code":502') ||
+    msg.includes('"code":503') ||
+    msg.includes('"code":504')
+  )
+}
+
+async function sleep(ms: number) {
+  return new Promise(r => setTimeout(r, ms))
+}
+
+async function generateOneWithRetry(
+  ai: GoogleGenAI,
+  model: ImageModelId,
+  prompt: string,
+  maxAttempts = 3,
+): Promise<GeneratedImage> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await generateOne(ai, model, prompt)
+    } catch (e) {
+      lastErr = e
+      if (attempt >= maxAttempts - 1 || !isTransientError(e)) break
+      await sleep(1500 * Math.pow(2, attempt)) // 1.5s, 3s, 6s
+    }
+  }
+  throw lastErr
+}
+
 export async function generateFusionImages(opts: GenerateFusionImagesOptions): Promise<GeneratedImage[]> {
-  // Gemini image preview returns one image per generateContent call. Loop for variety.
-  return generateFusionImagesFromPrompts({
+  const { images } = await generateBatchWithConcurrency({
     apiKey: opts.apiKey,
     prompts: Array.from({ length: opts.count }, () => opts.prompt),
     model: opts.model,
   })
+  return images
 }
 
 export interface GenerateFromPromptsOptions {
@@ -147,15 +188,54 @@ export interface GenerateFromPromptsOptions {
  * Generate one image per prompt. Used by the chaos sweep, where each image
  * gets a prompt built at a different chaos level so the batch shows the design
  * evolving from faithful → experimental.
+ *
+ * Backwards-compat: returns only the successes in order. Drops failures
+ * silently — most callers want a list of images, not failure indices.
  */
 export async function generateFusionImagesFromPrompts(opts: GenerateFromPromptsOptions): Promise<GeneratedImage[]> {
+  const { images } = await generateBatchWithConcurrency(opts)
+  return images
+}
+
+export interface BatchGenerationResult {
+  /** Successful images, in original prompt order (failed slots are skipped). */
+  images: GeneratedImage[]
+  /** Per-prompt success/failure flags, parallel to the input prompts array. */
+  slots: { index: number; image: GeneratedImage | null; error: string | null }[]
+}
+
+/**
+ * Run image generation in parallel with a small concurrency cap so we don't
+ * stampede Gemini's preview infrastructure. Each call has its own retry on
+ * transient errors. Returns BOTH the flat successes (for the common case)
+ * and per-slot details (for the route handler to attribute failures).
+ *
+ * Concurrency = 3 by default. Higher = faster total wall-clock but more
+ * pressure on the preview backend. Lower = safer but slower.
+ */
+export async function generateBatchWithConcurrency(opts: GenerateFromPromptsOptions & { concurrency?: number }): Promise<BatchGenerationResult> {
   const ai = new GoogleGenAI({ apiKey: opts.apiKey })
   const model = opts.model ?? DEFAULT_IMAGE_MODEL
-  const out: GeneratedImage[] = []
-  for (const prompt of opts.prompts) {
-    out.push(await generateOne(ai, model, prompt))
+  const concurrency = Math.max(1, Math.min(opts.concurrency ?? 3, opts.prompts.length))
+  const slots: BatchGenerationResult['slots'] = opts.prompts.map((_, index) => ({ index, image: null, error: null }))
+
+  let next = 0
+  async function worker() {
+    while (true) {
+      const idx = next++
+      if (idx >= opts.prompts.length) return
+      try {
+        slots[idx].image = await generateOneWithRetry(ai, model, opts.prompts[idx])
+      } catch (e) {
+        slots[idx].error = e instanceof Error ? e.message : 'Image generation failed.'
+      }
+    }
   }
-  return out
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()))
+
+  const images = slots.flatMap(s => (s.image ? [s.image] : []))
+  return { images, slots }
 }
 
 export interface FusionImageRecord {

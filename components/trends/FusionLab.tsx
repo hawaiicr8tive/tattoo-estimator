@@ -276,11 +276,31 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           entrySnapshot,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Image generation failed')
-      const updated = data.entry as FusionHistoryEntry | null
+
+      // Parse the response carefully — Vercel timeouts return HTML, not JSON,
+      // and the raw JSON.parse error ("string did not match the expected
+      // pattern" on Safari) hides what really happened.
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        if (res.status === 504) {
+          throw new Error('Image generation timed out — try fewer images, or switch to the Flash model.')
+        }
+        const errMsg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Image generation failed (HTTP ${res.status})`
+        throw new Error(errMsg)
+      }
+
+      const payload = data as { entry: FusionHistoryEntry | null; addedCount?: number; requestedCount?: number; failures?: { index: number; chaos?: number; error: string }[] }
+      const updated = payload.entry
       if (updated) {
         setAnalysis(prev => (prev ? { ...prev, images: updated.images ?? [] } : prev))
+      }
+      // Partial success: show a soft warning, don't block the UI.
+      if (payload.failures && payload.failures.length > 0 && payload.addedCount && payload.requestedCount) {
+        const failed = payload.failures.length
+        const first = payload.failures[0]?.error ?? 'unknown'
+        setImageError(`${payload.addedCount}/${payload.requestedCount} succeeded — ${failed} failed (${first.slice(0, 80)})`)
       }
       refreshHistory()
     } catch (e) {
