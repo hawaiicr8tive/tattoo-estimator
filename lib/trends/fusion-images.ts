@@ -178,7 +178,9 @@ async function generateOneOpenRouter(apiKey: string, model: ImageModelId, prompt
     body: JSON.stringify({
       model: realModel,
       messages: [{ role: 'user', content: prompt }],
-      modalities: ['image', 'text'],
+      // Image-only modality so pure image generators (FLUX) accept it. Models
+      // that can also emit text (e.g. Gemini Image) still happily honour this.
+      modalities: ['image'],
     }),
   })
   if (!res.ok) {
