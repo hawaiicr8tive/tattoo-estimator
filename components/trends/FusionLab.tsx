@@ -17,6 +17,9 @@ type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
 const IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
+  { id: 'openrouter/recraft/recraft-v3', label: 'Recraft V3 (OpenRouter)', priceHint: '~$0.04/image · illustration / vector style' },
+  { id: 'openrouter/openai/gpt-5-image', label: 'GPT-5 Image (OpenRouter)', priceHint: '~$0.08/image · best instruction-following' },
+  { id: 'openrouter/bytedance-seed/seedream-4.5', label: 'Seedream 4.5 (OpenRouter)', priceHint: '~$0.04/image · ByteDance aesthetic' },
   { id: 'openrouter/black-forest-labs/flux.2-klein-4b', label: 'FLUX.2 Klein 4B (OpenRouter)', priceHint: '~$0.014/MP · cheapest' },
   { id: 'openrouter/black-forest-labs/flux.2-pro', label: 'FLUX.2 Pro (OpenRouter)', priceHint: '~$0.03/MP · standard' },
   { id: 'openrouter/black-forest-labs/flux.2-flex', label: 'FLUX.2 Flex (OpenRouter)', priceHint: '~$0.06/MP · flexible / edits' },
