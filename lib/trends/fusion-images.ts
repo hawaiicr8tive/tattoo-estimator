@@ -4,14 +4,14 @@ import type { FusionResult, IndustryDataset, StyleStrand } from './types'
 export const IMAGE_MODELS = [
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', priceHint: '~$0.07/image · faster' },
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', priceHint: '~$0.15/image · higher quality' },
-  { id: 'openrouter/ideogram-ai/ideogram-v3', label: 'Ideogram V3 (OpenRouter)', priceHint: '~$0.08/image · clean text + illustration' },
   { id: 'openrouter/openai/gpt-5-image', label: 'GPT-5 Image (OpenRouter)', priceHint: '~$0.08/image · best instruction-following' },
   { id: 'openrouter/recraft/recraft-v3', label: 'Recraft V3 (OpenRouter)', priceHint: '~$0.04/image · illustration / vector style' },
   { id: 'openrouter/bytedance-seed/seedream-4.5', label: 'Seedream 4.5 (OpenRouter)', priceHint: '~$0.04/image · ByteDance aesthetic' },
-  { id: 'openrouter/stabilityai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (OpenRouter)', priceHint: '~$0.04/image · open-source SDXL successor' },
   { id: 'openrouter/black-forest-labs/flux.2-max', label: 'FLUX.2 Max (OpenRouter)', priceHint: '~$0.07/MP · best FLUX so far' },
-  { id: 'openrouter/qwen/qwen-image', label: 'Qwen Image (OpenRouter)', priceHint: 'TBD · Alibaba aesthetic' },
-  { id: 'openrouter/deepseek/janus-pro-7b', label: 'Janus Pro 7B (OpenRouter)', priceHint: 'TBD · DeepSeek multimodal' },
+  { id: 'replicate/ideogram-ai/ideogram-v3', label: 'Ideogram V3 (Replicate)', priceHint: '~$0.05/image · clean illustration + text' },
+  { id: 'replicate/stability-ai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (Replicate)', priceHint: '~$0.04/image · open-source SDXL successor' },
+  { id: 'replicate/qwen/qwen-image', label: 'Qwen Image (Replicate)', priceHint: '~$0.02/image · Alibaba aesthetic' },
+  { id: 'replicate/deepseek-ai/janus-pro-7b', label: 'Janus Pro 7B (Replicate)', priceHint: '~$0.02/image · DeepSeek multimodal' },
 ] as const
 
 export type ImageModelId = (typeof IMAGE_MODELS)[number]['id']
@@ -23,10 +23,16 @@ export function isValidImageModel(id: unknown): id is ImageModelId {
 }
 
 const OPENROUTER_IMAGE_PREFIX = 'openrouter/'
+const REPLICATE_IMAGE_PREFIX = 'replicate/'
 
 /** True for image models routed through OpenRouter rather than Google direct. */
 export function isOpenRouterImageModel(model: string): boolean {
   return model.startsWith(OPENROUTER_IMAGE_PREFIX)
+}
+
+/** True for image models routed through Replicate. */
+export function isReplicateImageModel(model: string): boolean {
+  return model.startsWith(REPLICATE_IMAGE_PREFIX)
 }
 
 /** Backwards-compat alias — earlier code referenced this name. */
@@ -213,10 +219,103 @@ async function generateOneOpenRouter(apiKey: string, model: ImageModelId, prompt
   return { bytes: buf, mime }
 }
 
+/**
+ * Generate a single image via Replicate's hosted-model API. Uses the
+ * synchronous "Prefer: wait" header so models that finish under ~60s come
+ * back in one round-trip. For slower models we fall back to polling the
+ * prediction endpoint.
+ *
+ * Replicate's input schema varies per model — most modern image models
+ * accept `{ prompt }` as the only required field. We pass nothing else so
+ * each model uses its own defaults (size, steps, sampler, etc.).
+ */
+async function generateOneReplicate(apiKey: string, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
+  const slug = model.slice(REPLICATE_IMAGE_PREFIX.length)
+  const [owner, ...rest] = slug.split('/')
+  const name = rest.join('/')
+  if (!owner || !name) throw new Error(`Bad Replicate model id: ${slug}`)
+
+  const res = await fetch(`https://api.replicate.com/v1/models/${owner}/${name}/predictions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${apiKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'wait',
+    },
+    body: JSON.stringify({ input: { prompt } }),
+  })
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    let msg = errText.slice(0, 500)
+    try {
+      const parsed = JSON.parse(errText)
+      if (parsed?.detail) msg = parsed.detail
+      else if (parsed?.title) msg = parsed.title
+    } catch { /* keep raw */ }
+    throw new Error(`Replicate error (${res.status}): ${msg}`)
+  }
+
+  let prediction = await res.json()
+
+  // If the model didn't finish in the Prefer:wait window, poll until done.
+  const maxPolls = 60 // 2s * 60 = up to 2 minutes total polling
+  for (let i = 0; i < maxPolls && (prediction.status === 'starting' || prediction.status === 'processing'); i++) {
+    await sleep(2000)
+    const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+      headers: { Authorization: `Token ${apiKey}` },
+    })
+    if (!pollRes.ok) throw new Error(`Replicate poll error (${pollRes.status})`)
+    prediction = await pollRes.json()
+  }
+
+  if (prediction.status === 'failed' || prediction.status === 'canceled') {
+    throw new Error(`Replicate prediction ${prediction.status}: ${prediction.error ?? 'no detail'}`)
+  }
+  if (prediction.status !== 'succeeded') {
+    throw new Error(`Replicate prediction timed out (status=${prediction.status})`)
+  }
+
+  // Output shape varies per model: string URL, array of URLs, or {image, images} object.
+  const url = extractReplicateImageUrl(prediction.output)
+  if (!url) throw new Error('Replicate response had no usable image URL.')
+
+  if (url.startsWith('data:image/')) {
+    const match = url.match(/^data:(image\/[\w+.-]+);base64,(.+)$/)
+    if (!match) throw new Error('Replicate returned a malformed data URL.')
+    return { bytes: Buffer.from(match[2], 'base64'), mime: match[1] }
+  }
+  const imgRes = await fetch(url)
+  if (!imgRes.ok) throw new Error(`Failed to download Replicate image (${imgRes.status})`)
+  const buf = Buffer.from(await imgRes.arrayBuffer())
+  const mime = imgRes.headers.get('content-type') ?? 'image/png'
+  return { bytes: buf, mime }
+}
+
+function extractReplicateImageUrl(output: unknown): string | null {
+  if (typeof output === 'string') return output
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      if (typeof item === 'string' && (item.startsWith('http') || item.startsWith('data:image/'))) return item
+    }
+  }
+  if (output && typeof output === 'object') {
+    const o = output as Record<string, unknown>
+    if (typeof o.image === 'string') return o.image
+    if (Array.isArray(o.images)) {
+      for (const item of o.images) {
+        if (typeof item === 'string') return item
+      }
+    }
+    if (typeof o.url === 'string') return o.url
+  }
+  return null
+}
+
 async function generateOne(apiKey: string, model: ImageModelId, prompt: string): Promise<GeneratedImage> {
-  return isOpenRouterImageModel(model)
-    ? generateOneOpenRouter(apiKey, model, prompt)
-    : generateOneGemini(apiKey, model, prompt)
+  if (isReplicateImageModel(model)) return generateOneReplicate(apiKey, model, prompt)
+  if (isOpenRouterImageModel(model)) return generateOneOpenRouter(apiKey, model, prompt)
+  return generateOneGemini(apiKey, model, prompt)
 }
 
 /** Gemini preview models occasionally return 500/503/504/DEADLINE_EXCEEDED under

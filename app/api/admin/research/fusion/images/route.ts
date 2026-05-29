@@ -13,6 +13,7 @@ import {
   DEFAULT_IMAGE_MODEL,
   generateBatchWithConcurrency,
   isOpenRouterImageModel,
+  isReplicateImageModel,
   isValidImageModel,
   type FusionImageRecord,
   type ImageModelId,
@@ -102,13 +103,22 @@ export async function POST(req: NextRequest) {
   const chaosSweep = x.chaosSweep === true
   const imageModel: ImageModelId = isValidImageModel(x.imageModel) ? (x.imageModel as ImageModelId) : DEFAULT_IMAGE_MODEL
 
-  // Pick the right provider key based on the chosen model. FLUX models go
-  // through OpenRouter; Gemini stays on Google direct.
-  const isOR = isOpenRouterImageModel(imageModel)
-  const apiKey = isOR ? process.env.OPENROUTER_API_KEY : (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY)
+  // Pick the right provider key based on the model id prefix.
+  let apiKey: string | undefined
+  let requiredVar: string
+  if (isReplicateImageModel(imageModel)) {
+    apiKey = process.env.REPLICATE_API_TOKEN
+    requiredVar = 'REPLICATE_API_TOKEN'
+  } else if (isOpenRouterImageModel(imageModel)) {
+    apiKey = process.env.OPENROUTER_API_KEY
+    requiredVar = 'OPENROUTER_API_KEY'
+  } else {
+    apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY
+    requiredVar = 'GEMINI_API_KEY'
+  }
   if (!apiKey) {
     return NextResponse.json(
-      { error: `${isOR ? 'OPENROUTER_API_KEY' : 'GEMINI_API_KEY'} is not configured on the server.` },
+      { error: `${requiredVar} is not configured on the server.` },
       { status: 500 },
     )
   }
