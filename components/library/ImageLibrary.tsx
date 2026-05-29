@@ -37,6 +37,8 @@ const ORPHAN_OPTIONS: { id: OrphanFilter; label: string }[] = [
   { id: 'only', label: 'Orphans only' },
 ]
 
+const MAX_DOWNLOAD = 100
+
 export default function ImageLibrary() {
   const [images, setImages] = useState<LibraryImage[] | null>(null)
   const [facets, setFacets] = useState<Facets | null>(null)
@@ -48,6 +50,9 @@ export default function ImageLibrary() {
   const [chaosMax, setChaosMax] = useState(100)
   const [orphanFilter, setOrphanFilter] = useState<OrphanFilter>('include')
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -101,6 +106,74 @@ export default function ImageLibrary() {
     })),
     [filtered],
   )
+
+  function toggleSelect(id: string) {
+    setSelected(s => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setDownloadError(null)
+  }
+
+  // Select-all only operates on currently-filtered images. If all visible are
+  // already selected, it deselects them. Selections outside the current filter
+  // are preserved untouched.
+  const allVisibleSelected = filtered.length > 0 && filtered.every(i => selected.has(i.id))
+  function toggleSelectAllVisible() {
+    setSelected(s => {
+      const next = new Set(s)
+      if (allVisibleSelected) {
+        for (const i of filtered) next.delete(i.id)
+      } else {
+        for (const i of filtered) next.add(i.id)
+      }
+      return next
+    })
+    setDownloadError(null)
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+    setDownloadError(null)
+  }
+
+  async function downloadSelected() {
+    if (selected.size === 0 || !images) return
+    if (selected.size > MAX_DOWNLOAD) {
+      setDownloadError(`Too many images selected (${selected.size}). Max ${MAX_DOWNLOAD} per download.`)
+      return
+    }
+    setDownloading(true)
+    setDownloadError(null)
+    try {
+      const paths = images.filter(i => selected.has(i.id)).map(i => i.bucketPath)
+      const res = await fetch('/api/admin/research/fusion/library/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths }),
+      })
+      if (!res.ok) {
+        let msg = `Download failed (${res.status})`
+        try { const j = await res.json(); if (j?.error) msg = j.error } catch { /* ignore */ }
+        throw new Error(msg)
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fusion-library-${new Date().toISOString().slice(0, 10)}.zip`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setDownloadError(e instanceof Error ? e.message : 'Download failed')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   if (error) {
     return <div className="p-6 text-sm text-rose-400">Failed to load library: {error}</div>
@@ -179,49 +252,117 @@ export default function ImageLibrary() {
         </div>
       </section>
 
+      <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={toggleSelectAllVisible}
+              disabled={filtered.length === 0}
+              className="w-4 h-4 accent-[var(--brand-primary)] cursor-pointer disabled:cursor-not-allowed"
+            />
+            <span className="text-[var(--brand-text)]">
+              Select all visible ({filtered.length})
+            </span>
+          </label>
+          {selected.size > 0 && (
+            <>
+              <span className="text-[var(--brand-text-mid)]">
+                {selected.size} selected
+              </span>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="text-[var(--brand-text-mid)] hover:text-[var(--brand-text)] underline cursor-pointer"
+              >
+                Clear selection
+              </button>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {downloadError && <span className="text-rose-400">{downloadError}</span>}
+          <button
+            type="button"
+            onClick={downloadSelected}
+            disabled={selected.size === 0 || downloading}
+            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-[var(--brand-primary-text)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            style={{ background: 'var(--brand-gradient)', boxShadow: '0 0 14px var(--brand-glow)' }}
+          >
+            {downloading
+              ? 'Zipping…'
+              : selected.size === 0
+                ? 'Download (select images)'
+                : `Download ${selected.size} as ZIP`}
+          </button>
+        </div>
+      </div>
+
       {filtered.length === 0 ? (
         <p className="py-12 text-center text-sm text-[var(--brand-text-mid)]">
           No images match the current filters.
         </p>
       ) : (
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {filtered.map((img, i) => (
-            <li key={img.id}>
-              <button
-                type="button"
-                onClick={() => setLightboxIndex(i)}
-                className="group block w-full rounded-lg overflow-hidden border border-[var(--brand-border)] hover:border-[var(--brand-primary)] bg-[var(--brand-card)] text-left transition-colors cursor-zoom-in"
-              >
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt={img.fusionName ?? 'Orphaned flash design'} className="w-full aspect-square object-cover" loading="lazy" />
-                  {typeof img.chaos === 'number' && (
-                    <span className="absolute top-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums">
-                      chaos {img.chaos}
-                    </span>
-                  )}
-                  {img.isOrphan && (
-                    <span className="absolute top-1 right-1 rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-bold text-black uppercase">
-                      orphan
-                    </span>
-                  )}
-                </div>
-                <div className="px-2 py-2 space-y-0.5">
-                  <div className="text-xs font-semibold text-[var(--brand-text)] truncate">
-                    {img.fusionName ?? `Orphan · ${img.fusionEntryId.slice(0, 12)}…`}
+          {filtered.map((img, i) => {
+            const isSelected = selected.has(img.id)
+            return (
+              <li key={img.id} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(i)}
+                  className={`group block w-full rounded-lg overflow-hidden border bg-[var(--brand-card)] text-left transition-colors cursor-zoom-in ${
+                    isSelected
+                      ? 'border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]'
+                      : 'border-[var(--brand-border)] hover:border-[var(--brand-primary)]'
+                  }`}
+                >
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.url} alt={img.fusionName ?? 'Orphaned flash design'} className="w-full aspect-square object-cover" loading="lazy" />
+                    {typeof img.chaos === 'number' && (
+                      <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums">
+                        chaos {img.chaos}
+                      </span>
+                    )}
+                    {img.isOrphan && (
+                      <span className="absolute top-1 right-1 rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-bold text-black uppercase">
+                        orphan
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[10px] text-[var(--brand-text-mid)] truncate">
-                    {img.baseLabel && img.blendLabel
-                      ? `${img.baseLabel} × ${img.blendLabel}`
-                      : img.industryLabel ?? 'no metadata'}
+                  <div className="px-2 py-2 space-y-0.5">
+                    <div className="text-xs font-semibold text-[var(--brand-text)] truncate">
+                      {img.fusionName ?? `Orphan · ${img.fusionEntryId.slice(0, 12)}…`}
+                    </div>
+                    <div className="text-[10px] text-[var(--brand-text-mid)] truncate">
+                      {img.baseLabel && img.blendLabel
+                        ? `${img.baseLabel} × ${img.blendLabel}`
+                        : img.industryLabel ?? 'no metadata'}
+                    </div>
+                    <div className="text-[10px] text-[var(--brand-text-mid)] truncate">
+                      {new Date(img.createdAt).toLocaleDateString()} · {img.model ?? 'unknown model'}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-[var(--brand-text-mid)] truncate">
-                    {new Date(img.createdAt).toLocaleDateString()} · {img.model ?? 'unknown model'}
-                  </div>
-                </div>
-              </button>
-            </li>
-          ))}
+                </button>
+                {/* Selection checkbox sits outside the button (sibling) and is z-stacked
+                    above it, so a click on the checkbox doesn't also fire the button. */}
+                <label
+                  className="absolute top-1 left-1 z-10 flex items-center justify-center w-7 h-7 rounded bg-black/60 hover:bg-black/80 cursor-pointer touch-manipulation"
+                  onClick={e => e.stopPropagation()}
+                  aria-label={`${isSelected ? 'Deselect' : 'Select'} ${img.fusionName ?? 'orphaned image'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelect(img.id)}
+                    className="w-4 h-4 accent-[var(--brand-primary)] cursor-pointer"
+                  />
+                </label>
+              </li>
+            )
+          })}
         </ul>
       )}
 
