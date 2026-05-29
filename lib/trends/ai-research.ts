@@ -7,6 +7,7 @@ export const RESEARCH_MODELS = [
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (fastest)' },
   { id: 'openrouter/openai/gpt-5', label: 'GPT-5 (via OpenRouter)' },
   { id: 'openrouter/google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (via OpenRouter)' },
+  { id: 'openrouter/anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6 (via OpenRouter)' },
 ] as const
 
 export type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
