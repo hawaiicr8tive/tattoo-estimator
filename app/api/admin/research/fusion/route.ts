@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { isValidModel, runFusionResearch, type ResearchModelId } from '@/lib/trends/ai-research'
+import { isOpenRouterModel, isValidModel, runFusionResearch, type ResearchModelId } from '@/lib/trends/ai-research'
 import { loadIndustryDataset } from '@/lib/trends/store'
 import { appendFusionHistory, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 
@@ -34,14 +34,6 @@ export async function POST(req: NextRequest) {
   const denied = requireAdmin(req)
   if (denied) return denied
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'ANTHROPIC_API_KEY is not configured on the server.' },
-      { status: 500 },
-    )
-  }
-
   let body: unknown
   try {
     body = await req.json()
@@ -49,6 +41,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
   const x = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+
+  const usingOpenRouter = typeof x.model === 'string' && isOpenRouterModel(x.model)
+  const apiKey = usingOpenRouter ? process.env.OPENROUTER_API_KEY : process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: `${usingOpenRouter ? 'OPENROUTER_API_KEY' : 'ANTHROPIC_API_KEY'} is not configured on the server.` },
+      { status: 500 },
+    )
+  }
 
   const industryId = typeof x.industryId === 'string' ? x.industryId : ''
   const baseStyleId = typeof x.baseStyleId === 'string' ? x.baseStyleId : ''

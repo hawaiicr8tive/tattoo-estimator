@@ -5,12 +5,79 @@ export const RESEARCH_MODELS = [
   { id: 'claude-opus-4-7', label: 'Claude Opus 4.7 (most capable)' },
   { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (fast + cheap)' },
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (fastest)' },
+  { id: 'openrouter/openai/gpt-5', label: 'GPT-5 (via OpenRouter)' },
+  { id: 'openrouter/google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (via OpenRouter)' },
 ] as const
 
 export type ResearchModelId = (typeof RESEARCH_MODELS)[number]['id']
 
 export function isValidModel(id: unknown): id is ResearchModelId {
   return typeof id === 'string' && RESEARCH_MODELS.some(m => m.id === id)
+}
+
+const OPENROUTER_PREFIX = 'openrouter/'
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+export function isOpenRouterModel(model: string): boolean {
+  return model.startsWith(OPENROUTER_PREFIX)
+}
+
+interface OpenRouterCallOpts {
+  apiKey: string
+  model: string
+  system: string
+  user: string
+  maxTokens: number
+}
+
+interface ProviderUsage {
+  input_tokens: number
+  output_tokens: number
+  cache_creation_input_tokens: number
+  cache_read_input_tokens: number
+}
+
+async function callOpenRouter(opts: OpenRouterCallOpts): Promise<{ text: string; usage: ProviderUsage }> {
+  const realModel = opts.model.slice(OPENROUTER_PREFIX.length)
+  const res = await fetch(OPENROUTER_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${opts.apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://style-prediction-model.vercel.app',
+      'X-Title': 'Style Prediction Model',
+    },
+    body: JSON.stringify({
+      model: realModel,
+      messages: [
+        { role: 'system', content: opts.system },
+        { role: 'user', content: opts.user },
+      ],
+      max_tokens: opts.maxTokens,
+      response_format: { type: 'json_object' },
+    }),
+  })
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    let msg = errText.slice(0, 500)
+    try {
+      const parsed = JSON.parse(errText)
+      if (parsed?.error?.message) msg = parsed.error.message
+    } catch { /* keep raw */ }
+    throw new Error(`OpenRouter error (${res.status}): ${msg}`)
+  }
+  const data = await res.json()
+  const text = data?.choices?.[0]?.message?.content
+  if (typeof text !== 'string' || !text) throw new Error('OpenRouter returned empty content.')
+  return {
+    text,
+    usage: {
+      input_tokens: data?.usage?.prompt_tokens ?? 0,
+      output_tokens: data?.usage?.completion_tokens ?? 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+    },
+  }
 }
 
 export interface SuggestedStrand {
@@ -118,6 +185,30 @@ Constraints:
 
 Return only the structured JSON described by the output schema.`
 
+const SUGGESTION_SHAPE_DESCRIPTION = `Return ONLY raw JSON (no markdown fences) matching this shape:
+{
+  "reasoning": string,
+  "suggestions": [
+    {
+      "proposed_id": kebab-case string (unique, not in existing ids),
+      "label": string,
+      "tagline": string,
+      "description": string,
+      "origin": integer year,
+      "parentId": optional string (must be an existing strand id),
+      "ancestors": string[] (each must be an existing strand id),
+      "curve_points": [{ "year": integer, "value": integer 0-100 }],
+      "signals": string[],
+      "tags": string[],
+      "pioneers": optional string[],
+      "triggers": optional [{ "year": integer, "name": string, "medium": "film"|"tv"|"music"|"celebrity"|"viral"|"literature"|"sports"|"other", "impact": "high"|"medium"|"low", "notes": optional string }],
+      "confidence": integer 0-100,
+      "rationale": string
+    }
+  ],
+  "cycle_notes_to_add": string[]
+}`
+
 function describeStrand(s: StyleStrand): string {
   const peaks = s.curve.map(c => `${c.year}:${c.value}`).join(' ')
   const lineage = s.parentId ? ` parent=${s.parentId}` : ''
@@ -170,12 +261,7 @@ export interface RunFusionResearchOptions {
 export interface RunFusionResearchOutcome {
   analysis: string
   visualDescriptor: string
-  usage: {
-    input_tokens: number
-    output_tokens: number
-    cache_creation_input_tokens: number
-    cache_read_input_tokens: number
-  }
+  usage: ProviderUsage
 }
 
 const FUSION_SYSTEM_PROMPT = `You are a trend-cycle research analyst. The user is exploring a hypothetical fusion of two existing strands from their dataset and wants two outputs returned together.
@@ -198,6 +284,12 @@ Constraints:
 
 Return JSON matching the output schema.`
 
+const FUSION_OUTPUT_SHAPE_DESCRIPTION = `Return ONLY raw JSON (no markdown fences) with exactly these two fields:
+{
+  "analysis": string — the 4-6 paragraph prose analysis,
+  "visualDescriptor": string — the ~100 word visual description
+}`
+
 const FUSION_OUTPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -215,7 +307,6 @@ const FUSION_OUTPUT_SCHEMA = {
 } as const
 
 export async function runFusionResearch(opts: RunFusionResearchOptions): Promise<RunFusionResearchOutcome> {
-  const client = new Anthropic({ apiKey: opts.apiKey })
   const datasetContext = buildDatasetContext(opts.dataset)
 
   const baseShare = 100 - Math.round(opts.blendWeight)
@@ -232,28 +323,50 @@ export async function runFusionResearch(opts: RunFusionResearchOptions): Promise
     opts.contentFocus ? `- Primary content focus (a specific motif the user wants the fusion to render): ${opts.contentFocus.itemLabel} (${opts.contentFocus.categoryLabel} category). The visualDescriptor MUST feature this motif as the central subject.` : null,
   ].filter(Boolean).join('\n')
 
-  const response = await client.messages.create({
-    model: opts.model,
-    max_tokens: 4000,
-    thinking: { type: 'adaptive' },
-    system: [
-      { type: 'text', text: FUSION_SYSTEM_PROMPT },
-      // Cache the dataset context — same key as runResearch, so it shares the cache hit window.
-      { type: 'text', text: datasetContext, cache_control: { type: 'ephemeral' } },
-    ],
-    messages: [
-      { role: 'user', content: fusionContext },
-    ],
-    output_config: {
-      format: {
-        type: 'json_schema',
-        schema: FUSION_OUTPUT_SCHEMA,
-      },
-    },
-  })
+  let text: string
+  let usage: ProviderUsage
 
-  const text = firstTextBlock(response.content)
-  if (!text) throw new Error('Model returned no text content.')
+  if (isOpenRouterModel(opts.model)) {
+    const r = await callOpenRouter({
+      apiKey: opts.apiKey,
+      model: opts.model,
+      system: `${FUSION_SYSTEM_PROMPT}\n\n${FUSION_OUTPUT_SHAPE_DESCRIPTION}\n\n--- Dataset context ---\n${datasetContext}`,
+      user: fusionContext,
+      maxTokens: 4000,
+    })
+    text = r.text
+    usage = r.usage
+  } else {
+    const client = new Anthropic({ apiKey: opts.apiKey })
+    const response = await client.messages.create({
+      model: opts.model,
+      max_tokens: 4000,
+      thinking: { type: 'adaptive' },
+      system: [
+        { type: 'text', text: FUSION_SYSTEM_PROMPT },
+        // Cache the dataset context — same key as runResearch, so it shares the cache hit window.
+        { type: 'text', text: datasetContext, cache_control: { type: 'ephemeral' } },
+      ],
+      messages: [
+        { role: 'user', content: fusionContext },
+      ],
+      output_config: {
+        format: {
+          type: 'json_schema',
+          schema: FUSION_OUTPUT_SCHEMA,
+        },
+      },
+    })
+    const t = firstTextBlock(response.content)
+    if (!t) throw new Error('Model returned no text content.')
+    text = t
+    usage = {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_creation_input_tokens: response.usage.cache_creation_input_tokens ?? 0,
+      cache_read_input_tokens: response.usage.cache_read_input_tokens ?? 0,
+    }
+  }
 
   let parsed: unknown
   try {
@@ -266,16 +379,7 @@ export async function runFusionResearch(opts: RunFusionResearchOptions): Promise
   const visualDescriptor = typeof obj.visualDescriptor === 'string' ? obj.visualDescriptor : ''
   if (!analysis || !visualDescriptor) throw new Error('Fusion result missing analysis or visualDescriptor.')
 
-  return {
-    analysis,
-    visualDescriptor,
-    usage: {
-      input_tokens: response.usage.input_tokens,
-      output_tokens: response.usage.output_tokens,
-      cache_creation_input_tokens: response.usage.cache_creation_input_tokens ?? 0,
-      cache_read_input_tokens: response.usage.cache_read_input_tokens ?? 0,
-    },
-  }
+  return { analysis, visualDescriptor, usage }
 }
 
 /* ------------------------------------------------------------------ */
@@ -292,43 +396,60 @@ export interface RunResearchOptions {
 export interface RunResearchOutcome {
   result: ResearchResult
   raw: string
-  usage: {
-    input_tokens: number
-    output_tokens: number
-    cache_creation_input_tokens: number
-    cache_read_input_tokens: number
-  }
+  usage: ProviderUsage
 }
 
 export async function runResearch({ apiKey, model, query, dataset }: RunResearchOptions): Promise<RunResearchOutcome> {
-  const client = new Anthropic({ apiKey })
   const datasetContext = buildDatasetContext(dataset)
+  const userMessage = `Research query: ${query}\n\nReturn your structured analysis as JSON conforming to the output schema.`
 
-  const response = await client.messages.create({
-    model,
-    max_tokens: 16000,
-    thinking: { type: 'adaptive' },
-    system: [
-      { type: 'text', text: SYSTEM_PROMPT },
-      // Cache the dataset context — it's stable per-industry and benefits repeat runs.
-      { type: 'text', text: datasetContext, cache_control: { type: 'ephemeral' } },
-    ],
-    messages: [
-      {
-        role: 'user',
-        content: `Research query: ${query}\n\nReturn your structured analysis as JSON conforming to the output schema.`,
-      },
-    ],
-    output_config: {
-      format: {
-        type: 'json_schema',
-        schema: SUGGESTION_SCHEMA,
-      },
-    },
-  })
+  let raw: string
+  let usage: ProviderUsage
 
-  const raw = firstTextBlock(response.content)
-  if (!raw) throw new Error('Model returned no text content.')
+  if (isOpenRouterModel(model)) {
+    const r = await callOpenRouter({
+      apiKey,
+      model,
+      system: `${SYSTEM_PROMPT}\n\n${SUGGESTION_SHAPE_DESCRIPTION}\n\n--- Dataset context ---\n${datasetContext}`,
+      user: userMessage,
+      maxTokens: 16000,
+    })
+    raw = r.text
+    usage = r.usage
+  } else {
+    const client = new Anthropic({ apiKey })
+    const response = await client.messages.create({
+      model,
+      max_tokens: 16000,
+      thinking: { type: 'adaptive' },
+      system: [
+        { type: 'text', text: SYSTEM_PROMPT },
+        // Cache the dataset context — it's stable per-industry and benefits repeat runs.
+        { type: 'text', text: datasetContext, cache_control: { type: 'ephemeral' } },
+      ],
+      messages: [
+        {
+          role: 'user',
+          content: userMessage,
+        },
+      ],
+      output_config: {
+        format: {
+          type: 'json_schema',
+          schema: SUGGESTION_SCHEMA,
+        },
+      },
+    })
+    const t = firstTextBlock(response.content)
+    if (!t) throw new Error('Model returned no text content.')
+    raw = t
+    usage = {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cache_creation_input_tokens: response.usage.cache_creation_input_tokens ?? 0,
+      cache_read_input_tokens: response.usage.cache_read_input_tokens ?? 0,
+    }
+  }
 
   let parsed: unknown
   try {
@@ -342,12 +463,7 @@ export async function runResearch({ apiKey, model, query, dataset }: RunResearch
   return {
     result,
     raw,
-    usage: {
-      input_tokens: response.usage.input_tokens,
-      output_tokens: response.usage.output_tokens,
-      cache_creation_input_tokens: response.usage.cache_creation_input_tokens ?? 0,
-      cache_read_input_tokens: response.usage.cache_read_input_tokens ?? 0,
-    },
+    usage,
   }
 }
 
