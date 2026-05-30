@@ -41,6 +41,25 @@ interface MotifCategory { id: string; label: string; description?: string }
 interface MotifItem { id: string; label: string; categoryId: string; industries: string[] }
 interface MotifLibrary { categories: MotifCategory[]; items: MotifItem[] }
 
+interface BatchJobRow {
+  id: string
+  fusion_entry_id: string
+  model: string
+  count: number
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'expired'
+  error: string | null
+  added_image_count: number
+  created_at: string
+  completed_at: string | null
+}
+
+const BULK_MIN = 10
+const BULK_MAX = 50
+const BULK_PRICE = {
+  'gemini-3-pro-image-preview':     { perImage: 0.075, label: 'Gemini 3 Pro Image' },
+  'gemini-3.1-flash-image-preview': { perImage: 0.035, label: 'Nano Banana 2 (Flash)' },
+} as const
+
 function itemAppliesToIndustry(item: MotifItem, industryId: string): boolean {
   return item.industries.includes('*') || item.industries.includes(industryId)
 }
@@ -94,6 +113,13 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [generatingImages, setGeneratingImages] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [chaos, setChaos] = useState(0)
+  // Bulk batch state — separate from real-time controls.
+  const [bulkCount, setBulkCount] = useState(25)
+  const [bulkModel, setBulkModel] = useState<'gemini-3-pro-image-preview' | 'gemini-3.1-flash-image-preview'>('gemini-3-pro-image-preview')
+  const [bulkDirection, setBulkDirection] = useState('')
+  const [submittingBulk, setSubmittingBulk] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
   /** Editable copy of the visualDescriptor — synced from analysis on load, then user-mutable. */
   const [editedVisualDescriptor, setEditedVisualDescriptor] = useState('')
   const [history, setHistory] = useState<FusionHistoryEntry[]>([])
@@ -177,6 +203,29 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  // Refresh batch jobs whenever the loaded analysis changes, then poll every
+  // 60s while there's an open batch (so the user sees status flip without a
+  // manual refresh).
+  useEffect(() => {
+    if (!analysis) { setBatchJobs([]); return }
+    let cancelled = false
+    let timer: ReturnType<typeof setInterval> | null = null
+    async function load() {
+      try {
+        const res = await fetch(`/api/admin/research/fusion/images/batch?fusionEntryId=${encodeURIComponent(analysis!.entryId)}`)
+        if (!res.ok) return
+        const data = await res.json() as { jobs?: BatchJobRow[] }
+        if (cancelled) return
+        setBatchJobs(data.jobs ?? [])
+        const stillOpen = (data.jobs ?? []).some(j => j.status === 'pending' || j.status === 'running')
+        if (!stillOpen && timer) { clearInterval(timer); timer = null }
+      } catch { /* ignore */ }
+    }
+    load()
+    timer = setInterval(load, 60000)
+    return () => { cancelled = true; if (timer) clearInterval(timer) }
+  }, [analysis])
 
 
   function entryToAnalysisState(entry: FusionHistoryEntry, baseLabel: string, blendLabel: string): AnalysisState {
@@ -316,6 +365,72 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       setImageError(e instanceof Error ? e.message : 'Image generation failed')
     } finally {
       setGeneratingImages(false)
+    }
+  }
+
+  async function refreshBatchJobs() {
+    if (!analysis) { setBatchJobs([]); return }
+    try {
+      const res = await fetch(`/api/admin/research/fusion/images/batch?fusionEntryId=${encodeURIComponent(analysis.entryId)}`)
+      if (!res.ok) return
+      const data = await res.json() as { jobs?: BatchJobRow[] }
+      setBatchJobs(data.jobs ?? [])
+    } catch { /* swallow — best-effort */ }
+  }
+
+  async function handleSubmitBulk() {
+    if (!analysis) return
+    setSubmittingBulk(true)
+    setBulkError(null)
+    try {
+      const fullEntry = history.find(h => h.id === analysis.entryId)
+      const entrySnapshot = fullEntry ?? {
+        id: analysis.entryId,
+        timestamp: new Date().toISOString(),
+        industryId,
+        baseStyleId: base?.id ?? '',
+        blendStyleId: blend?.id ?? '',
+        blendWeight,
+        socialAccelerant,
+        anomaly,
+        extraSignals,
+        fusionName: analysis.fusionName,
+        model: analysis.model,
+        analysis: analysis.analysis,
+        visualDescriptor: analysis.visualDescriptor,
+        contentFocus: selectedContent ?? undefined,
+        usage: analysis.usage,
+      }
+      const res = await fetch('/api/admin/research/fusion/images/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryId: analysis.entryId,
+          count: bulkCount,
+          model: bulkModel,
+          chaosDirection: bulkDirection.trim() || undefined,
+          visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
+            ? editedVisualDescriptor
+            : undefined,
+          contentFocus: selectedContent ?? undefined,
+          entrySnapshot,
+        }),
+      })
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        const msg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Bulk submit failed (HTTP ${res.status})`
+        throw new Error(msg)
+      }
+      // Optimistically prepend the new job, then refresh from server.
+      const newJob = (data as { job?: BatchJobRow }).job
+      if (newJob) setBatchJobs(prev => [newJob, ...prev])
+      refreshBatchJobs()
+    } catch (e) {
+      setBulkError(e instanceof Error ? e.message : 'Bulk submit failed')
+    } finally {
+      setSubmittingBulk(false)
     }
   }
 
@@ -500,10 +615,13 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
             {analysis && (
               <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <div className="flex items-baseline justify-between gap-3 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wide text-gray-700">
-                    Analysis: {analysis.fusionName}
-                  </span>
-                  <span className="text-[10px] text-gray-500">
+                  <div className="flex items-baseline gap-3 min-w-0">
+                    <span className="text-xs font-bold uppercase tracking-wide text-gray-700 truncate">
+                      Analysis: {analysis.fusionName}
+                    </span>
+                    <BatchStatusBadge jobs={batchJobs} />
+                  </div>
+                  <span className="text-[10px] text-gray-500 shrink-0">
                     {analysis.model} · {analysis.usage.input_tokens + analysis.usage.cache_read_input_tokens + analysis.usage.cache_creation_input_tokens} in / {analysis.usage.output_tokens} out
                     {analysis.usage.cache_read_input_tokens > 0 && ' · cache hit'}
                   </span>
@@ -596,6 +714,59 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     Chaos sweep ramps chaos 0→100 across the {imageCount} image{imageCount === 1 ? '' : 's'} (pick 2+). Plain generate uses the slider value for every image.
                   </p>
                   {imageError && <p className="mt-2 text-xs text-red-600">{imageError}</p>}
+
+                  {/* ── Bulk row (Gemini Batch API) ───────────────────────── */}
+                  <div className="mt-4 pt-3 border-t border-dashed border-gray-300">
+                    <div className="flex items-baseline justify-between gap-2 mb-2">
+                      <span className="text-xs uppercase tracking-wide text-gray-500">Bulk batch (async · ~50% off)</span>
+                      <span className="text-[10px] text-gray-400">Gemini Batch API · 0–24h turnaround</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <select
+                        value={bulkCount}
+                        onChange={e => setBulkCount(Number(e.target.value))}
+                        disabled={submittingBulk}
+                        className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
+                        title="Number of images in this batch (10–50)"
+                      >
+                        {Array.from({ length: BULK_MAX - BULK_MIN + 1 }, (_, i) => i + BULK_MIN).map(n => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={bulkModel}
+                        onChange={e => setBulkModel(e.target.value as typeof bulkModel)}
+                        disabled={submittingBulk}
+                        className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
+                      >
+                        <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image</option>
+                        <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (Flash)</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={bulkDirection}
+                        onChange={e => setBulkDirection(e.target.value.slice(0, 400))}
+                        placeholder="Chaos direction (optional inspiration text)"
+                        disabled={submittingBulk}
+                        className="flex-1 min-w-[180px] text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSubmitBulk}
+                        disabled={submittingBulk}
+                        className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+                      >
+                        {submittingBulk ? 'Submitting…' : 'Submit bulk job'}
+                      </button>
+                      <span className="text-[10px] text-gray-500 tabular-nums">
+                        ≈ ${(bulkCount * BULK_PRICE[bulkModel].perImage).toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Always ramps chaos 0→100 across the {bulkCount} images. Optional &quot;chaos direction&quot; text nudges every prompt with extra creative inspiration. Results appear in this entry when Google finishes (typically 2–6 h).
+                    </p>
+                    {bulkError && <p className="mt-2 text-xs text-red-600">{bulkError}</p>}
+                  </div>
                   {analysis.images.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {analysis.images.map((img, i) => (
@@ -757,4 +928,40 @@ function renderInline(s: string): string {
   safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
   safe = safe.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
   return safe
+}
+
+
+function BatchStatusBadge({ jobs }: { jobs: BatchJobRow[] }) {
+  if (!jobs || jobs.length === 0) return null
+  const open = jobs.filter(j => j.status === "pending" || j.status === "running")
+  const recentDone = jobs
+    .filter(j => j.completed_at && (Date.now() - new Date(j.completed_at).getTime() < 1000 * 60 * 60 * 24))
+    .sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""))
+  if (open.length === 0 && recentDone.length === 0) return null
+
+  const tone = open.length > 0
+    ? "bg-amber-100 text-amber-800 border-amber-300"
+    : recentDone[0]?.status === "succeeded"
+      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+      : "bg-rose-100 text-rose-800 border-rose-300"
+
+  const label = open.length > 0
+    ? `${open.length} batch${open.length === 1 ? "" : "es"} pending`
+    : recentDone[0]?.status === "succeeded"
+      ? `+${recentDone[0].added_image_count} from batch`
+      : `Batch ${recentDone[0]?.status}`
+
+  const title = open.length > 0
+    ? open.map(j => `${j.id} · ${j.status} · ${j.count}× ${j.model.includes("pro") ? "Pro" : "Flash"} · ${new Date(j.created_at).toLocaleString()}`).join("\n")
+    : recentDone.slice(0, 3).map(j => `${j.id} · ${j.status} · +${j.added_image_count}/${j.count} · ${j.completed_at ? new Date(j.completed_at).toLocaleString() : ""}`).join("\n")
+
+  return (
+    <span
+      title={title}
+      className={`shrink-0 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium ${tone}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${open.length > 0 ? "bg-amber-500 animate-pulse" : "bg-current"}`} />
+      {label}
+    </span>
+  )
 }
