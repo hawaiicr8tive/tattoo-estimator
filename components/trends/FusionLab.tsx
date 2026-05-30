@@ -122,6 +122,11 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
   const [pollingBatches, setPollingBatches] = useState(false)
   const [pollSummary, setPollSummary] = useState<string | null>(null)
+  // Quick-add for the motif library — one category + comma-separated items.
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newItemsCsv, setNewItemsCsv] = useState('')
+  const [addingToLibrary, setAddingToLibrary] = useState(false)
+  const [libraryAddStatus, setLibraryAddStatus] = useState<{ ok: boolean; message: string } | null>(null)
   /** Editable copy of the visualDescriptor — synced from analysis on load, then user-mutable. */
   const [editedVisualDescriptor, setEditedVisualDescriptor] = useState('')
   const [history, setHistory] = useState<FusionHistoryEntry[]>([])
@@ -381,6 +386,56 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   }
 
   /**
+   * Quick-add to the motif library — one category + comma-separated items.
+   * Builds a minimal CSV inline and POSTs through the same import endpoint
+   * the /data page's CSV importer uses, so the merge semantics are identical.
+   * New items default to the currently-selected industry only (not '*'), since
+   * the user is adding them in an industry-scoped context.
+   */
+  async function handleAddToLibrary() {
+    const cat = newCategoryName.trim()
+    const items = newItemsCsv.split(',').map(s => s.trim()).filter(Boolean)
+    if (!cat) { setLibraryAddStatus({ ok: false, message: 'Category name required' }); return }
+    if (items.length === 0) { setLibraryAddStatus({ ok: false, message: 'Add at least one item, comma-separated' }); return }
+    setAddingToLibrary(true)
+    setLibraryAddStatus(null)
+    try {
+      const header = 'category,name,industries'
+      const rows = items.map(item => `${csvEscape(cat)},${csvEscape(item)},${industryId}`)
+      const csv = [header, ...rows].join('\n')
+      const res = await fetch('/api/admin/motif-library/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv }),
+      })
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        const msg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Import failed (HTTP ${res.status})`
+        throw new Error(msg)
+      }
+      const payload = data as { addedItems?: number; addedCategories?: number; library?: MotifLibrary }
+      setLibraryAddStatus({
+        ok: true,
+        message: `Added ${payload.addedItems ?? items.length} item${(payload.addedItems ?? items.length) === 1 ? '' : 's'} to "${cat}".`,
+      })
+      // Refresh the in-memory library so dropdowns update immediately.
+      if (payload.library) setLibrary(payload.library)
+      else {
+        const r = await fetch('/api/motif-library')
+        if (r.ok) setLibrary(await r.json())
+      }
+      setNewCategoryName('')
+      setNewItemsCsv('')
+    } catch (e) {
+      setLibraryAddStatus({ ok: false, message: e instanceof Error ? e.message : 'Import failed' })
+    } finally {
+      setAddingToLibrary(false)
+    }
+  }
+
+  /**
    * Force the server to poll Google for every open batch job, attach any
    * results that are ready, and refresh both the batch-status badge AND the
    * current entry's images. Used for the "Check now" button so users don't
@@ -533,34 +588,72 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
         </div>
 
         {filteredLibrary && filteredLibrary.categories.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Content focus — category</div>
-              <select
-                value={effectiveCategoryId}
-                onChange={e => { setContentCategoryId(e.target.value); setContentItemId('') }}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
-              >
-                <option value="">Auto / N/A</option>
-                {filteredLibrary.categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Content focus — item</div>
-              <select
-                value={effectiveItemId}
-                onChange={e => setContentItemId(e.target.value)}
-                disabled={!effectiveCategoryId}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white disabled:opacity-60"
-              >
-                <option value="">{effectiveCategoryId ? 'Auto / N/A' : 'pick a category'}</option>
-                {itemsInSelectedCategory.map(i => (
-                  <option key={i.id} value={i.id}>{i.label}</option>
-                ))}
-              </select>
-            </label>
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Content focus — category</div>
+                <select
+                  value={effectiveCategoryId}
+                  onChange={e => { setContentCategoryId(e.target.value); setContentItemId('') }}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">Auto / N/A</option>
+                  {filteredLibrary.categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value.slice(0, 80))}
+                  placeholder="+ new category (one only)"
+                  disabled={addingToLibrary}
+                  className="mt-1.5 w-full rounded border border-gray-200 px-2 py-1.5 text-xs bg-white text-gray-900 placeholder:text-gray-400"
+                />
+              </label>
+              <label className="block">
+                <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Content focus — item</div>
+                <select
+                  value={effectiveItemId}
+                  onChange={e => setContentItemId(e.target.value)}
+                  disabled={!effectiveCategoryId}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white disabled:opacity-60"
+                >
+                  <option value="">{effectiveCategoryId ? 'Auto / N/A' : 'pick a category'}</option>
+                  {itemsInSelectedCategory.map(i => (
+                    <option key={i.id} value={i.id}>{i.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={newItemsCsv}
+                  onChange={e => setNewItemsCsv(e.target.value)}
+                  placeholder="+ new items (comma-separated, e.g. Phoenix, Unicorn, Pegasus)"
+                  disabled={addingToLibrary}
+                  className="mt-1.5 w-full rounded border border-gray-200 px-2 py-1.5 text-xs bg-white text-gray-900 placeholder:text-gray-400"
+                />
+              </label>
+            </div>
+            {(newCategoryName.trim() || newItemsCsv.trim()) && (
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleAddToLibrary}
+                  disabled={addingToLibrary || !newCategoryName.trim() || !newItemsCsv.trim()}
+                  className="rounded bg-gray-700 text-white text-xs px-3 py-1.5 hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {addingToLibrary ? 'Adding…' : 'Add to library'}
+                </button>
+                <span className="text-[10px] text-gray-500">
+                  Items will be tagged to the <span className="font-semibold">{industryId}</span> industry.
+                </span>
+              </div>
+            )}
+            {libraryAddStatus && (
+              <p className={`text-xs ${libraryAddStatus.ok ? 'text-emerald-700' : 'text-red-600'}`}>
+                {libraryAddStatus.message}
+              </p>
+            )}
           </div>
         )}
 
@@ -967,6 +1060,13 @@ function AnalysisProse({ text }: { text: string }) {
       ))}
     </div>
   )
+}
+
+/** Wrap a CSV cell value in double-quotes if it contains a comma/quote/newline.
+ * Double-quotes inside are escaped by doubling per RFC 4180. */
+function csvEscape(s: string): string {
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  return s
 }
 
 function escapeHtml(s: string): string {
