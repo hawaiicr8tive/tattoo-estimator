@@ -53,6 +53,10 @@ export interface FusionImagePromptInput {
   chaos?: number
   /** Optional motif focus — forced central subject (e.g. "Rose"). */
   contentFocus?: { categoryLabel: string; itemLabel: string }
+  /** Optional free-text creative direction layered on top of the numeric chaos
+   * value. Used by bulk batches to nudge a whole batch in a specific direction
+   * (e.g. "art-nouveau organic flow"). */
+  chaosDirection?: string
 }
 
 const CHAOS_DIRECTIVES: { min: number; text: string }[] = [
@@ -78,12 +82,13 @@ function chaosDirective(chaos: number): string {
  * kill it) doesn't translate to image style and dilutes the prompt.
  */
 export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
-  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0, contentFocus } = input
+  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0, contentFocus, chaosDirection } = input
   const baseTags = baseStrand.tags.join(', ')
   const blendTags = blendStrand.tags.join(', ')
   const ingredients = fusion.ingredients.slice(0, 3).join('. ')
   const safeDescriptor = visualDescriptor ? sanitizeForImageGen(visualDescriptor).slice(0, 1200) : ''
   const chaosText = chaosDirective(Math.max(0, Math.min(100, Math.round(chaos))))
+  const safeDirection = chaosDirection ? sanitizeForImageGen(chaosDirection).slice(0, 400).trim() : ''
   return [
     'A black-ink tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the inked design centered on paper.',
     contentFocus ? `Central subject: ${contentFocus.itemLabel} (${contentFocus.categoryLabel}). The design MUST feature this as the primary motif.` : '',
@@ -93,6 +98,7 @@ export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
     `Visual ingredients: ${ingredients}`,
     safeDescriptor ? `Visual descriptor: ${safeDescriptor}` : `Outlook: ${fusion.outlook}`,
     chaosText ? `Chaos modifier: ${chaosText}` : '',
+    safeDirection ? `Creative direction (let this inspiration steer the visual choices while keeping the core composition): ${safeDirection}` : '',
     'Style: traditional flash-sheet illustration, fine ink work, crisp lines, the kind of drawing a tattoo artist pins to a studio wall as reference. Subtle paper texture. No watermarks, no text annotations, no signatures.',
   ].filter(Boolean).join(' ')
 }
