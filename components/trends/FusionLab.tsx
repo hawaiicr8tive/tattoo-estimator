@@ -120,6 +120,8 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
+  const [pollingBatches, setPollingBatches] = useState(false)
+  const [pollSummary, setPollSummary] = useState<string | null>(null)
   /** Editable copy of the visualDescriptor — synced from analysis on load, then user-mutable. */
   const [editedVisualDescriptor, setEditedVisualDescriptor] = useState('')
   const [history, setHistory] = useState<FusionHistoryEntry[]>([])
@@ -376,6 +378,51 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       const data = await res.json() as { jobs?: BatchJobRow[] }
       setBatchJobs(data.jobs ?? [])
     } catch { /* swallow — best-effort */ }
+  }
+
+  /**
+   * Force the server to poll Google for every open batch job, attach any
+   * results that are ready, and refresh both the batch-status badge AND the
+   * current entry's images. Used for the "Check now" button so users don't
+   * have to wait for the daily cron tick.
+   */
+  async function handleForcePoll() {
+    if (pollingBatches) return
+    setPollingBatches(true)
+    setPollSummary(null)
+    try {
+      const res = await fetch('/api/admin/research/fusion/images/batch/poll')
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        const msg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Poll failed (HTTP ${res.status})`
+        throw new Error(msg)
+      }
+      const summary = data as { polled?: number; succeeded?: number; imagesAttached?: number }
+      const polled = summary.polled ?? 0
+      const succeeded = summary.succeeded ?? 0
+      const attached = summary.imagesAttached ?? 0
+      setPollSummary(
+        polled === 0
+          ? 'No open batches to check.'
+          : `Checked ${polled} · ${succeeded} succeeded · +${attached} image${attached === 1 ? '' : 's'}`,
+      )
+      // Refresh both the batch panel and the current entry's images so any
+      // newly-attached batch results show up in the grid immediately.
+      await refreshBatchJobs()
+      if (attached > 0) {
+        const fresh = await refreshHistory()
+        const myEntry = fresh.find(h => h.id === analysis?.entryId)
+        if (myEntry && analysis) {
+          setAnalysis(prev => (prev ? { ...prev, images: myEntry.images ?? [] } : prev))
+        }
+      }
+    } catch (e) {
+      setPollSummary(e instanceof Error ? e.message : 'Poll failed')
+    } finally {
+      setPollingBatches(false)
+    }
   }
 
   async function handleSubmitBulk() {
@@ -758,6 +805,15 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                       >
                         {submittingBulk ? 'Submitting…' : 'Submit bulk job'}
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleForcePoll}
+                        disabled={pollingBatches}
+                        title="Ask Google now whether any open batches are done — bypasses the daily cron"
+                        className="rounded border border-[#7B0000] text-[#7B0000] text-xs px-3 py-1.5 hover:bg-[#7B0000]/5 disabled:opacity-50"
+                      >
+                        {pollingBatches ? 'Checking…' : 'Check now'}
+                      </button>
                       <span className="text-[10px] text-gray-500 tabular-nums">
                         ≈ ${(bulkCount * BULK_PRICE[bulkModel].perImage).toFixed(2)}
                       </span>
@@ -765,6 +821,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <p className="mt-1 text-[11px] text-gray-500">
                       Always ramps chaos 0→100 across the {bulkCount} images. Optional &quot;chaos direction&quot; text nudges every prompt with extra creative inspiration. Results appear in this entry when Google finishes (typically 2–6 h).
                     </p>
+                    {pollSummary && <p className="mt-2 text-xs text-gray-600">{pollSummary}</p>}
                     {bulkError && <p className="mt-2 text-xs text-red-600">{bulkError}</p>}
                   </div>
                   {analysis.images.length > 0 && (
