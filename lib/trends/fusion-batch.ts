@@ -19,7 +19,7 @@ export function isValidBatchModel(id: unknown): id is BatchImageModelId {
   return typeof id === 'string' && BATCH_IMAGE_MODELS.some(m => m.id === id)
 }
 
-export const BATCH_MIN_COUNT = 10
+export const BATCH_MIN_COUNT = 4
 export const BATCH_MAX_COUNT = 50
 export const BATCH_DEFAULT_COUNT = 25
 

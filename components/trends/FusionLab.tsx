@@ -53,7 +53,7 @@ interface BatchJobRow {
   completed_at: string | null
 }
 
-const BULK_MIN = 10
+const BULK_MIN = 4
 const BULK_MAX = 50
 const BULK_PRICE = {
   'gemini-3-pro-image-preview':     { perImage: 0.075, label: 'Gemini 3 Pro Image' },
