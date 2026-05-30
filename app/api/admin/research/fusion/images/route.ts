@@ -208,7 +208,10 @@ export async function POST(req: NextRequest) {
   // whole batch.
   let batch
   try {
-    batch = await generateBatchWithConcurrency({ apiKey, prompts, model: imageModel, concurrency: 3 })
+    // Replicate's free/low-volume tier rate-limits to ~6 req/min with burst=1.
+    // Running 3 in parallel guarantees throttling. Keep Gemini/OR at 3.
+    const concurrency = isReplicateImageModel(imageModel) ? 1 : 3
+    batch = await generateBatchWithConcurrency({ apiKey, prompts, model: imageModel, concurrency })
   } catch (e) {
     console.error('fusion image gen error:', e)
     return NextResponse.json(
