@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { addDraft, deleteDraft, loadDrafts } from '@/lib/trends/prompt-drafts'
+import { addDraft, deleteDraft, loadDrafts, updateDraft } from '@/lib/trends/prompt-drafts'
 
 export async function GET(req: NextRequest) {
   const denied = requireAdmin(req)
@@ -28,6 +28,25 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error('add draft error:', e)
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Add failed' }, { status: 400 })
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const denied = requireAdmin(req)
+  if (denied) return denied
+  let body: unknown
+  try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+  const x = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+  const id = typeof x.id === 'string' ? x.id : ''
+  const name = typeof x.name === 'string' ? x.name : ''
+  const text = typeof x.text === 'string' ? x.text : ''
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  try {
+    const drafts = await updateDraft(id, name, text)
+    return NextResponse.json({ drafts })
+  } catch (e) {
+    console.error('update draft error:', e)
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Update failed' }, { status: 400 })
   }
 }
 

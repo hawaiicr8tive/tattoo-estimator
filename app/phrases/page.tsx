@@ -1,11 +1,6 @@
-import ChaosPhraseLibrary from '@/components/admin/ChaosPhraseLibrary'
+import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
+// /phrases moved into the unified /controls tab. Redirect any stale links.
 export default function PhrasesPage() {
-  return (
-    <div className="px-3 sm:px-4 py-6 sm:py-8 max-w-7xl mx-auto">
-      <ChaosPhraseLibrary />
-    </div>
-  )
+  redirect('/controls')
 }

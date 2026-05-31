@@ -53,6 +53,17 @@ export async function deleteDraft(id: string): Promise<PromptDraft[]> {
   return next
 }
 
+export async function updateDraft(id: string, name: string, text: string): Promise<PromptDraft[]> {
+  if (!name.trim()) throw new Error('Draft name required')
+  if (!text.trim()) throw new Error('Draft text required')
+  const current = await loadDrafts()
+  const idx = current.findIndex(d => d.id === id)
+  if (idx === -1) throw new Error(`Draft ${id} not found`)
+  current[idx] = { ...current[idx], name: name.trim().slice(0, 80), text: text.trim() }
+  await saveAll(current)
+  return current
+}
+
 async function saveAll(drafts: PromptDraft[]): Promise<void> {
   const db = getServiceClient()
   const { error } = await db
