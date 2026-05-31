@@ -14,6 +14,12 @@ interface Props {
   activeIndex: number | null
   onClose: () => void
   onNavigate: (newIndex: number) => void
+  /** Optional handler invoked when the user clicks "Analyze" in the lightbox
+   * toolbar. When omitted, the button is hidden. */
+  onAnalyze?: (image: LightboxImage) => void
+  /** True while the analyze request is in flight so the button can show a
+   * loading state. */
+  analyzing?: boolean
 }
 
 /**
@@ -23,7 +29,7 @@ interface Props {
  * descriptors). "Open original" opens the raw URL in a new tab — handy for
  * download or sharing.
  */
-export default function ImageLightbox({ images, activeIndex, onClose, onNavigate }: Props) {
+export default function ImageLightbox({ images, activeIndex, onClose, onNavigate, onAnalyze, analyzing }: Props) {
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
@@ -68,6 +74,17 @@ export default function ImageLightbox({ images, activeIndex, onClose, onNavigate
             >
               {showPrompt ? 'Hide prompt' : 'Show prompt'}
             </button>
+            {onAnalyze && (
+              <button
+                type="button"
+                onClick={() => onAnalyze(img)}
+                disabled={analyzing}
+                className="underline hover:text-white disabled:opacity-50"
+                title="Use GPT-5 Vision to reverse-engineer a prompt from this image"
+              >
+                {analyzing ? 'Analyzing…' : '🔍 Analyze with GPT-5'}
+              </button>
+            )}
             <a
               href={img.url}
               target="_blank"
