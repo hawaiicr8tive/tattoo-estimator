@@ -33,30 +33,39 @@ export async function POST(req: NextRequest) {
   if (!imageUrl || !(imageUrl.startsWith('http') || imageUrl.startsWith('data:image/'))) {
     return NextResponse.json({ error: 'imageUrl required (http/https or data URL)' }, { status: 400 })
   }
-  // Default to GPT-4o — battle-tested for vision, returns reliably under
-  // tight token budgets. GPT-5 is a reasoning model and tends to burn its
-  // entire budget on internal reasoning, returning empty content. Users can
-  // override via the request body if they want a specific model.
+  // Default to Claude Sonnet 4.6 — best balance of vision detail + price.
+  // Sonnet vision describes images at the level of detail the user wants
+  // (subject, pose, line weight, shading, palette, mood, style references)
+  // without the reasoning-token overhead that gpt-5 has.
   const model = typeof x.model === 'string' && x.model.includes('/')
     ? x.model
-    : 'openai/gpt-4o'
+    : 'anthropic/claude-sonnet-4.6'
 
-  const systemPrompt = `You are analyzing a tattoo flash-sheet design and producing a tight visual descriptor that could be used as a prompt to recreate something similar.
+  const systemPrompt = `You are an expert tattoo art director analyzing a tattoo flash-sheet design. Produce a richly detailed visual descriptor (250-400 words) that captures every element needed to recreate this design with high fidelity.
 
-Produce a single paragraph of 100-150 words covering:
-- The subject and its pose/composition
-- Line weight and shading style (e.g. fine single-needle, bold traditional, dotwork, blackwork)
-- Decorative elements, motifs, framing
-- Overall aesthetic style and any cultural/era references you can identify
-- Negative/positive space balance
+Structure your response as 4-6 flowing paragraphs (no bullet points, no headers) covering:
+
+OVERALL COMPOSITION — the central focal point, the surrounding elements, the positive/negative space balance, the dominant motifs. Identify any visible text/lettering with EXACT wording in quotes.
+
+PRIMARY SUBJECT — the main figure(s) or object(s) in detail. Pose, expression, clothing, hair, anatomy. For objects: form, surface, texture, dimensionality.
+
+DECORATIVE ELEMENTS — borders, frames, banners, flowers, leaves, secondary motifs. How they relate to the main subject. Their styling and placement.
+
+LINE & SHADING TECHNIQUE — specifically named techniques: "thick black outlines", "whip shading", "stipple shading", "single-needle fine line", "dotwork", "blackwork fills", "crosshatching". Identify line weight variations, fill patterns, shading style.
+
+COLOR PALETTE — list every color present and where each is used (dominant vs accent vs background). Note saturation level and any palette references (muted vintage, neon, monochrome blackwork, etc.).
+
+MOOD & STYLE REFERENCES — overall feeling, era references, cultural movements, specific tattoo style identification (American traditional, neo-traditional, fine line, blackwork, dotwork, Japanese irezumi, chicano fine line, etc.).
 
 Constraints:
-- Only describe what is visually present. No market commentary, history, or non-visual content.
-- Write as if briefing an artist about to draw something similar.
-- Do NOT mention "the image" or "this design" — write descriptively as if you were the original art director.
-- Avoid words like "gore", "wound", "corpse", "bleeding" — they trip image-gen safety filters downstream.
+- Write as flowing paragraphs, NOT bulleted lists or headers.
+- Be specific and concrete — "thick black outlines and muted earth-tone fills" not "lines and colors".
+- Identify tattoo style references where credible.
+- Quote any visible text exactly.
+- Avoid the words "gore", "wound", "corpse", "bleeding" — they trip image-gen safety filters downstream.
+- 250-400 words total.
 
-Return ONLY the paragraph. No markdown, no preamble.`
+Return ONLY the descriptor paragraphs. No section labels, no preamble, no markdown.`
 
   let res: Response
   try {
@@ -79,9 +88,10 @@ Return ONLY the paragraph. No markdown, no preamble.`
             ],
           },
         ],
-        // Generous budget so reasoning models still leave room for the
-        // actual ~150 word descriptor output.
-        max_tokens: 4000,
+        // Generous budget so the model has room for the full 250-400 word
+        // structured descriptor (Claude Sonnet typically uses ~600 output
+        // tokens for this kind of detailed analysis).
+        max_tokens: 8000,
       }),
     })
   } catch (e) {

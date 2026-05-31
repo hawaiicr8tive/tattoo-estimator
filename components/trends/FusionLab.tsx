@@ -314,7 +314,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
    * so the next generation picks it up immediately. User can edit the
    * descriptor before generating, or toggle override off to revert.
    */
-  async function handleAnalyzeImage(image: { url: string }) {
+  async function handleAnalyzeImage(image: { url: string }, model?: string) {
     if (analyzingImageUrl) return
     setAnalyzingImageUrl(image.url)
     setAnalyzeError(null)
@@ -322,7 +322,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       const res = await fetch('/api/admin/research/fusion/images/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: image.url }),
+        body: JSON.stringify({ imageUrl: image.url, model }),
       })
       const data: unknown = await res.json().catch(() => null)
       if (!res.ok || data === null) {
@@ -1304,7 +1304,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           activeIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
-          onAnalyze={img => handleAnalyzeImage(img)}
+          onAnalyze={(img, model) => handleAnalyzeImage(img, model)}
           analyzing={!!analyzingImageUrl}
         />
       )}
