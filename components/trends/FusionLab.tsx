@@ -41,6 +41,21 @@ interface MotifCategory { id: string; label: string; description?: string }
 interface MotifItem { id: string; label: string; categoryId: string; industries: string[] }
 interface MotifLibrary { categories: MotifCategory[]; items: MotifItem[] }
 
+interface ChaosCategoryLite { id: string; label: string }
+interface ChaosTagLite { id: string; label: string }
+interface ChaosPhraseLite {
+  id: string
+  phrase: string
+  description?: string
+  categoryId: string
+  tagIds?: string[]
+}
+interface ChaosLibrary {
+  categories: ChaosCategoryLite[]
+  tags: ChaosTagLite[]
+  phrases: ChaosPhraseLite[]
+}
+
 interface BatchJobRow {
   id: string
   fusion_entry_id: string
@@ -53,7 +68,7 @@ interface BatchJobRow {
   completed_at: string | null
 }
 
-const BULK_MIN = 4
+const BULK_MIN = 1
 const BULK_MAX = 50
 const BULK_PRICE = {
   'gemini-3-pro-image-preview':     { perImage: 0.075, label: 'Gemini 3 Pro Image' },
@@ -117,6 +132,14 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [bulkCount, setBulkCount] = useState(25)
   const [bulkModel, setBulkModel] = useState<'gemini-3-pro-image-preview' | 'gemini-3.1-flash-image-preview'>('gemini-3-pro-image-preview')
   const [bulkDirection, setBulkDirection] = useState('')
+  // Chaos-phrase library (for the dropdown next to the chaos-direction input).
+  const [chaosLibrary, setChaosLibrary] = useState<ChaosLibrary | null>(null)
+  const [showPhraseQuickAdd, setShowPhraseQuickAdd] = useState(false)
+  const [quickAddPhrase, setQuickAddPhrase] = useState('')
+  const [quickAddCategoryId, setQuickAddCategoryId] = useState('')
+  const [quickAddNewCategory, setQuickAddNewCategory] = useState('')
+  const [quickAddingPhrase, setQuickAddingPhrase] = useState(false)
+  const [quickAddPhraseStatus, setQuickAddPhraseStatus] = useState<{ ok: boolean; message: string } | null>(null)
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
@@ -210,6 +233,53 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  // Chaos phrase library — feeds the dropdown next to the chaos direction input.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/chaos-phrases')
+      .then(r => r.ok ? r.json() : null)
+      .then((d: ChaosLibrary | null) => { if (!cancelled && d) setChaosLibrary(d) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  async function handleQuickAddPhrase() {
+    if (!quickAddPhrase.trim()) { setQuickAddPhraseStatus({ ok: false, message: 'Phrase required' }); return }
+    if (!quickAddCategoryId && !quickAddNewCategory.trim()) {
+      setQuickAddPhraseStatus({ ok: false, message: 'Pick category or type new one' }); return
+    }
+    setQuickAddingPhrase(true); setQuickAddPhraseStatus(null)
+    try {
+      const res = await fetch('/api/admin/chaos-phrases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phrase: quickAddPhrase.trim(),
+          categoryId: quickAddCategoryId || undefined,
+          newCategoryLabel: quickAddCategoryId ? undefined : quickAddNewCategory.trim(),
+        }),
+      })
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        const msg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Add failed (HTTP ${res.status})`
+        throw new Error(msg)
+      }
+      const payload = data as { library: ChaosLibrary }
+      setChaosLibrary(payload.library)
+      // Auto-fill the bulk direction field with the just-added phrase.
+      setBulkDirection(quickAddPhrase.trim())
+      setQuickAddPhraseStatus({ ok: true, message: 'Added & filled below.' })
+      setQuickAddPhrase('')
+      setQuickAddNewCategory('')
+    } catch (e) {
+      setQuickAddPhraseStatus({ ok: false, message: e instanceof Error ? e.message : 'Add failed' })
+    } finally {
+      setQuickAddingPhrase(false)
+    }
+  }
 
   // Refresh batch jobs whenever the loaded analysis changes, then poll every
   // 60s while there's an open batch (so the user sees status flip without a
@@ -882,6 +952,40 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image</option>
                         <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (Flash)</option>
                       </select>
+                      {chaosLibrary && (
+                        <select
+                          value=""
+                          onChange={e => {
+                            const phrase = chaosLibrary.phrases.find(p => p.id === e.target.value)
+                            if (phrase) setBulkDirection(phrase.phrase)
+                          }}
+                          disabled={submittingBulk}
+                          className="text-xs rounded border border-gray-300 px-2 py-1 bg-white max-w-[180px]"
+                          title="Pick a chaos phrase from the library (fills the direction field)"
+                        >
+                          <option value="">Pick phrase ▾</option>
+                          {chaosLibrary.categories.map(cat => {
+                            const inCat = chaosLibrary.phrases.filter(p => p.categoryId === cat.id)
+                            if (inCat.length === 0) return null
+                            return (
+                              <optgroup key={cat.id} label={cat.label}>
+                                {inCat.map(p => (
+                                  <option key={p.id} value={p.id}>{p.phrase.length > 70 ? p.phrase.slice(0, 67) + '…' : p.phrase}</option>
+                                ))}
+                              </optgroup>
+                            )
+                          })}
+                        </select>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowPhraseQuickAdd(v => !v)}
+                        disabled={submittingBulk}
+                        title="Add a new phrase to the library"
+                        className="rounded border border-gray-300 text-xs px-2 py-1 bg-white text-gray-700 hover:border-gray-500"
+                      >
+                        + new
+                      </button>
                       <input
                         type="text"
                         value={bulkDirection}
@@ -911,6 +1015,54 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         ≈ ${(bulkCount * BULK_PRICE[bulkModel].perImage).toFixed(2)}
                       </span>
                     </div>
+                    {showPhraseQuickAdd && chaosLibrary && (
+                      <div className="mt-2 rounded border border-dashed border-gray-300 bg-gray-50 p-2 space-y-2">
+                        <div className="text-[10px] uppercase tracking-wide text-gray-500">Add a phrase to the chaos library</div>
+                        <input
+                          type="text"
+                          value={quickAddPhrase}
+                          onChange={e => setQuickAddPhrase(e.target.value.slice(0, 400))}
+                          placeholder="Phrase text (will also fill the direction field below)"
+                          disabled={quickAddingPhrase}
+                          className="w-full text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={quickAddCategoryId}
+                            onChange={e => { setQuickAddCategoryId(e.target.value); if (e.target.value) setQuickAddNewCategory('') }}
+                            disabled={quickAddingPhrase}
+                            className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
+                          >
+                            <option value="">— existing category —</option>
+                            {chaosLibrary.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                          </select>
+                          <input
+                            type="text"
+                            value={quickAddNewCategory}
+                            onChange={e => { setQuickAddNewCategory(e.target.value.slice(0, 60)); if (e.target.value) setQuickAddCategoryId('') }}
+                            placeholder="…or new category name"
+                            disabled={quickAddingPhrase || !!quickAddCategoryId}
+                            className="text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400 disabled:opacity-50"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleQuickAddPhrase}
+                            disabled={quickAddingPhrase}
+                            className="rounded bg-gray-700 text-white text-xs px-3 py-1 hover:bg-gray-800 disabled:opacity-50"
+                          >
+                            {quickAddingPhrase ? 'Adding…' : 'Save phrase'}
+                          </button>
+                          <span className="text-[10px] text-gray-500">For tag editing, use the full Phrases tab.</span>
+                          {quickAddPhraseStatus && (
+                            <span className={`text-[10px] ${quickAddPhraseStatus.ok ? 'text-emerald-700' : 'text-red-600'}`}>
+                              {quickAddPhraseStatus.message}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <p className="mt-1 text-[11px] text-gray-500">
                       Always ramps chaos 0→100 across the {bulkCount} images. Optional &quot;chaos direction&quot; text nudges every prompt with extra creative inspiration. Results appear in this entry when Google finishes (typically 2–6 h).
                     </p>
