@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FusionInput, FusionResult, StyleStrand } from '@/lib/trends/types'
 import { fuseStyles } from '@/lib/trends/engine'
-import ImageLightbox from './ImageLightbox'
+import ImageLightbox, { ANALYZE_MODELS, type AnalyzeModelId } from './ImageLightbox'
 
 const RESEARCH_MODELS = [
   { id: 'claude-opus-4-7', label: 'Opus 4.7' },
@@ -149,6 +149,12 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [analyzingImageUrl, setAnalyzingImageUrl] = useState<string | null>(null)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [secondarySourceUrl, setSecondarySourceUrl] = useState<string | null>(null)
+  // External image analyzer: drop/upload any image and run the same vision
+  // analyze flow to seed the secondary descriptor.
+  const [externalImageDataUrl, setExternalImageDataUrl] = useState<string | null>(null)
+  const [externalImageName, setExternalImageName] = useState<string | null>(null)
+  const [externalAnalyzeModel, setExternalAnalyzeModel] = useState<AnalyzeModelId>('anthropic/claude-sonnet-4.6')
+  const [externalDragOver, setExternalDragOver] = useState(false)
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
@@ -341,6 +347,43 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     } finally {
       setAnalyzingImageUrl(null)
     }
+  }
+
+  /** Read a File into a data URL the vision endpoint can accept directly. */
+  function readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  async function handleExternalImageFile(file: File) {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowed.includes(file.type)) {
+      setAnalyzeError(`Unsupported format: ${file.type || 'unknown'}. Use JPEG, PNG, WebP, or GIF.`)
+      return
+    }
+    // Cap at 3 MB so the resulting base64 data URL fits inside Vercel's
+    // ~4.5 MB request body cap with headroom.
+    if (file.size > 3 * 1024 * 1024) {
+      setAnalyzeError(`Image too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 3 MB.`)
+      return
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setExternalImageDataUrl(dataUrl)
+      setExternalImageName(file.name)
+      setAnalyzeError(null)
+    } catch {
+      setAnalyzeError('Failed to read file')
+    }
+  }
+
+  async function handleAnalyzeExternal() {
+    if (!externalImageDataUrl) return
+    await handleAnalyzeImage({ url: externalImageDataUrl }, externalAnalyzeModel)
   }
 
   // Refresh batch jobs whenever the loaded analysis changes, then poll every
@@ -970,11 +1013,85 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                   <div className="mt-1 flex items-center justify-between gap-2 flex-wrap text-[10px] text-gray-500">
                     <span>
                       {secondarySourceUrl
-                        ? <>Extracted from <a href={secondarySourceUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-800">this image</a>.</>
-                        : <>Pick an image in the grid → open lightbox → click <span className="font-semibold">🔍 Analyze with GPT-5</span>.</>}
+                        ? (secondarySourceUrl.startsWith('data:image/')
+                            ? <>Extracted from an uploaded image.</>
+                            : <>Extracted from <a href={secondarySourceUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-800">this image</a>.</>)
+                        : <>Pick an image in the grid → open lightbox → click <span className="font-semibold">🔍 Analyze</span>, or upload one below.</>}
                     </span>
                     {analyzeError && <span className="text-rose-600">{analyzeError}</span>}
-                    {analyzingImageUrl && <span className="text-amber-600">GPT-5 is reading the image…</span>}
+                    {analyzingImageUrl && <span className="text-amber-600">Vision model is reading the image…</span>}
+                  </div>
+
+                  {/* ── External image analyzer ──────────────────────────── */}
+                  <div className="mt-3 pt-3 border-t border-dotted border-gray-300">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1.5">
+                      Or upload / drop any external image
+                    </div>
+                    <div
+                      onDragOver={e => { e.preventDefault(); setExternalDragOver(true) }}
+                      onDragLeave={() => setExternalDragOver(false)}
+                      onDrop={e => {
+                        e.preventDefault()
+                        setExternalDragOver(false)
+                        const file = e.dataTransfer.files?.[0]
+                        if (file) void handleExternalImageFile(file)
+                      }}
+                      className={`rounded border-2 border-dashed transition-colors ${
+                        externalDragOver ? 'border-[#7B0000] bg-[#7B0000]/5' : 'border-gray-300 bg-white'
+                      }`}
+                    >
+                      {externalImageDataUrl ? (
+                        <div className="flex items-center gap-2 p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={externalImageDataUrl} alt="external preview" className="w-14 h-14 object-cover rounded border border-gray-200" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-gray-700 truncate">{externalImageName ?? 'pasted image'}</div>
+                            <button
+                              type="button"
+                              onClick={() => { setExternalImageDataUrl(null); setExternalImageName(null) }}
+                              className="text-[10px] text-gray-500 hover:text-gray-800 underline"
+                            >
+                              clear
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="block py-4 text-center text-[11px] text-gray-500 cursor-pointer hover:text-gray-700">
+                          Drop image here or click to choose · JPEG / PNG / WebP / GIF · max 3 MB
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            onChange={e => {
+                              const file = e.target.files?.[0]
+                              if (file) void handleExternalImageFile(file)
+                              e.target.value = ''
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <select
+                        value={externalAnalyzeModel}
+                        onChange={e => setExternalAnalyzeModel(e.target.value as AnalyzeModelId)}
+                        disabled={!!analyzingImageUrl}
+                        className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
+                      >
+                        {ANALYZE_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAnalyzeExternal}
+                        disabled={!externalImageDataUrl || !!analyzingImageUrl}
+                        className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+                      >
+                        {analyzingImageUrl === externalImageDataUrl ? 'Analyzing…' : 'Analyze this image'}
+                      </button>
+                      <span className="text-[10px] text-gray-500">
+                        Result fills the descriptor above and auto-enables override.
+                      </span>
+                    </div>
                   </div>
                 </div>
 
