@@ -140,6 +140,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [quickAddNewCategory, setQuickAddNewCategory] = useState('')
   const [quickAddingPhrase, setQuickAddingPhrase] = useState(false)
   const [quickAddPhraseStatus, setQuickAddPhraseStatus] = useState<{ ok: boolean; message: string } | null>(null)
+  const [bulkPhraseFilter, setBulkPhraseFilter] = useState('')
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
@@ -197,6 +198,24 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     const cat = filteredLibrary.categories.find(c => c.id === item.categoryId)
     return { itemLabel: item.label, categoryLabel: cat?.label ?? item.categoryId }
   }, [filteredLibrary, effectiveItemId])
+
+  /** Quick-filtered phrase list for the bulk-row dropdown. Matches against the
+   * phrase text, the description, AND tag labels (so typing "dotwork" finds
+   * every dotwork-tagged phrase regardless of which category it lives in). */
+  const filteredBulkPhrases = useMemo(() => {
+    if (!chaosLibrary) return []
+    const q = bulkPhraseFilter.trim().toLowerCase()
+    if (!q) return chaosLibrary.phrases
+    const tagLabelById = new Map(chaosLibrary.tags.map(t => [t.id, t.label.toLowerCase()]))
+    return chaosLibrary.phrases.filter(p => {
+      const hay = [
+        p.phrase,
+        p.description ?? '',
+        ...(p.tagIds ?? []).map(t => `${t} ${tagLabelById.get(t) ?? ''}`),
+      ].join(' ').toLowerCase()
+      return hay.includes(q)
+    })
+  }, [chaosLibrary, bulkPhraseFilter])
 
   const result: FusionResult | null = useMemo(() => {
     if (!base || !blend) return null
@@ -953,29 +972,48 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (Flash)</option>
                       </select>
                       {chaosLibrary && (
-                        <select
-                          value=""
-                          onChange={e => {
-                            const phrase = chaosLibrary.phrases.find(p => p.id === e.target.value)
-                            if (phrase) setBulkDirection(phrase.phrase)
-                          }}
-                          disabled={submittingBulk}
-                          className="text-xs rounded border border-gray-300 px-2 py-1 bg-white max-w-[180px]"
-                          title="Pick a chaos phrase from the library (fills the direction field)"
-                        >
-                          <option value="">Pick phrase ▾</option>
-                          {chaosLibrary.categories.map(cat => {
-                            const inCat = chaosLibrary.phrases.filter(p => p.categoryId === cat.id)
-                            if (inCat.length === 0) return null
-                            return (
-                              <optgroup key={cat.id} label={cat.label}>
-                                {inCat.map(p => (
-                                  <option key={p.id} value={p.id}>{p.phrase.length > 70 ? p.phrase.slice(0, 67) + '…' : p.phrase}</option>
-                                ))}
-                              </optgroup>
-                            )
-                          })}
-                        </select>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={bulkPhraseFilter}
+                            onChange={e => setBulkPhraseFilter(e.target.value)}
+                            placeholder="filter (e.g. dotwork, japanese)"
+                            disabled={submittingBulk}
+                            className="text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400 w-[160px]"
+                            title="Type to narrow the phrase dropdown by phrase, description, or tag"
+                          />
+                          <select
+                            value=""
+                            onChange={e => {
+                              const phrase = chaosLibrary.phrases.find(p => p.id === e.target.value)
+                              if (phrase) setBulkDirection(phrase.phrase)
+                            }}
+                            disabled={submittingBulk || filteredBulkPhrases.length === 0}
+                            className="text-xs rounded border border-gray-300 px-2 py-1 bg-white max-w-[220px]"
+                            title="Pick a chaos phrase from the library (fills the direction field)"
+                          >
+                            <option value="">
+                              {filteredBulkPhrases.length === chaosLibrary.phrases.length
+                                ? `Pick phrase (${chaosLibrary.phrases.length}) ▾`
+                                : `Pick phrase (${filteredBulkPhrases.length}/${chaosLibrary.phrases.length}) ▾`}
+                            </option>
+                            {chaosLibrary.categories.map(cat => {
+                              const inCat = filteredBulkPhrases.filter(p => p.categoryId === cat.id)
+                              if (inCat.length === 0) return null
+                              return (
+                                <optgroup key={cat.id} label={cat.label}>
+                                  {inCat.map(p => {
+                                    const summary = p.description
+                                      ? `${p.phrase} — ${p.description}`
+                                      : p.phrase
+                                    const truncated = summary.length > 90 ? summary.slice(0, 87) + '…' : summary
+                                    return <option key={p.id} value={p.id} title={summary}>{truncated}</option>
+                                  })}
+                                </optgroup>
+                              )
+                            })}
+                          </select>
+                        </div>
                       )}
                       <button
                         type="button"
