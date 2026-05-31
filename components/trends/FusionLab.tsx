@@ -155,6 +155,11 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [externalImageName, setExternalImageName] = useState<string | null>(null)
   const [externalAnalyzeModel, setExternalAnalyzeModel] = useState<AnalyzeModelId>('anthropic/claude-sonnet-4.6')
   const [externalDragOver, setExternalDragOver] = useState(false)
+  // Saved secondary-descriptor drafts in localStorage so a page reload
+  // doesn't lose what the user has been iterating on. Up to 20 saved at a
+  // time, newest first.
+  const [secondaryDrafts, setSecondaryDrafts] = useState<Array<{ id: string; savedAt: string; label: string; text: string }>>([])
+  const [draftSavedFlash, setDraftSavedFlash] = useState(false)
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
@@ -384,6 +389,46 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   async function handleAnalyzeExternal() {
     if (!externalImageDataUrl) return
     await handleAnalyzeImage({ url: externalImageDataUrl }, externalAnalyzeModel)
+  }
+
+  // Hydrate saved secondary-descriptor drafts from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('spm-secondary-descriptor-drafts')
+      if (raw) {
+        const parsed = JSON.parse(raw) as Array<{ id: string; savedAt: string; label: string; text: string }>
+        if (Array.isArray(parsed)) setSecondaryDrafts(parsed)
+      }
+    } catch { /* corrupt JSON or storage disabled — ignore */ }
+  }, [])
+
+  function persistDrafts(next: typeof secondaryDrafts) {
+    setSecondaryDrafts(next)
+    try { localStorage.setItem('spm-secondary-descriptor-drafts', JSON.stringify(next)) } catch { /* ignore */ }
+  }
+
+  function handleSaveDraft() {
+    const text = secondaryDescriptor.trim()
+    if (!text) return
+    const id = `draft_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+    const savedAt = new Date().toISOString()
+    const label = text.slice(0, 60).replace(/\s+/g, ' ') + (text.length > 60 ? '…' : '')
+    // Newest first, cap at 20 to keep localStorage small.
+    persistDrafts([{ id, savedAt, label, text }, ...secondaryDrafts].slice(0, 20))
+    setDraftSavedFlash(true)
+    setTimeout(() => setDraftSavedFlash(false), 1500)
+  }
+
+  function handleLoadDraft(id: string) {
+    const draft = secondaryDrafts.find(d => d.id === id)
+    if (!draft) return
+    setSecondaryDescriptor(draft.text)
+    setUseSecondaryDescriptor(true)
+    setSecondarySourceUrl(null)
+  }
+
+  function handleDeleteDraft(id: string) {
+    persistDrafts(secondaryDrafts.filter(d => d.id !== id))
   }
 
   // Refresh batch jobs whenever the loaded analysis changes, then poll every
@@ -939,7 +984,6 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <span className="text-xs font-bold uppercase tracking-wide text-gray-700 truncate">
                       Analysis: {analysis.fusionName}
                     </span>
-                    <BatchStatusBadge jobs={batchJobs} />
                   </div>
                   <span className="text-[10px] text-gray-500 shrink-0">
                     {analysis.model} · {analysis.usage.input_tokens + analysis.usage.cache_read_input_tokens + analysis.usage.cache_creation_input_tokens} in / {analysis.usage.output_tokens} out
@@ -981,7 +1025,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <span className="text-xs uppercase tracking-wide text-gray-500">
                       Secondary descriptor (reverse-engineered)
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <label className="inline-flex items-center gap-1 text-[11px] text-gray-700 cursor-pointer">
                         <input
                           type="checkbox"
@@ -992,6 +1036,32 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         />
                         Use for next generation
                       </label>
+                      <button
+                        type="button"
+                        onClick={handleSaveDraft}
+                        disabled={!secondaryDescriptor.trim()}
+                        title="Save the current draft to your browser so a reload doesn't lose it"
+                        className="text-[10px] rounded border border-gray-300 px-1.5 py-0.5 text-gray-700 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {draftSavedFlash ? '✓ saved' : 'Save draft'}
+                      </button>
+                      {secondaryDrafts.length > 0 && (
+                        <select
+                          value=""
+                          onChange={e => {
+                            if (e.target.value) { handleLoadDraft(e.target.value); e.target.value = '' }
+                          }}
+                          className="text-[10px] rounded border border-gray-300 px-1.5 py-0.5 bg-white text-gray-700 max-w-[200px]"
+                          title="Load a previously saved draft"
+                        >
+                          <option value="">Load draft ({secondaryDrafts.length}) ▾</option>
+                          {secondaryDrafts.map(d => (
+                            <option key={d.id} value={d.id} title={d.text}>
+                              {new Date(d.savedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {d.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {secondaryDescriptor && (
                         <button
                           type="button"
@@ -1021,6 +1091,35 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     {analyzeError && <span className="text-rose-600">{analyzeError}</span>}
                     {analyzingImageUrl && <span className="text-amber-600">Vision model is reading the image…</span>}
                   </div>
+
+                  {secondaryDrafts.length > 0 && (
+                    <details className="mt-2 text-[10px] text-gray-500">
+                      <summary className="cursor-pointer hover:text-gray-700">Manage saved drafts ({secondaryDrafts.length})</summary>
+                      <ul className="mt-1 space-y-0.5">
+                        {secondaryDrafts.map(d => (
+                          <li key={d.id} className="flex items-center justify-between gap-2 py-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleLoadDraft(d.id)}
+                              className="text-left truncate flex-1 hover:text-gray-800"
+                              title={d.text}
+                            >
+                              <span className="text-gray-400 tabular-nums mr-1.5">{new Date(d.savedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              {d.label}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDraft(d.id)}
+                              className="text-gray-400 hover:text-red-600 shrink-0"
+                              title="Delete this draft"
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
 
                   {/* ── External image analyzer ──────────────────────────── */}
                   <div className="mt-3 pt-3 border-t border-dotted border-gray-300">
@@ -1320,7 +1419,12 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <p className="mt-1 text-[11px] text-gray-500">
                       Always ramps chaos 0→100 across the {bulkCount} images. Optional &quot;chaos direction&quot; text nudges every prompt with extra creative inspiration. Results appear in this entry when Google finishes (typically 2–6 h).
                     </p>
-                    {pollSummary && <p className="mt-2 text-xs text-gray-600">{pollSummary}</p>}
+                    {(pollSummary || batchJobs.length > 0) && (
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        {pollSummary && <span className="text-xs text-gray-600">{pollSummary}</span>}
+                        <BatchStatusBadge jobs={batchJobs} />
+                      </div>
+                    )}
                     {bulkError && <p className="mt-2 text-xs text-red-600">{bulkError}</p>}
                   </div>
                   {analysis.images.length > 0 && (
