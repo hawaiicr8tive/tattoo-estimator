@@ -155,11 +155,16 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [externalImageName, setExternalImageName] = useState<string | null>(null)
   const [externalAnalyzeModel, setExternalAnalyzeModel] = useState<AnalyzeModelId>('anthropic/claude-sonnet-4.6')
   const [externalDragOver, setExternalDragOver] = useState(false)
-  // Saved secondary-descriptor drafts in localStorage so a page reload
-  // doesn't lose what the user has been iterating on. Up to 20 saved at a
-  // time, newest first.
-  const [secondaryDrafts, setSecondaryDrafts] = useState<Array<{ id: string; savedAt: string; label: string; text: string }>>([])
+  // Named prompt drafts — Supabase-backed (shared across devices, persists
+  // long-term). Each draft has a short style heading (e.g. "Americana
+  // Traditional") and the full descriptor text. Replaces the earlier
+  // localStorage-only implementation.
+  const [promptDrafts, setPromptDrafts] = useState<Array<{ id: string; name: string; text: string; createdAt: string }>>([])
   const [draftSavedFlash, setDraftSavedFlash] = useState(false)
+  const [draftFilter, setDraftFilter] = useState('')
+  const [draftsExpanded, setDraftsExpanded] = useState(false)
+  // Image favorites — keyed by URL, set membership = is favorite.
+  const [favoritedUrls, setFavoritedUrls] = useState<Set<string>>(new Set())
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
@@ -391,45 +396,101 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     await handleAnalyzeImage({ url: externalImageDataUrl }, externalAnalyzeModel)
   }
 
-  // Hydrate saved secondary-descriptor drafts from localStorage on mount.
+  // Load prompt drafts + favorites from the database on mount.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('spm-secondary-descriptor-drafts')
-      if (raw) {
-        const parsed = JSON.parse(raw) as Array<{ id: string; savedAt: string; label: string; text: string }>
-        if (Array.isArray(parsed)) setSecondaryDrafts(parsed)
-      }
-    } catch { /* corrupt JSON or storage disabled — ignore */ }
+    let cancelled = false
+    fetch('/api/admin/prompt-drafts')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancelled && d?.drafts) setPromptDrafts(d.drafts) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/image-favorites')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancelled && d?.favorites) setFavoritedUrls(new Set(Object.keys(d.favorites))) })
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [])
 
-  function persistDrafts(next: typeof secondaryDrafts) {
-    setSecondaryDrafts(next)
-    try { localStorage.setItem('spm-secondary-descriptor-drafts', JSON.stringify(next)) } catch { /* ignore */ }
-  }
-
-  function handleSaveDraft() {
+  async function handleSaveDraft() {
     const text = secondaryDescriptor.trim()
     if (!text) return
-    const id = `draft_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
-    const savedAt = new Date().toISOString()
-    const label = text.slice(0, 60).replace(/\s+/g, ' ') + (text.length > 60 ? '…' : '')
-    // Newest first, cap at 20 to keep localStorage small.
-    persistDrafts([{ id, savedAt, label, text }, ...secondaryDrafts].slice(0, 20))
-    setDraftSavedFlash(true)
-    setTimeout(() => setDraftSavedFlash(false), 1500)
+    // Prompt for a short style heading (e.g. "Americana Traditional"). Keep
+    // the input default suggestion lightweight — first six words.
+    const suggestion = text.split(/\s+/).slice(0, 6).join(' ')
+    const name = window.prompt('Name this prompt (short style heading):', suggestion)
+    if (!name || !name.trim()) return
+    try {
+      const res = await fetch('/api/admin/prompt-drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), text }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Save failed')
+      if (data.drafts) setPromptDrafts(data.drafts)
+      setDraftSavedFlash(true)
+      setTimeout(() => setDraftSavedFlash(false), 1500)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Save failed')
+    }
   }
 
   function handleLoadDraft(id: string) {
-    const draft = secondaryDrafts.find(d => d.id === id)
+    const draft = promptDrafts.find(d => d.id === id)
     if (!draft) return
     setSecondaryDescriptor(draft.text)
     setUseSecondaryDescriptor(true)
     setSecondarySourceUrl(null)
   }
 
-  function handleDeleteDraft(id: string) {
-    persistDrafts(secondaryDrafts.filter(d => d.id !== id))
+  async function handleDeleteDraft(id: string) {
+    if (!window.confirm('Delete this saved prompt?')) return
+    try {
+      const res = await fetch(`/api/admin/prompt-drafts?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Delete failed')
+      if (data.drafts) setPromptDrafts(data.drafts)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Delete failed')
+    }
   }
+
+  async function toggleImageFavorite(url: string) {
+    const wasFav = favoritedUrls.has(url)
+    setFavoritedUrls(prev => {
+      const next = new Set(prev)
+      if (wasFav) next.delete(url); else next.add(url)
+      return next
+    })
+    try {
+      const res = await fetch('/api/admin/image-favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, favorite: !wasFav }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json() as { favorites?: Record<string, unknown> }
+      if (data.favorites) setFavoritedUrls(new Set(Object.keys(data.favorites)))
+    } catch {
+      setFavoritedUrls(prev => {
+        const next = new Set(prev)
+        if (wasFav) next.add(url); else next.delete(url)
+        return next
+      })
+    }
+  }
+
+  /** Filtered drafts for the dropdown / panel — name + text are both
+   * searchable so users can find "Mucha" by typing "floral" if the text
+   * mentions it. */
+  const filteredDrafts = useMemo(() => {
+    const q = draftFilter.trim().toLowerCase()
+    if (!q) return promptDrafts
+    return promptDrafts.filter(d => `${d.name} ${d.text}`.toLowerCase().includes(q))
+  }, [promptDrafts, draftFilter])
 
   // Refresh batch jobs whenever the loaded analysis changes, then poll every
   // 60s while there's an open batch (so the user sees status flip without a
@@ -1040,28 +1101,19 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         type="button"
                         onClick={handleSaveDraft}
                         disabled={!secondaryDescriptor.trim()}
-                        title="Save the current draft to your browser so a reload doesn't lose it"
+                        title="Save the current prompt to the shared database with a short style heading"
                         className="text-[10px] rounded border border-gray-300 px-1.5 py-0.5 text-gray-700 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {draftSavedFlash ? '✓ saved' : 'Save draft'}
+                        {draftSavedFlash ? '✓ saved' : 'Save prompt'}
                       </button>
-                      {secondaryDrafts.length > 0 && (
-                        <select
-                          value=""
-                          onChange={e => {
-                            if (e.target.value) { handleLoadDraft(e.target.value); e.target.value = '' }
-                          }}
-                          className="text-[10px] rounded border border-gray-300 px-1.5 py-0.5 bg-white text-gray-700 max-w-[200px]"
-                          title="Load a previously saved draft"
-                        >
-                          <option value="">Load draft ({secondaryDrafts.length}) ▾</option>
-                          {secondaryDrafts.map(d => (
-                            <option key={d.id} value={d.id} title={d.text}>
-                              {new Date(d.savedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {d.label}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDraftsExpanded(v => !v)}
+                        title="Browse saved style prompts"
+                        className="text-[10px] rounded border border-gray-300 px-1.5 py-0.5 text-gray-700 hover:border-gray-500"
+                      >
+                        {draftsExpanded ? 'Hide library' : `Prompt library (${promptDrafts.length})`}
+                      </button>
                       {secondaryDescriptor && (
                         <button
                           type="button"
@@ -1092,33 +1144,60 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     {analyzingImageUrl && <span className="text-amber-600">Vision model is reading the image…</span>}
                   </div>
 
-                  {secondaryDrafts.length > 0 && (
-                    <details className="mt-2 text-[10px] text-gray-500">
-                      <summary className="cursor-pointer hover:text-gray-700">Manage saved drafts ({secondaryDrafts.length})</summary>
-                      <ul className="mt-1 space-y-0.5">
-                        {secondaryDrafts.map(d => (
-                          <li key={d.id} className="flex items-center justify-between gap-2 py-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleLoadDraft(d.id)}
-                              className="text-left truncate flex-1 hover:text-gray-800"
-                              title={d.text}
-                            >
-                              <span className="text-gray-400 tabular-nums mr-1.5">{new Date(d.savedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                              {d.label}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteDraft(d.id)}
-                              className="text-gray-400 hover:text-red-600 shrink-0"
-                              title="Delete this draft"
-                            >
-                              ×
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
+                  {draftsExpanded && (
+                    <div className="mt-3 rounded-lg border border-gray-300 bg-gray-50 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-xs uppercase tracking-wide text-gray-600 font-semibold">
+                          Prompt library
+                          <span className="ml-1 text-gray-400 font-normal">
+                            ({filteredDrafts.length}{draftFilter ? `/${promptDrafts.length}` : ''})
+                          </span>
+                        </span>
+                        <input
+                          type="search"
+                          value={draftFilter}
+                          onChange={e => setDraftFilter(e.target.value)}
+                          placeholder="filter (e.g. americana, polynesian)"
+                          className="text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400 w-[200px]"
+                        />
+                      </div>
+                      {promptDrafts.length === 0 ? (
+                        <p className="text-[11px] text-gray-500 py-2">
+                          No saved prompts yet. Generate or analyze, then click <span className="font-semibold">Save prompt</span> above to name and store your first style heading.
+                        </p>
+                      ) : filteredDrafts.length === 0 ? (
+                        <p className="text-[11px] text-gray-500 py-2">No prompts match &quot;{draftFilter}&quot;.</p>
+                      ) : (
+                        <ul className="max-h-[260px] overflow-y-auto divide-y divide-gray-200">
+                          {filteredDrafts.map(d => (
+                            <li key={d.id} className="flex items-center justify-between gap-2 py-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleLoadDraft(d.id)}
+                                className="text-left flex-1 min-w-0 hover:text-[#7B0000]"
+                                title={d.text}
+                              >
+                                <span className="text-xs font-semibold text-gray-900 truncate block">{d.name}</span>
+                                <span className="text-[10px] text-gray-500">
+                                  {new Date(d.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDraft(d.id)}
+                                className="text-gray-400 hover:text-red-600 shrink-0 text-base leading-none"
+                                title="Delete this prompt"
+                              >
+                                ×
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="text-[10px] text-gray-500">
+                        Click a heading to load its prompt into the descriptor above. Saved to your shared database — same drafts appear on any device.
+                      </p>
+                    </div>
                   )}
 
                   {/* ── External image analyzer ──────────────────────────── */}
@@ -1430,28 +1509,40 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                   {analysis.images.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {analysis.images.map((img, i) => (
-                        <button
-                          key={img.url}
-                          type="button"
-                          onClick={() => setLightboxIndex(i)}
-                          className="group block rounded overflow-hidden border border-gray-200 hover:border-gray-400 relative cursor-zoom-in"
-                          aria-label={`Preview flash design ${i + 1} of ${analysis.images.length}`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img.url} alt="Flash design" className="w-full aspect-square object-cover" />
-                          {typeof img.chaos === 'number' && (
-                            <span className="absolute top-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums">
-                              chaos {img.chaos}
+                        <div key={img.url} className="relative group">
+                          <button
+                            type="button"
+                            onClick={() => setLightboxIndex(i)}
+                            className="block rounded overflow-hidden border border-gray-200 hover:border-gray-400 relative cursor-zoom-in w-full"
+                            aria-label={`Preview flash design ${i + 1} of ${analysis.images.length}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={img.url} alt="Flash design" className="w-full aspect-square object-cover" />
+                            {typeof img.chaos === 'number' && (
+                              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white tabular-nums">
+                                chaos {img.chaos}
+                              </span>
+                            )}
+                            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="11" cy="11" r="7" />
+                                <path d="M21 21l-4.3-4.3" />
+                                <path d="M11 8v6M8 11h6" />
+                              </svg>
                             </span>
-                          )}
-                          <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center text-white opacity-0 group-hover:opacity-100">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="11" cy="11" r="7" />
-                              <path d="M21 21l-4.3-4.3" />
-                              <path d="M11 8v6M8 11h6" />
-                            </svg>
-                          </span>
-                        </button>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); void toggleImageFavorite(img.url) }}
+                            title={favoritedUrls.has(img.url) ? 'Unfavorite' : 'Favorite'}
+                            className={`absolute top-1 right-1 z-10 flex items-center justify-center w-6 h-6 rounded bg-black/60 hover:bg-black/80 cursor-pointer text-sm ${
+                              favoritedUrls.has(img.url) ? 'text-amber-400' : 'text-white/70'
+                            }`}
+                            aria-label={favoritedUrls.has(img.url) ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            {favoritedUrls.has(img.url) ? '★' : '☆'}
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1527,6 +1618,8 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           onNavigate={setLightboxIndex}
           onAnalyze={(img, model) => handleAnalyzeImage(img, model)}
           analyzing={!!analyzingImageUrl}
+          favoritedUrls={favoritedUrls}
+          onToggleFavorite={(img) => { void toggleImageFavorite(img.url) }}
         />
       )}
     </div>
