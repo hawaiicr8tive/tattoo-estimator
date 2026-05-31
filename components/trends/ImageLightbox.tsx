@@ -9,6 +9,18 @@ export interface LightboxImage {
   model: string
 }
 
+/** Vision models offered in the lightbox's Analyze dropdown. Slugs match
+ * OpenRouter's catalog. */
+export const ANALYZE_MODELS = [
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6 (default · detailed)' },
+  { id: 'anthropic/claude-opus-4.7',   label: 'Claude Opus 4.7 (best · costly)' },
+  { id: 'openai/gpt-5',                label: 'GPT-5 (reasoning · slower)' },
+  { id: 'openai/gpt-4o',               label: 'GPT-4o (fast · fewer details)' },
+  { id: 'google/gemini-2.5-pro',       label: 'Gemini 2.5 Pro' },
+] as const
+
+export type AnalyzeModelId = (typeof ANALYZE_MODELS)[number]['id']
+
 interface Props {
   images: LightboxImage[]
   activeIndex: number | null
@@ -16,7 +28,7 @@ interface Props {
   onNavigate: (newIndex: number) => void
   /** Optional handler invoked when the user clicks "Analyze" in the lightbox
    * toolbar. When omitted, the button is hidden. */
-  onAnalyze?: (image: LightboxImage) => void
+  onAnalyze?: (image: LightboxImage, model: AnalyzeModelId) => void
   /** True while the analyze request is in flight so the button can show a
    * loading state. */
   analyzing?: boolean
@@ -31,6 +43,7 @@ interface Props {
  */
 export default function ImageLightbox({ images, activeIndex, onClose, onNavigate, onAnalyze, analyzing }: Props) {
   const [showPrompt, setShowPrompt] = useState(false)
+  const [analyzeModel, setAnalyzeModel] = useState<AnalyzeModelId>('anthropic/claude-sonnet-4.6')
 
   useEffect(() => {
     if (activeIndex === null) return
@@ -75,15 +88,28 @@ export default function ImageLightbox({ images, activeIndex, onClose, onNavigate
               {showPrompt ? 'Hide prompt' : 'Show prompt'}
             </button>
             {onAnalyze && (
-              <button
-                type="button"
-                onClick={() => onAnalyze(img)}
-                disabled={analyzing}
-                className="underline hover:text-white disabled:opacity-50"
-                title="Use GPT-5 Vision to reverse-engineer a prompt from this image"
-              >
-                {analyzing ? 'Analyzing…' : '🔍 Analyze with GPT-5'}
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onAnalyze(img, analyzeModel)}
+                  disabled={analyzing}
+                  className="underline hover:text-white disabled:opacity-50"
+                  title="Use vision LLM to reverse-engineer a prompt from this image"
+                >
+                  {analyzing ? 'Analyzing…' : '🔍 Analyze'}
+                </button>
+                <select
+                  value={analyzeModel}
+                  onChange={e => setAnalyzeModel(e.target.value as AnalyzeModelId)}
+                  disabled={analyzing}
+                  className="text-[10px] bg-black/50 text-white/90 border border-white/20 rounded px-1 py-0.5 max-w-[140px]"
+                  title="Vision model"
+                >
+                  {ANALYZE_MODELS.map(m => (
+                    <option key={m.id} value={m.id} className="bg-gray-900 text-white">{m.label}</option>
+                  ))}
+                </select>
+              </div>
             )}
             <a
               href={img.url}
