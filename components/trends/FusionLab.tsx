@@ -141,6 +141,14 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [quickAddingPhrase, setQuickAddingPhrase] = useState(false)
   const [quickAddPhraseStatus, setQuickAddPhraseStatus] = useState<{ ok: boolean; message: string } | null>(null)
   const [bulkPhraseFilter, setBulkPhraseFilter] = useState('')
+  // Secondary (reverse-engineered) descriptor — populated by GPT-5 Vision
+  // analyzing a chosen produced image. When `useSecondary` is on, generation
+  // routes use this descriptor instead of the primary visualDescriptor.
+  const [secondaryDescriptor, setSecondaryDescriptor] = useState('')
+  const [useSecondaryDescriptor, setUseSecondaryDescriptor] = useState(false)
+  const [analyzingImageUrl, setAnalyzingImageUrl] = useState<string | null>(null)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [secondarySourceUrl, setSecondarySourceUrl] = useState<string | null>(null)
   const [submittingBulk, setSubmittingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
@@ -300,6 +308,41 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     }
   }
 
+  /**
+   * Send a chosen produced image to GPT-5 Vision and stuff its reverse-prompt
+   * into the secondary descriptor field. Auto-flips the override checkbox on
+   * so the next generation picks it up immediately. User can edit the
+   * descriptor before generating, or toggle override off to revert.
+   */
+  async function handleAnalyzeImage(image: { url: string }) {
+    if (analyzingImageUrl) return
+    setAnalyzingImageUrl(image.url)
+    setAnalyzeError(null)
+    try {
+      const res = await fetch('/api/admin/research/fusion/images/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: image.url }),
+      })
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        const msg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Analyze failed (HTTP ${res.status})`
+        throw new Error(msg)
+      }
+      const payload = data as { descriptor?: string }
+      if (!payload.descriptor) throw new Error('No descriptor returned')
+      setSecondaryDescriptor(payload.descriptor)
+      setSecondarySourceUrl(image.url)
+      setUseSecondaryDescriptor(true)
+    } catch (e) {
+      setAnalyzeError(e instanceof Error ? e.message : 'Analyze failed')
+    } finally {
+      setAnalyzingImageUrl(null)
+    }
+  }
+
   // Refresh batch jobs whenever the loaded analysis changes, then poll every
   // 60s while there's an open batch (so the user sees status flip without a
   // manual refresh).
@@ -422,10 +465,12 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           chaos,
           chaosSweep,
           imageModel,
-          // Override only if the user has edited away from the stored value.
-          visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
-            ? editedVisualDescriptor
-            : undefined,
+          // Override priority: secondary (if enabled + filled) > edited primary > stored default.
+          visualDescriptor: (useSecondaryDescriptor && secondaryDescriptor.trim())
+            ? secondaryDescriptor.trim()
+            : (editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
+              ? editedVisualDescriptor
+              : undefined),
           contentFocus: selectedContent ?? undefined,
           entrySnapshot,
         }),
@@ -600,9 +645,12 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           count: bulkCount,
           model: bulkModel,
           chaosDirection: bulkDirection.trim() || undefined,
-          visualDescriptor: editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
-            ? editedVisualDescriptor
-            : undefined,
+          // Secondary descriptor overrides when enabled — same priority as real-time.
+          visualDescriptor: (useSecondaryDescriptor && secondaryDescriptor.trim())
+            ? secondaryDescriptor.trim()
+            : (editedVisualDescriptor.trim() && editedVisualDescriptor !== analysis.visualDescriptor
+              ? editedVisualDescriptor
+              : undefined),
           contentFocus: selectedContent ?? undefined,
           entrySnapshot,
         }),
@@ -875,8 +923,59 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     value={editedVisualDescriptor}
                     onChange={e => setEditedVisualDescriptor(e.target.value)}
                     placeholder="A 100-word visual descriptor will appear here after research…"
+                    className={`w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed ${useSecondaryDescriptor && secondaryDescriptor.trim() ? 'opacity-50' : ''}`}
+                  />
+                  {useSecondaryDescriptor && secondaryDescriptor.trim() && (
+                    <p className="mt-1 text-[10px] text-gray-500 italic">
+                      Greyed out because the secondary descriptor below is currently overriding.
+                    </p>
+                  )}
+                </div>
+
+                {/* ── Secondary descriptor (reverse-engineered from a chosen image) ── */}
+                <div className="mt-3 pt-3 border-t border-dashed border-gray-300">
+                  <div className="flex items-baseline justify-between gap-2 mb-1">
+                    <span className="text-xs uppercase tracking-wide text-gray-500">
+                      Secondary descriptor (reverse-engineered)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1 text-[11px] text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useSecondaryDescriptor}
+                          onChange={e => setUseSecondaryDescriptor(e.target.checked)}
+                          disabled={!secondaryDescriptor.trim()}
+                          className="rounded border-gray-300 cursor-pointer disabled:cursor-not-allowed"
+                        />
+                        Use for next generation
+                      </label>
+                      {secondaryDescriptor && (
+                        <button
+                          type="button"
+                          onClick={() => { setSecondaryDescriptor(''); setUseSecondaryDescriptor(false); setSecondarySourceUrl(null) }}
+                          className="text-[10px] text-gray-500 hover:text-gray-800 underline"
+                        >
+                          clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={secondaryDescriptor}
+                    onChange={e => setSecondaryDescriptor(e.target.value)}
+                    placeholder="Open any generated image → 🔍 Analyze with GPT-5 — the reverse-engineered prompt lands here. Edit freely, then tick the box above to use it for the next batch."
                     className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed"
                   />
+                  <div className="mt-1 flex items-center justify-between gap-2 flex-wrap text-[10px] text-gray-500">
+                    <span>
+                      {secondarySourceUrl
+                        ? <>Extracted from <a href={secondarySourceUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-800">this image</a>.</>
+                        : <>Pick an image in the grid → open lightbox → click <span className="font-semibold">🔍 Analyze with GPT-5</span>.</>}
+                    </span>
+                    {analyzeError && <span className="text-rose-600">{analyzeError}</span>}
+                    {analyzingImageUrl && <span className="text-amber-600">GPT-5 is reading the image…</span>}
+                  </div>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-200">
@@ -1205,6 +1304,8 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           activeIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
+          onAnalyze={img => handleAnalyzeImage(img)}
+          analyzing={!!analyzingImageUrl}
         />
       )}
     </div>
