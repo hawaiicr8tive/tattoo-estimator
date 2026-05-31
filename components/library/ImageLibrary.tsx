@@ -53,6 +53,8 @@ export default function ImageLibrary() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [favoritedUrls, setFavoritedUrls] = useState<Set<string>>(new Set())
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -71,12 +73,52 @@ export default function ImageLibrary() {
     return () => { cancelled = true }
   }, [])
 
+  // Favorites — fetched in parallel, applied as a Set for O(1) membership.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/image-favorites')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!cancelled && d?.favorites) setFavoritedUrls(new Set(Object.keys(d.favorites)))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  async function toggleFavorite(url: string) {
+    const wasFav = favoritedUrls.has(url)
+    // Optimistic update so the UI flips instantly.
+    setFavoritedUrls(prev => {
+      const next = new Set(prev)
+      if (wasFav) next.delete(url); else next.add(url)
+      return next
+    })
+    try {
+      const res = await fetch('/api/admin/image-favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, favorite: !wasFav }),
+      })
+      if (!res.ok) throw new Error('Failed to toggle favorite')
+      const data = await res.json() as { favorites?: Record<string, unknown> }
+      if (data.favorites) setFavoritedUrls(new Set(Object.keys(data.favorites)))
+    } catch {
+      // Roll back on failure.
+      setFavoritedUrls(prev => {
+        const next = new Set(prev)
+        if (wasFav) next.add(url); else next.delete(url)
+        return next
+      })
+    }
+  }
+
   const filtered = useMemo(() => {
     if (!images) return []
     const q = search.trim().toLowerCase()
     return images.filter(img => {
       if (orphanFilter === 'exclude' && img.isOrphan) return false
       if (orphanFilter === 'only' && !img.isOrphan) return false
+      if (favoritesOnly && !favoritedUrls.has(img.url)) return false
       if (industry && img.industryId !== industry) return false
       if (model && img.model !== model) return false
       if (img.chaos !== null && (img.chaos < chaosMin || img.chaos > chaosMax)) return false
@@ -95,7 +137,7 @@ export default function ImageLibrary() {
       }
       return true
     })
-  }, [images, search, industry, model, chaosMin, chaosMax, orphanFilter])
+  }, [images, search, industry, model, chaosMin, chaosMax, orphanFilter, favoritesOnly, favoritedUrls])
 
   const lightboxImages = useMemo(
     () => filtered.map(img => ({
@@ -225,6 +267,15 @@ export default function ImageLibrary() {
           >
             {ORPHAN_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
+          <label className="inline-flex items-center gap-1 cursor-pointer text-[var(--brand-text)]">
+            <input
+              type="checkbox"
+              checked={favoritesOnly}
+              onChange={e => setFavoritesOnly(e.target.checked)}
+              className="rounded border-[var(--brand-border)] accent-amber-400"
+            />
+            ★ Favorites only ({favoritedUrls.size})
+          </label>
           <div className="flex items-center gap-1.5 text-[var(--brand-text-mid)]">
             <span>Chaos</span>
             <input
@@ -240,10 +291,10 @@ export default function ImageLibrary() {
             />
             <span className="text-[10px]">(images with no chaos value always show)</span>
           </div>
-          {(search || industry || model || orphanFilter !== 'include' || chaosMin > 0 || chaosMax < 100) && (
+          {(search || industry || model || orphanFilter !== 'include' || chaosMin > 0 || chaosMax < 100 || favoritesOnly) && (
             <button
               type="button"
-              onClick={() => { setSearch(''); setIndustry(''); setModel(''); setOrphanFilter('include'); setChaosMin(0); setChaosMax(100) }}
+              onClick={() => { setSearch(''); setIndustry(''); setModel(''); setOrphanFilter('include'); setChaosMin(0); setChaosMax(100); setFavoritesOnly(false) }}
               className="text-[var(--brand-text-mid)] hover:text-[var(--brand-text)] underline cursor-pointer"
             >
               Clear filters
@@ -360,6 +411,19 @@ export default function ImageLibrary() {
                     className="w-4 h-4 accent-[var(--brand-primary)] cursor-pointer"
                   />
                 </label>
+                {/* Favorite toggle — top-right (above the orphan badge if both apply,
+                    using top-9 if orphan badge is present so they don't overlap). */}
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); toggleFavorite(img.url) }}
+                  title={favoritedUrls.has(img.url) ? 'Unfavorite' : 'Favorite'}
+                  className={`absolute z-10 flex items-center justify-center w-7 h-7 rounded bg-black/60 hover:bg-black/80 cursor-pointer touch-manipulation text-base ${
+                    favoritedUrls.has(img.url) ? 'text-amber-400' : 'text-white/70'
+                  } ${img.isOrphan ? 'top-9 right-1' : 'top-1 right-1'}`}
+                  aria-label={favoritedUrls.has(img.url) ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  {favoritedUrls.has(img.url) ? '★' : '☆'}
+                </button>
               </li>
             )
           })}
@@ -371,6 +435,8 @@ export default function ImageLibrary() {
         activeIndex={lightboxIndex}
         onClose={() => setLightboxIndex(null)}
         onNavigate={i => setLightboxIndex(i)}
+        favoritedUrls={favoritedUrls}
+        onToggleFavorite={(img, next) => { void toggleFavorite(img.url); void next }}
       />
     </div>
   )

@@ -32,6 +32,12 @@ interface Props {
   /** True while the analyze request is in flight so the button can show a
    * loading state. */
   analyzing?: boolean
+  /** Optional favorite-toggle handler. When provided, shows a ⭐/☆ button
+   * in the toolbar that calls back with the next desired state. */
+  onToggleFavorite?: (image: LightboxImage, nextFavorite: boolean) => void
+  /** Set of image URLs currently favorited (for the button's filled/empty
+   * state). */
+  favoritedUrls?: Set<string>
 }
 
 /**
@@ -41,7 +47,7 @@ interface Props {
  * descriptors). "Open original" opens the raw URL in a new tab — handy for
  * download or sharing.
  */
-export default function ImageLightbox({ images, activeIndex, onClose, onNavigate, onAnalyze, analyzing }: Props) {
+export default function ImageLightbox({ images, activeIndex, onClose, onNavigate, onAnalyze, analyzing, onToggleFavorite, favoritedUrls }: Props) {
   const [showPrompt, setShowPrompt] = useState(false)
   const [analyzeModel, setAnalyzeModel] = useState<AnalyzeModelId>('anthropic/claude-sonnet-4.6')
 
@@ -80,6 +86,20 @@ export default function ImageLightbox({ images, activeIndex, onClose, onNavigate
             <span className="ml-3">{new Date(img.createdAt).toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
+            {onToggleFavorite && (() => {
+              const isFav = favoritedUrls?.has(img.url) ?? false
+              return (
+                <button
+                  type="button"
+                  onClick={() => onToggleFavorite(img, !isFav)}
+                  className={`text-base hover:text-white ${isFav ? 'text-amber-400' : 'text-white/60'}`}
+                  title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                  aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  {isFav ? '★' : '☆'}
+                </button>
+              )
+            })()}
             <button
               type="button"
               onClick={() => setShowPrompt(p => !p)}
