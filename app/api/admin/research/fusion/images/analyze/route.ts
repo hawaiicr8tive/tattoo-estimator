@@ -33,9 +33,13 @@ export async function POST(req: NextRequest) {
   if (!imageUrl || !(imageUrl.startsWith('http') || imageUrl.startsWith('data:image/'))) {
     return NextResponse.json({ error: 'imageUrl required (http/https or data URL)' }, { status: 400 })
   }
-  const model = typeof x.model === 'string' && x.model.startsWith('openai/')
+  // Default to GPT-4o — battle-tested for vision, returns reliably under
+  // tight token budgets. GPT-5 is a reasoning model and tends to burn its
+  // entire budget on internal reasoning, returning empty content. Users can
+  // override via the request body if they want a specific model.
+  const model = typeof x.model === 'string' && x.model.includes('/')
     ? x.model
-    : 'openai/gpt-5'
+    : 'openai/gpt-4o'
 
   const systemPrompt = `You are analyzing a tattoo flash-sheet design and producing a tight visual descriptor that could be used as a prompt to recreate something similar.
 
@@ -75,7 +79,9 @@ Return ONLY the paragraph. No markdown, no preamble.`
             ],
           },
         ],
-        max_tokens: 500,
+        // Generous budget so reasoning models still leave room for the
+        // actual ~150 word descriptor output.
+        max_tokens: 4000,
       }),
     })
   } catch (e) {
@@ -94,9 +100,31 @@ Return ONLY the paragraph. No markdown, no preamble.`
   }
 
   const data = await res.json()
-  const descriptor = data?.choices?.[0]?.message?.content
-  if (typeof descriptor !== 'string' || !descriptor.trim()) {
-    return NextResponse.json({ error: 'Vision model returned no content' }, { status: 502 })
+  const message = data?.choices?.[0]?.message
+  const finishReason = data?.choices?.[0]?.finish_reason
+
+  // OpenRouter / OpenAI return content as either a string or an array of
+  // typed parts (text + tool_calls etc.). Handle both shapes.
+  let descriptor: string | null = null
+  if (typeof message?.content === 'string') {
+    descriptor = message.content
+  } else if (Array.isArray(message?.content)) {
+    descriptor = message.content
+      .filter((p: { type?: string; text?: string }) => p?.type === 'text' && typeof p.text === 'string')
+      .map((p: { text: string }) => p.text)
+      .join('\n')
+  }
+
+  if (!descriptor || !descriptor.trim()) {
+    // Surface the actual reason so users can react (content filter, token
+    // exhaustion, model refusal, etc.) instead of a generic "no content".
+    const refusal = (message as { refusal?: string } | undefined)?.refusal
+    let diag = `Vision model "${model}" returned no usable text`
+    if (refusal) diag += ` (refusal: ${String(refusal).slice(0, 200)})`
+    else if (finishReason === 'content_filter') diag += ' (response filtered by safety policy)'
+    else if (finishReason === 'length') diag += ' (token budget exhausted before output — try a different model)'
+    else if (finishReason) diag += ` (finish_reason: ${finishReason})`
+    return NextResponse.json({ error: diag }, { status: 502 })
   }
 
   return NextResponse.json({
