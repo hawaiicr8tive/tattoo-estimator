@@ -63,6 +63,17 @@ export interface Artist {
   photo: string
 }
 
+export interface FlashItem {
+  id: string
+  title: string
+  image: string
+  style: TattooStyle | string
+  artistId?: string
+  isColor?: boolean
+  price?: number        // flash is often flat-priced; optional
+  available?: boolean    // false = already claimed / one-off
+}
+
 export interface Lead {
   id?: string
   created_at?: string

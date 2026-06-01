@@ -1,0 +1,8 @@
+[
+  { "id": "flash-01", "title": "Fine Line Botanical", "image": "/flash/flash-01.svg", "style": "fine-line",   "artistId": "artist-01", "isColor": false, "price": 180, "available": true },
+  { "id": "flash-02", "title": "Neo-Traditional Panther", "image": "/flash/flash-02.svg", "style": "traditional", "artistId": "artist-02", "isColor": true,  "price": 260, "available": true },
+  { "id": "flash-03", "title": "Sacred Geometry Mandala", "image": "/flash/flash-03.svg", "style": "geometric",  "artistId": "artist-04", "isColor": false, "price": 220, "available": true },
+  { "id": "flash-04", "title": "Polynesian Half-Sleeve", "image": "/flash/flash-04.svg", "style": "polynesian", "artistId": "artist-05", "isColor": false, "price": 400, "available": true },
+  { "id": "flash-05", "title": "Realism Rose", "image": "/flash/flash-05.svg", "style": "realism",     "artistId": "artist-03", "isColor": true,  "price": 320, "available": false },
+  { "id": "flash-06", "title": "Dotwork Moth", "image": "/flash/flash-06.svg", "style": "fine-line",   "artistId": "artist-07", "isColor": false, "price": 200, "available": true }
+]

@@ -46,3 +46,29 @@ input, textarea, select {
 input::placeholder, textarea::placeholder {
   color: #9ca3af;
 }
+
+/* ---- Kiosk (/kiosk) ---- */
+.kiosk {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+.kiosk img { -webkit-user-drag: none; }
+
+@keyframes kiosk-kenburns {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to   { transform: scale(1.12) translate3d(-1.5%, -1.5%, 0); }
+}
+.kiosk-kenburns { animation: kiosk-kenburns 9s ease-out forwards; }
+
+@keyframes kiosk-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(0.97); }
+}
+.kiosk-pulse { animation: kiosk-pulse 2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-kenburns, .kiosk-pulse { animation: none; }
+}
