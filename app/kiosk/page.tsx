@@ -6,6 +6,8 @@ import BrandFrame from '@/components/kiosk/BrandFrame'
 import AttractScreen from '@/components/kiosk/AttractScreen'
 import KioskImage from '@/components/kiosk/KioskImage'
 import type { Artist, FlashItem } from '@/lib/types'
+import flashSeed from '@/data/flash.json'
+import artistsSeed from '@/data/artists.json'
 
 const SHOP_NAME = 'Tattoolicious'
 const IDLE_MS = 60_000 // return to the attract loop after 1 min untouched
@@ -15,8 +17,11 @@ type Tab = 'flash' | 'artists'
 export default function KioskPage() {
   const { bookingUrl } = useBranding()
 
-  const [flash, setFlash] = useState<FlashItem[]>([])
-  const [artists, setArtists] = useState<Artist[]>([])
+  // Seed with bundled data so the kiosk renders instantly (and offline /
+  // with no backend configured); the API refresh below overrides it if it
+  // returns admin-managed data.
+  const [flash, setFlash] = useState<FlashItem[]>(flashSeed as FlashItem[])
+  const [artists, setArtists] = useState<Artist[]>(artistsSeed as Artist[])
   const [tab, setTab] = useState<Tab>('flash')
   const [flashIndex, setFlashIndex] = useState(0)
   const [artistIndex, setArtistIndex] = useState(0)
@@ -28,9 +33,9 @@ export default function KioskPage() {
   // Load data from the same APIs the estimator uses.
   useEffect(() => {
     fetch('/api/flash').then(r => r.json())
-      .then((d: FlashItem[]) => { if (Array.isArray(d)) setFlash(d) }).catch(() => {})
+      .then((d: FlashItem[]) => { if (Array.isArray(d) && d.length) setFlash(d) }).catch(() => {})
     fetch('/api/artists').then(r => r.json())
-      .then((d: Artist[]) => { if (Array.isArray(d)) setArtists(d) }).catch(() => {})
+      .then((d: Artist[]) => { if (Array.isArray(d) && d.length) setArtists(d) }).catch(() => {})
   }, [])
 
   const artistById = useMemo(
