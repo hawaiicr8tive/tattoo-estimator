@@ -271,17 +271,31 @@ async function runCrop(bucket, mode) {
   const resultFile = path.join(folder, '_crop-result.json')
   await fs.rm(resultFile, { force: true }).catch(() => {})
 
-  // do javascript file "<jsx>" with arguments {"<folder>", "<mode>"}
+  // Write a tiny wrapper that sets the params as globals then runs the engine.
+  // (Passing them via AppleScript `with arguments` doesn't work — inside the
+  //  engine's function `arguments` is the function's own, not the passed values.)
+  const wrapperPath = path.join(SCRIPT_DIR, `_run-${mode}.jsx`)
+  const wrapper =
+    `#target photoshop\n` +
+    `var CROP_FOLDER = ${JSON.stringify(folder)};\n` +
+    `var CROP_MODE = ${JSON.stringify(mode)};\n` +
+    `$.evalFile(new File(${JSON.stringify(jsx)}));\n`
+  await fs.writeFile(wrapperPath, wrapper)
+
   // `with timeout` lifts AppleScript's default 2-min Apple Event ceiling — without
   // it a big bucket throws -1712 (timed out) even though Photoshop is still cropping.
   const ascript =
     `with timeout of 86400 seconds\n` +
     `  tell application id "com.adobe.Photoshop"\n` +
     `    activate\n` +
-    `    do javascript file ${JSON.stringify(jsx)} with arguments {${JSON.stringify(folder)}, ${JSON.stringify(mode)}}\n` +
+    `    do javascript file ${JSON.stringify(wrapperPath)}\n` +
     `  end tell\n` +
     `end timeout`
-  await exec('osascript', ['-e', ascript], { maxBuffer: 1 << 24, timeout: 0 })
+  try {
+    await exec('osascript', ['-e', ascript], { maxBuffer: 1 << 24, timeout: 0 })
+  } finally {
+    await fs.rm(wrapperPath, { force: true }).catch(() => {})
+  }
 
   try { return JSON.parse(await fs.readFile(resultFile, 'utf8')) }
   catch { return null }

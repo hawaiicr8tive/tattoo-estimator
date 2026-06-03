@@ -1,7 +1,10 @@
 /*
  * crop-core.jsx — ONE headless engine for all three crop modes.
- * Driven by run-all.mjs via:
- *   do javascript file "…/crop-core.jsx" with arguments {"<bucket folder>", "<mode>"}
+ * run-all.mjs writes a tiny wrapper that sets two globals then $.evalFile's this:
+ *   var CROP_FOLDER = "<bucket folder>"; var CROP_MODE = "fills|margin|textured";
+ *   $.evalFile(new File("…/crop-core.jsx"));
+ * (Globals are used rather than AppleScript `with arguments`, because `arguments`
+ *  inside this function would be the function's own — not the passed-in values.)
  *
  * mode = "fills"   → centered square, full short edge (ZOOM 1.0)   [paper fills frame]
  * mode = "margin"  → centered square pulled in to 82% (ZOOM 0.82)  [light surround blends]
@@ -18,10 +21,12 @@
 (function () {
   app.displayDialogs = DialogModes.NO
 
-  // Args come in as the ExtendScript `arguments` array (folder, mode).
-  var args = (typeof arguments !== 'undefined' && arguments.length) ? arguments : []
-  var folderPath = String(args[0] || File($.fileName).parent.fsName)
-  var mode = String(args[1] || 'fills')
+  // Params arrive as globals set by the wrapper (with a couple of safe fallbacks).
+  var folderPath = String(
+    (typeof CROP_FOLDER !== 'undefined' && CROP_FOLDER) ? CROP_FOLDER :
+    (typeof $ !== 'undefined' && $.global && $.global.CROP_FOLDER) ? $.global.CROP_FOLDER :
+    File($.fileName).parent.fsName)
+  var mode = String((typeof CROP_MODE !== 'undefined' && CROP_MODE) ? CROP_MODE : 'fills')
 
   // --- tunables (identical to the standalone scripts) ---
   var MAX_EDGE = 1600, JPG_QUALITY = 10
