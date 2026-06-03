@@ -1,60 +1,62 @@
 /*
- * crop-core.jsx — ONE headless engine for all three crop modes.
- * run-all.mjs writes a tiny wrapper that sets two globals then $.evalFile's this:
- *   var CROP_FOLDER = "<bucket folder>"; var CROP_MODE = "fills|margin|textured";
- *   $.evalFile(new File("…/crop-core.jsx"));
- * (Globals are used rather than AppleScript `with arguments`, because `arguments`
- *  inside this function would be the function's own — not the passed-in values.)
+ * crop-core.jsx — ONE headless engine for all three crop modes (ENGINE v5).
+ *
+ * run-all.mjs drops a copy of this (with `var CROP_MODE="…";` baked on top) INTO
+ * the bucket folder and runs it there — so File($.fileName).parent IS the bucket,
+ * exactly like the original crop-*.jsx that worked via File ▸ Scripts ▸ Browse.
  *
  * mode = "fills"   → centered square, full short edge (ZOOM 1.0)   [paper fills frame]
  * mode = "margin"  → centered square pulled in to 82% (ZOOM 0.82)  [light surround blends]
  * mode = "textured"→ find bright paper, find drawing inside it, center a square
  *                    on the drawing and keep it INSIDE the paper (no desk).
  *
- * Art is NEVER altered — only the crop and what surrounds it. No alert() so it can
- * run unattended; it writes _crop-result.json into the bucket folder instead.
- *
- * It is the SAME logic as the standalone crop-fills/crop-margin/crop-textured.jsx,
- * just parameterized and headless so the whole pipeline runs as one process.
+ * Art is NEVER altered — only the crop and surrounding paper. No alert(); it writes
+ * _crop-result.json (a "started" marker first, then the final tally) so run-all.mjs
+ * — and you — can see exactly what happened even if something goes wrong.
  */
 #target photoshop
 (function () {
   app.displayDialogs = DialogModes.NO
 
-  // Params arrive as globals set by the wrapper (with a couple of safe fallbacks).
-  var folderPath = String(
-    (typeof CROP_FOLDER !== 'undefined' && CROP_FOLDER) ? CROP_FOLDER :
-    (typeof $ !== 'undefined' && $.global && $.global.CROP_FOLDER) ? $.global.CROP_FOLDER :
-    File($.fileName).parent.fsName)
+  // Where this script sits = the bucket. (CROP_FOLDER global overrides if present.)
+  var here
+  try { here = File($.fileName).parent } catch (e) { here = Folder.current }
+  if (typeof CROP_FOLDER !== 'undefined' && CROP_FOLDER) here = new Folder(CROP_FOLDER)
+  var folderPath = here.fsName
+  var resultPath = folderPath + '/_crop-result.json'
   var mode = String((typeof CROP_MODE !== 'undefined' && CROP_MODE) ? CROP_MODE : 'fills')
 
-  // --- tunables (identical to the standalone scripts) ---
   var MAX_EDGE = 1600, JPG_QUALITY = 10
   var ZOOM_FILLS = 1.0, ZOOM_MARGIN = 0.82
   var PAPER_THRESH = 180, ART_THRESH = 170, ART_FILL = 0.80, INSET = 0.015
 
-  var u = app.preferences.rulerUnits
-  app.preferences.rulerUnits = Units.PIXELS
-  var here = new Folder(folderPath)
-  var out = new Folder(here.fsName + '/squared'); if (!out.exists) out.create()
+  var out = new Folder(folderPath + '/squared'); if (!out.exists) out.create()
   var files = here.getFiles(function (f) { return f instanceof File && /\.(jpe?g|png|tif|tiff|webp)$/i.test(f.name) })
 
-  var done = 0, fail = 0, log = []
-  for (var i = 0; i < files.length; i++) {
-    try { one(files[i]); done++ }
-    catch (e) { fail++; log.push(files[i].name + ' :: ' + e) }
-  }
-  app.preferences.rulerUnits = u
+  // "started" marker — proves the engine launched and shows what it sees.
+  writeResult('started', 0, 0, [])
 
-  // hand the result back to run-all.mjs (instead of a blocking alert)
-  var esc = []
-  for (var k = 0; k < log.length; k++) esc.push('"' + jsonEsc(log[k]) + '"')
-  var rf = new File(here.fsName + '/_crop-result.json')
-  rf.encoding = 'UTF-8'
-  rf.open('w')
-  rf.write('{"mode":"' + mode + '","done":' + done + ',"fail":' + fail +
-    ',"out":"' + jsonEsc(out.fsName) + '","errors":[' + esc.join(',') + ']}')
-  rf.close()
+  var u = app.preferences.rulerUnits; app.preferences.rulerUnits = Units.PIXELS
+  var done = 0, fail = 0, log = []
+  try {
+    for (var i = 0; i < files.length; i++) {
+      try { one(files[i]); done++ } catch (e) { fail++; log.push(files[i].name + ' :: ' + e) }
+    }
+  } catch (eAll) { log.push('FATAL :: ' + eAll) }
+  app.preferences.rulerUnits = u
+  writeResult('done', done, fail, log)
+
+  // ---------- result file ----------
+  function writeResult(status, done, fail, errors) {
+    try {
+      var esc = []
+      for (var k = 0; k < (errors || []).length; k++) esc.push('"' + jsonEsc(errors[k]) + '"')
+      var s = '{"status":"' + status + '","engine":"v5","mode":"' + mode + '","folder":"' + jsonEsc(folderPath) +
+        '","files":' + files.length + ',"done":' + done + ',"fail":' + fail +
+        ',"out":"' + jsonEsc(out.fsName) + '","errors":[' + esc.join(',') + ']}'
+      var rf = new File(resultPath); rf.encoding = 'UTF-8'; rf.open('w'); rf.write(s); rf.close()
+    } catch (e) {}
+  }
 
   // ---------- per-file ----------
   function one(file) {

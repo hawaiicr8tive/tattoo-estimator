@@ -271,18 +271,17 @@ async function runCrop(bucket, mode) {
   const resultFile = path.join(folder, '_crop-result.json')
   await fs.rm(resultFile, { force: true }).catch(() => {})
 
-  // Build ONE self-contained script: the params baked on top of the full engine
-  // source. (No `$.evalFile` — it silently returns false on failure; no AppleScript
-  // `with arguments` — inside the engine's function `arguments` is its own, empty.)
+  // Drop a copy of the engine INTO the bucket (with the mode baked on top) and run
+  // it there — so File($.fileName).parent is the bucket, exactly like the original
+  // crop-*.jsx that worked via File ▸ Scripts ▸ Browse. No $.evalFile, no arguments.
   let core = await fs.readFile(jsx, 'utf8')
   core = core.replace(/^[ \t]*#target.*$/gm, '') // we're already inside Photoshop
-  const wrapperPath = path.join(SCRIPT_DIR, `_run-${mode}.jsx`)
-  const wrapper =
+  const runnerPath = path.join(folder, '_crop.jsx')
+  const runner =
     `#target photoshop\n` +
-    `var CROP_FOLDER = ${JSON.stringify(folder)};\n` +
     `var CROP_MODE = ${JSON.stringify(mode)};\n` +
     core
-  await fs.writeFile(wrapperPath, wrapper)
+  await fs.writeFile(runnerPath, runner)
 
   // `with timeout` lifts AppleScript's default 2-min Apple Event ceiling — without
   // it a big bucket throws -1712 (timed out) even though Photoshop is still cropping.
@@ -290,17 +289,17 @@ async function runCrop(bucket, mode) {
     `with timeout of 86400 seconds\n` +
     `  tell application id "com.adobe.Photoshop"\n` +
     `    activate\n` +
-    `    do javascript file ${JSON.stringify(wrapperPath)}\n` +
+    `    do javascript file ${JSON.stringify(runnerPath)}\n` +
     `  end tell\n` +
     `end timeout`
-  try {
-    await exec('osascript', ['-e', ascript], { maxBuffer: 1 << 24, timeout: 0 })
-  } finally {
-    await fs.rm(wrapperPath, { force: true }).catch(() => {})
-  }
+  await exec('osascript', ['-e', ascript], { maxBuffer: 1 << 24, timeout: 0 })
 
-  try { return JSON.parse(await fs.readFile(resultFile, 'utf8')) }
-  catch { return null }
+  let result = null
+  try { result = JSON.parse(await fs.readFile(resultFile, 'utf8')) } catch {}
+  // Tidy up the runner if it actually completed; otherwise LEAVE it so you can
+  // run it by hand (File ▸ Scripts ▸ Browse) and see whatever Photoshop choked on.
+  if (result && result.status === 'done') await fs.rm(runnerPath, { force: true }).catch(() => {})
+  return result
 }
 
 async function stepPhotoshop(counts) {
@@ -326,7 +325,7 @@ async function stepPhotoshop(counts) {
     return []
   }
 
-  console.log('STEP 3  Cropping in Photoshop (this opens Photoshop; leave it alone while it runs)…')
+  console.log('STEP 3  Cropping in Photoshop [engine v5] (this opens Photoshop; leave it alone while it runs)…')
   const results = []
   for (const j of jobs) {
     // resume: if squared/ already holds every image for this bucket, don't redo it
@@ -341,8 +340,18 @@ async function stepPhotoshop(counts) {
     process.stdout.write(`    ${j.bucket.padEnd(12)} (${counts[j.bucket]} imgs)… `)
     let r = null
     try { r = await runCrop(j.bucket, j.mode) } catch (e) { console.log('ERROR: ' + e.message); results.push({ bucket: j.bucket, error: e.message }); continue }
-    if (r) { console.log(`done ${r.done}, failed ${r.fail}`); results.push({ bucket: j.bucket, ...r }) }
-    else { console.log('finished (no result file — check the bucket\'s squared/ folder)'); results.push({ bucket: j.bucket }) }
+    if (r && r.status === 'done') {
+      console.log(`done ${r.done}, failed ${r.fail}` + (r.errors && r.errors.length ? `  (first error: ${r.errors[0]})` : ''))
+      results.push({ bucket: j.bucket, ...r })
+    } else if (r && r.status === 'started') {
+      console.log(`started but didn't finish — Photoshop saw ${r.files} files in ${r.folder} then stalled (a dialog?). Click into Photoshop.`)
+      results.push({ bucket: j.bucket, ...r })
+    } else {
+      console.log('engine did NOT run — no result file written.')
+      console.log(`        → Open Photoshop, File ▸ Scripts ▸ Browse… and pick:  ${path.join(j.bucket, '_crop.jsx')}`)
+      console.log(`          (it stays in the bucket if the engine never ran; that will show any error dialog.)`)
+      results.push({ bucket: j.bucket })
+    }
   }
   console.log('')
   return results
