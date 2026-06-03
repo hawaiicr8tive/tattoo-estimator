@@ -9,6 +9,7 @@ import LeadsTab from '@/components/admin/LeadsTab'
 import BrandingTab from '@/components/admin/BrandingTab'
 import TrendsTab from '@/components/admin/TrendsTab'
 import ResearchTab from '@/components/admin/ResearchTab'
+import FlashCropperTab from '@/components/admin/FlashCropperTab'
 import type { AdminConfig } from '@/lib/admin-types'
 
 const TABS = [
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'placements', label: 'Placements' },
   { id: 'artists',    label: 'Artists' },
   { id: 'branding',   label: 'Branding' },
+  { id: 'flash-cropper', label: 'Flash Cropper' },
   { id: 'trends',     label: 'Trends' },
   { id: 'research',   label: 'AI Research' },
 ] as const
@@ -38,6 +40,9 @@ export default function AdminPage() {
   // Loading state is derived: we're loading once authed and the fetch hasn't
   // landed yet (no config and no error captured).
   const configLoading = authed === true && config === null && configError === null
+  // Tabs that fetch their own data don't need the shared admin config.
+  const INDEPENDENT_TABS: TabId[] = ['leads', 'trends', 'research', 'flash-cropper']
+  const isConfigTab = !INDEPENDENT_TABS.includes(activeTab)
 
   // Resume admin session on reload via the cookie set by /api/admin/auth.
   useEffect(() => {
@@ -175,19 +180,20 @@ export default function AdminPage() {
 
       {/* Content */}
       <main className="mx-auto max-w-7xl px-4 py-8">
-        {/* Leads tab doesn't need config */}
+        {/* Tabs that fetch their own data (no shared config) */}
         {activeTab === 'leads' && <LeadsTab />}
         {activeTab === 'trends' && <TrendsTab />}
         {activeTab === 'research' && <ResearchTab />}
+        {activeTab === 'flash-cropper' && <FlashCropperTab />}
 
-        {/* Config tabs */}
-        {activeTab !== 'leads' && activeTab !== 'trends' && activeTab !== 'research' && configLoading && (
+        {/* Config-backed tabs */}
+        {isConfigTab && configLoading && (
           <p className="text-[#555555] py-12 text-center">Loading configuration…</p>
         )}
-        {activeTab !== 'leads' && activeTab !== 'trends' && activeTab !== 'research' && configError && (
+        {isConfigTab && configError && (
           <p className="text-red-600 py-4">{configError}</p>
         )}
-        {activeTab !== 'leads' && activeTab !== 'trends' && activeTab !== 'research' && !configLoading && !configError && config && (
+        {isConfigTab && !configLoading && !configError && config && (
           <>
             {activeTab === 'pricing'    && <PricingTab    initialData={config.pricing}    />}
             {activeTab === 'styles'     && <StylesTab     initialData={config.styles}     />}
