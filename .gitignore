@@ -43,3 +43,6 @@ next-env.d.ts
 
 # flash-crop download artifact (the source lives in flash-crop/)
 flash-crop.zip
+
+# sharp tester download artifact
+flash-cropper-sharp.zip
