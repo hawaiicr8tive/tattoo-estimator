@@ -271,15 +271,17 @@ async function runCrop(bucket, mode) {
   const resultFile = path.join(folder, '_crop-result.json')
   await fs.rm(resultFile, { force: true }).catch(() => {})
 
-  // Write a tiny wrapper that sets the params as globals then runs the engine.
-  // (Passing them via AppleScript `with arguments` doesn't work — inside the
-  //  engine's function `arguments` is the function's own, not the passed values.)
+  // Build ONE self-contained script: the params baked on top of the full engine
+  // source. (No `$.evalFile` — it silently returns false on failure; no AppleScript
+  // `with arguments` — inside the engine's function `arguments` is its own, empty.)
+  let core = await fs.readFile(jsx, 'utf8')
+  core = core.replace(/^[ \t]*#target.*$/gm, '') // we're already inside Photoshop
   const wrapperPath = path.join(SCRIPT_DIR, `_run-${mode}.jsx`)
   const wrapper =
     `#target photoshop\n` +
     `var CROP_FOLDER = ${JSON.stringify(folder)};\n` +
     `var CROP_MODE = ${JSON.stringify(mode)};\n` +
-    `$.evalFile(new File(${JSON.stringify(jsx)}));\n`
+    core
   await fs.writeFile(wrapperPath, wrapper)
 
   // `with timeout` lifts AppleScript's default 2-min Apple Event ceiling — without
