@@ -4,7 +4,12 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
 
 const STORAGE_BUCKET = 'fusion-images'
-const MAX_PATHS = 100
+const MAX_PATHS = 500
+const DOWNLOAD_CONCURRENCY = 8
+
+// Vercel Pro caps function execution at 300s; without this, a 500-image
+// archive can overrun the default timeout.
+export const maxDuration = 300
 
 /**
  * Bundle a selected set of fusion images into a ZIP and stream it back as
@@ -14,6 +19,9 @@ const MAX_PATHS = 100
  *
  * Paths are flattened in the ZIP (folder/file -> folder__file) so everything
  * lands in one flat archive — the folder name still encodes the fusion id.
+ *
+ * Downloads run in parallel with a small concurrency cap so the function
+ * fits inside the 300s Vercel cap even for 500-image archives.
  */
 export async function POST(req: NextRequest) {
   const denied = requireAdmin(req)
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
   if (rawPaths.length > MAX_PATHS) {
     return NextResponse.json(
-      { error: `Too many images selected — max ${MAX_PATHS} per download.` },
+      { error: `Too many images selected — max ${MAX_PATHS} per download. Split into smaller batches.` },
       { status: 400 },
     )
   }
@@ -44,18 +52,28 @@ export async function POST(req: NextRequest) {
   const zip = new JSZip()
   const failures: string[] = []
 
-  for (const path of paths) {
-    const { data, error } = await db.storage.from(STORAGE_BUCKET).download(path)
-    if (error || !data) {
-      failures.push(path)
-      continue
+  // Parallel download with concurrency limit. Each worker pulls from a shared
+  // index until the path list is exhausted. Adding to the JSZip instance is
+  // synchronous and safe to do from multiple workers.
+  let next = 0
+  async function worker() {
+    while (true) {
+      const i = next++
+      if (i >= paths.length) return
+      const path = paths[i]
+      const { data, error } = await db.storage.from(STORAGE_BUCKET).download(path)
+      if (error || !data) {
+        failures.push(path)
+        continue
+      }
+      const buf = Buffer.from(await data.arrayBuffer())
+      const flat = path.replace(/\//g, '__')
+      zip.file(flat, buf)
     }
-    const buf = Buffer.from(await data.arrayBuffer())
-    // Flatten so the ZIP root has one file per image (folder name is preserved
-    // in the filename so you can still tell which fusion each came from).
-    const flat = path.replace(/\//g, '__')
-    zip.file(flat, buf)
   }
+  await Promise.all(
+    Array.from({ length: Math.min(DOWNLOAD_CONCURRENCY, paths.length) }, () => worker()),
+  )
 
   if (Object.keys(zip.files).length === 0) {
     return NextResponse.json(
