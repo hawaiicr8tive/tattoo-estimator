@@ -45,6 +45,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const inDir = await resolveImageDir()
 
 const SKIP_PROFILE = process.env.SKIP_PROFILE === '1'
+const SKIP_SORT = process.env.SKIP_SORT === '1'
 const SKIP_PHOTOSHOP = process.env.SKIP_PHOTOSHOP === '1'
 const MOVE = process.env.MOVE === '1'
 const MODEL = process.env.MODEL || 'gpt-4o-mini'
@@ -200,7 +201,23 @@ function bucketFor(r) {
   return String(r.paper_fills_frame).toLowerCase() === 'true' ? 'crop-fills' : 'crop-margin'
 }
 
+async function bucketImageCount(b) {
+  try { return (await fs.readdir(path.join(inDir, b))).filter(f => IMG_RE.test(f)).length }
+  catch { return 0 }
+}
+
 async function stepSort() {
+  // SKIP_SORT: keep the buckets exactly as they are (incl. any squared/ from a
+  // partial run) and just count them — lets you re-run only the Photoshop step.
+  if (SKIP_SORT) {
+    const counts = {}
+    for (const b of BUCKETS) counts[b] = await bucketImageCount(b)
+    console.log('STEP 2  skipped (SKIP_SORT=1). Existing buckets:')
+    for (const b of BUCKETS) console.log(`    ${b.padEnd(12)} ${counts[b]}`)
+    console.log('')
+    return counts
+  }
+
   const csvPath = path.join(inDir, 'profile-log.csv')
   let text
   try { text = await fs.readFile(csvPath, 'utf8') }
@@ -255,12 +272,16 @@ async function runCrop(bucket, mode) {
   await fs.rm(resultFile, { force: true }).catch(() => {})
 
   // do javascript file "<jsx>" with arguments {"<folder>", "<mode>"}
+  // `with timeout` lifts AppleScript's default 2-min Apple Event ceiling — without
+  // it a big bucket throws -1712 (timed out) even though Photoshop is still cropping.
   const ascript =
-    `tell application id "com.adobe.Photoshop"\n` +
-    `  activate\n` +
-    `  do javascript file ${JSON.stringify(jsx)} with arguments {${JSON.stringify(folder)}, ${JSON.stringify(mode)}}\n` +
-    `end tell`
-  await exec('osascript', ['-e', ascript], { maxBuffer: 1 << 24, timeout: 1000 * 60 * 60 })
+    `with timeout of 86400 seconds\n` +
+    `  tell application id "com.adobe.Photoshop"\n` +
+    `    activate\n` +
+    `    do javascript file ${JSON.stringify(jsx)} with arguments {${JSON.stringify(folder)}, ${JSON.stringify(mode)}}\n` +
+    `  end tell\n` +
+    `end timeout`
+  await exec('osascript', ['-e', ascript], { maxBuffer: 1 << 24, timeout: 0 })
 
   try { return JSON.parse(await fs.readFile(resultFile, 'utf8')) }
   catch { return null }
@@ -292,6 +313,15 @@ async function stepPhotoshop(counts) {
   console.log('STEP 3  Cropping in Photoshop (this opens Photoshop; leave it alone while it runs)…')
   const results = []
   for (const j of jobs) {
+    // resume: if squared/ already holds every image for this bucket, don't redo it
+    const want = counts[j.bucket]
+    let have = 0
+    try { have = (await fs.readdir(path.join(inDir, j.bucket, 'squared'))).filter(f => /\.jpe?g$/i.test(f)).length } catch {}
+    if (want > 0 && have >= want) {
+      console.log(`    ${j.bucket.padEnd(12)} already cropped (${have}) — skipping`)
+      results.push({ bucket: j.bucket, done: have, fail: 0, skipped: true })
+      continue
+    }
     process.stdout.write(`    ${j.bucket.padEnd(12)} (${counts[j.bucket]} imgs)… `)
     let r = null
     try { r = await runCrop(j.bucket, j.mode) } catch (e) { console.log('ERROR: ' + e.message); results.push({ bucket: j.bucket, error: e.message }); continue }

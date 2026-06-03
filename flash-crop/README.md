@@ -45,6 +45,7 @@ Originals are only **copied** into buckets (set `MOVE=1` to move instead).
 | Switch | Effect |
 |--------|--------|
 | `SKIP_PROFILE=1` | reuse the existing `profile-log.csv` (no AI re-run) |
+| `SKIP_SORT=1` | leave the buckets as-is; just (re-)run the Photoshop crops |
 | `SKIP_PHOTOSHOP=1` | stop after sorting; crop by hand later |
 | `SAMPLE=20` | only profile a random 20 (quick test) |
 | `MOVE=1` | move originals into buckets instead of copying |
