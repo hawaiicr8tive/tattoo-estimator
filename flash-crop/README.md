@@ -5,6 +5,9 @@ then crops every bucket to a clean square in Photoshop — **all from one comman
 The AI only **sorts**; it never touches a pixel. Crops are deterministic Photoshop
 steps, so the **artwork is never altered** — only the crop and the surrounding paper.
 
+> Validated on a 100-image test set: **96 auto-cropped, 0 failures, 4 routed to
+> `manual/`** (multiple drawings / low confidence). Engine: v5.
+
 ## What's in here
 
 | File | Role |
@@ -66,5 +69,16 @@ script from `single-bucket-scripts/` into its bucket folder and run it via
 ## After a run
 
 Spot-check each bucket's `squared/` folder. Drag any misses into `manual/`.
-If `textured/` shows a sliver of desk, raise `PAPER_THRESH` (e.g. 195) in
-`crop-core.jsx`; if it over-crops an aged sheet, lower it (e.g. 150).
+A re-run **skips** any bucket whose `squared/` is already full (resume). To force
+a fresh crop, delete the `squared` folder inside that bucket and run again.
+
+Tuning levers (top of `crop-core.jsx`):
+- `textured/` shows a desk sliver → raise `PAPER_THRESH` (e.g. 195); over-crops an
+  aged sheet → lower it (e.g. 150).
+- `crop-margin` clips art → raise `ZOOM_MARGIN` (0.82 → 0.85+).
+- output size / quality → `MAX_EDGE` (1600) and `JPG_QUALITY` (10).
+
+## Scaling to thousands
+
+Same command, bigger folder — it streams through at concurrency 4 on the AI step
+and crops bucket-by-bucket. Cost is pennies per thousand (gpt-4o-mini, low detail).
