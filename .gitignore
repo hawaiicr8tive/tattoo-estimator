@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# flash-crop download artifact (the source lives in flash-crop/)
+flash-crop.zip
