@@ -1,0 +1,10 @@
+{
+  "name": "flash-cropper-sharp",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Sharp-based flash crop engine (kiosk preview) — test against the Photoshop crops",
+  "dependencies": {
+    "sharp": "^0.33.5"
+  }
+}
