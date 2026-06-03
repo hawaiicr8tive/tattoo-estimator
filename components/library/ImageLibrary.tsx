@@ -55,6 +55,9 @@ export default function ImageLibrary() {
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [favoritedUrls, setFavoritedUrls] = useState<Set<string>>(new Set())
   const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [exportedUrls, setExportedUrls] = useState<Set<string>>(new Set())
+  const [exportedFilter, setExportedFilter] = useState<'hide' | 'show' | 'only'>('hide')
+  const [archiving, setArchiving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -84,6 +87,40 @@ export default function ImageLibrary() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  // Exported (archived) state — same shape as favorites.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/admin/image-exported')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!cancelled && d?.exported) setExportedUrls(new Set(Object.keys(d.exported)))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  /** Bulk-toggle exported state for a list of URLs and refresh local set. */
+  async function markExported(urls: string[], exported: boolean) {
+    if (urls.length === 0) return
+    setArchiving(true)
+    try {
+      const res = await fetch('/api/admin/image-exported', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls, exported }),
+      })
+      if (!res.ok) throw new Error('Failed to update exported state')
+      const data = await res.json() as { exported?: Record<string, unknown> }
+      if (data.exported) setExportedUrls(new Set(Object.keys(data.exported)))
+      // Selection cleared so users don't get confused about which view they're in.
+      setSelected(new Set())
+    } catch (e) {
+      setDownloadError(e instanceof Error ? e.message : 'Failed to update exported state')
+    } finally {
+      setArchiving(false)
+    }
+  }
 
   async function toggleFavorite(url: string) {
     const wasFav = favoritedUrls.has(url)
@@ -119,6 +156,9 @@ export default function ImageLibrary() {
       if (orphanFilter === 'exclude' && img.isOrphan) return false
       if (orphanFilter === 'only' && !img.isOrphan) return false
       if (favoritesOnly && !favoritedUrls.has(img.url)) return false
+      const isExported = exportedUrls.has(img.url)
+      if (exportedFilter === 'hide' && isExported) return false
+      if (exportedFilter === 'only' && !isExported) return false
       if (industry && img.industryId !== industry) return false
       if (model && img.model !== model) return false
       if (img.chaos !== null && (img.chaos < chaosMin || img.chaos > chaosMax)) return false
@@ -137,7 +177,7 @@ export default function ImageLibrary() {
       }
       return true
     })
-  }, [images, search, industry, model, chaosMin, chaosMax, orphanFilter, favoritesOnly, favoritedUrls])
+  }, [images, search, industry, model, chaosMin, chaosMax, orphanFilter, favoritesOnly, favoritedUrls, exportedFilter, exportedUrls])
 
   const lightboxImages = useMemo(
     () => filtered.map(img => ({
@@ -181,7 +221,7 @@ export default function ImageLibrary() {
     setDownloadError(null)
   }
 
-  async function downloadSelected() {
+  async function downloadSelected(opts?: { archiveAfter?: boolean }) {
     if (selected.size === 0 || !images) return
     if (selected.size > MAX_DOWNLOAD) {
       setDownloadError(`Too many images selected (${selected.size}). Max ${MAX_DOWNLOAD} per download.`)
@@ -190,7 +230,9 @@ export default function ImageLibrary() {
     setDownloading(true)
     setDownloadError(null)
     try {
-      const paths = images.filter(i => selected.has(i.id)).map(i => i.bucketPath)
+      const selectedImgs = images.filter(i => selected.has(i.id))
+      const paths = selectedImgs.map(i => i.bucketPath)
+      const urls = selectedImgs.map(i => i.url)
       const res = await fetch('/api/admin/research/fusion/library/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -210,6 +252,11 @@ export default function ImageLibrary() {
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+      // Mark exported AFTER successful download so a failed download doesn't
+      // hide images from the user.
+      if (opts?.archiveAfter) {
+        await markExported(urls, true)
+      }
     } catch (e) {
       setDownloadError(e instanceof Error ? e.message : 'Download failed')
     } finally {
@@ -276,6 +323,16 @@ export default function ImageLibrary() {
             />
             ★ Favorites only ({favoritedUrls.size})
           </label>
+          <select
+            value={exportedFilter}
+            onChange={e => setExportedFilter(e.target.value as 'hide' | 'show' | 'only')}
+            className="rounded border border-[var(--brand-border)] bg-[var(--brand-bg)] px-2 py-1.5 text-[var(--brand-text)]"
+            title={`${exportedUrls.size} images currently in the exported folder`}
+          >
+            <option value="hide">Hide exported ({exportedUrls.size})</option>
+            <option value="show">Show exported</option>
+            <option value="only">Exported folder only</option>
+          </select>
           <div className="flex items-center gap-1.5 text-[var(--brand-text-mid)]">
             <span>Chaos</span>
             <input
@@ -291,10 +348,10 @@ export default function ImageLibrary() {
             />
             <span className="text-[10px]">(images with no chaos value always show)</span>
           </div>
-          {(search || industry || model || orphanFilter !== 'include' || chaosMin > 0 || chaosMax < 100 || favoritesOnly) && (
+          {(search || industry || model || orphanFilter !== 'include' || chaosMin > 0 || chaosMax < 100 || favoritesOnly || exportedFilter !== 'hide') && (
             <button
               type="button"
-              onClick={() => { setSearch(''); setIndustry(''); setModel(''); setOrphanFilter('include'); setChaosMin(0); setChaosMax(100); setFavoritesOnly(false) }}
+              onClick={() => { setSearch(''); setIndustry(''); setModel(''); setOrphanFilter('include'); setChaosMin(0); setChaosMax(100); setFavoritesOnly(false); setExportedFilter('hide') }}
               className="text-[var(--brand-text-mid)] hover:text-[var(--brand-text)] underline cursor-pointer"
             >
               Clear filters
@@ -334,19 +391,54 @@ export default function ImageLibrary() {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {downloadError && <span className="text-rose-400">{downloadError}</span>}
-          <button
-            type="button"
-            onClick={downloadSelected}
-            disabled={selected.size === 0 || downloading}
-            className="px-3 py-1.5 rounded-lg text-sm font-semibold text-[var(--brand-primary-text)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            style={{ background: 'var(--brand-gradient)', boxShadow: '0 0 14px var(--brand-glow)' }}
-          >
-            {downloading
-              ? 'Zipping…'
-              : selected.size === 0
-                ? 'Download (select images)'
-                : `Download ${selected.size} as ZIP`}
-          </button>
+          {(() => {
+            // Split selection into already-exported vs not-yet-exported so the
+            // action buttons can be precise about what they'll do.
+            const selectedImgs = (images ?? []).filter(i => selected.has(i.id))
+            const nonExportedCount = selectedImgs.filter(i => !exportedUrls.has(i.url)).length
+            const exportedCount = selectedImgs.filter(i => exportedUrls.has(i.url)).length
+            return (
+              <>
+                {exportedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const urls = selectedImgs.filter(i => exportedUrls.has(i.url)).map(i => i.url)
+                      void markExported(urls, false)
+                    }}
+                    disabled={archiving}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--brand-border)] text-[var(--brand-text)] hover:border-[var(--brand-primary)] cursor-pointer disabled:opacity-40"
+                  >
+                    {archiving ? 'Working…' : `↩ Restore ${exportedCount}`}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void downloadSelected({ archiveAfter: false })}
+                  disabled={selected.size === 0 || downloading || archiving}
+                  className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-[var(--brand-border)] text-[var(--brand-text)] hover:border-[var(--brand-primary)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {downloading
+                    ? 'Zipping…'
+                    : selected.size === 0
+                      ? 'Download (select images)'
+                      : `Download ${selected.size} as ZIP`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void downloadSelected({ archiveAfter: true })}
+                  disabled={selected.size === 0 || downloading || archiving || nonExportedCount === 0}
+                  title="Download as ZIP, then move the selected images into the exported folder so future downloads won't include them"
+                  className="px-3 py-1.5 rounded-lg text-sm font-semibold text-[var(--brand-primary-text)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  style={{ background: 'var(--brand-gradient)', boxShadow: '0 0 14px var(--brand-glow)' }}
+                >
+                  {downloading
+                    ? 'Zipping + moving…'
+                    : `Export ${selected.size} → exported folder`}
+                </button>
+              </>
+            )
+          })()}
         </div>
       </div>
 
@@ -380,6 +472,14 @@ export default function ImageLibrary() {
                     {img.isOrphan && (
                       <span className="absolute top-1 right-1 rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-bold text-black uppercase">
                         orphan
+                      </span>
+                    )}
+                    {exportedUrls.has(img.url) && (
+                      <span
+                        className={`absolute rounded bg-emerald-500/90 px-1.5 py-0.5 text-[10px] font-bold text-black uppercase ${img.isOrphan ? 'top-9 right-1' : 'top-1 right-1'}`}
+                        title="Already in the exported folder"
+                      >
+                        exported
                       </span>
                     )}
                   </div>
