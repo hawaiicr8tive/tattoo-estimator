@@ -37,7 +37,7 @@ const ORPHAN_OPTIONS: { id: OrphanFilter; label: string }[] = [
   { id: 'only', label: 'Orphans only' },
 ]
 
-const MAX_DOWNLOAD = 100
+const MAX_DOWNLOAD = 500
 
 export default function ImageLibrary() {
   const [images, setImages] = useState<LibraryImage[] | null>(null)
