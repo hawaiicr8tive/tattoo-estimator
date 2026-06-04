@@ -57,6 +57,46 @@ export interface FusionImagePromptInput {
    * value. Used by bulk batches to nudge a whole batch in a specific direction
    * (e.g. "art-nouveau organic flow"). */
   chaosDirection?: string
+  /** Optional color palette instruction. Free-text that gets injected as a
+   * "Color palette:" line. When unset, the existing default (black ink on
+   * paper) baked into the system prompt wins. */
+  colorPalette?: string
+}
+
+/** Curated color palettes available in the UI dropdown. The user picks one
+ * (or "gamble" which lets the server pick a random one per prompt). Each
+ * entry's `text` is what gets injected into the prompt. */
+export const COLOR_PALETTES = [
+  { id: 'default',          label: 'Default (auto)',            text: '' },
+  { id: 'mono-black',       label: 'Monochrome black ink',      text: 'pure black ink only, no color, traditional flash-sheet aesthetic with crisp linework' },
+  { id: 'american-trad',    label: 'American Traditional',      text: 'American traditional palette: bold red, deep yellow, forest green color fills with thick black outlines, limited four-color palette feel' },
+  { id: 'sailor-jerry',     label: 'Sailor Jerry',              text: 'Sailor Jerry classic palette: red, green, black, occasional yellow accents, vintage 1940s nautical flash aesthetic' },
+  { id: 'neo-traditional',  label: 'Neo-Traditional',           text: 'Neo-traditional saturated palette: vibrant rich colors, deep shadows, bold outlines, modern color science applied to old-school structure' },
+  { id: 'pastel-watercolor',label: 'Pastel Watercolor',         text: 'soft pastel watercolor palette: transparent washes of color, gentle pigment bleeds at edges, dreamy muted tones' },
+  { id: 'black-grey',       label: 'Black & Grey realism',      text: 'pure greyscale shading, no color, smooth tonal gradations, photoreal black-and-grey realism style' },
+  { id: 'neon-cyber',       label: 'Neon Cyberpunk',            text: 'cyberpunk neon palette: electric blue, hot pink, acid green, dark backgrounds, glowing accents' },
+  { id: 'sepia-bone',       label: 'Sepia & Bone',              text: 'sepia and bone palette: warm browns, cream paper tones, faded ochre, occasional deep crimson accent' },
+  { id: 'muted-vintage',    label: 'Muted Vintage',             text: 'muted vintage palette: faded tan, dusty olive, washed-out crimson, antiqued cream — feels like an old printed flash sheet' },
+  { id: 'chicano-grey',     label: 'Chicano Grey-Wash',         text: 'chicano fine-line grey-wash palette: soft smoky greys, sparse black accents, occasional muted red, single-needle aesthetic' },
+  { id: 'red-only',         label: 'Red Single-Accent',         text: 'monochrome design with a single red color accent — everything else pure black ink on cream paper' },
+  { id: 'blue-only',        label: 'Blue Single-Accent',        text: 'monochrome design with a single blue color accent — everything else pure black ink on cream paper' },
+  { id: 'gold-leaf',        label: 'Gold Leaf Accent',          text: 'design with gold-leaf metallic accents on black ink linework, art-nouveau gilded ornament feel' },
+  { id: 'gamble',           label: '🎲 Random gamble',          text: '__GAMBLE__' },
+] as const
+
+export type ColorPaletteId = (typeof COLOR_PALETTES)[number]['id']
+
+/** Resolve a palette id (or raw text) to the actual instruction. When the id
+ * is "gamble", pick a random non-default, non-gamble palette. */
+export function resolveColorPalette(id: string | undefined): string {
+  if (!id || id === 'default') return ''
+  const palette = COLOR_PALETTES.find(p => p.id === id)
+  if (!palette) return id // raw text passthrough
+  if (palette.text === '__GAMBLE__') {
+    const candidates = COLOR_PALETTES.filter(p => p.id !== 'default' && p.id !== 'gamble' && p.text)
+    return candidates[Math.floor(Math.random() * candidates.length)]?.text ?? ''
+  }
+  return palette.text
 }
 
 const CHAOS_DIRECTIVES: { min: number; text: string }[] = [
@@ -82,15 +122,25 @@ function chaosDirective(chaos: number): string {
  * kill it) doesn't translate to image style and dilutes the prompt.
  */
 export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
-  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0, contentFocus, chaosDirection } = input
+  const { baseStrand, blendStrand, fusion, visualDescriptor, chaos = 0, contentFocus, chaosDirection, colorPalette } = input
   const baseTags = baseStrand.tags.join(', ')
   const blendTags = blendStrand.tags.join(', ')
   const ingredients = fusion.ingredients.slice(0, 3).join('. ')
   const safeDescriptor = visualDescriptor ? sanitizeForImageGen(visualDescriptor).slice(0, 1200) : ''
   const chaosText = chaosDirective(Math.max(0, Math.min(100, Math.round(chaos))))
   const safeDirection = chaosDirection ? sanitizeForImageGen(chaosDirection).slice(0, 400).trim() : ''
+  const safePalette = colorPalette ? sanitizeForImageGen(colorPalette).slice(0, 400).trim() : ''
+  // If the user picked a color palette, it overrides the default "black-ink on
+  // paper" framing — otherwise the palette instruction would fight the system
+  // prompt and Gemini would default to monochrome.
+  const opener = safePalette
+    ? 'A tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the design centered on paper.'
+    : 'A black-ink tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the inked design centered on paper.'
+  const closer = safePalette
+    ? 'Style: traditional flash-sheet illustration, crisp linework, the kind of drawing a tattoo artist pins to a studio wall as reference. Subtle paper texture. No watermarks, no text annotations, no signatures.'
+    : 'Style: traditional flash-sheet illustration, fine ink work, crisp lines, the kind of drawing a tattoo artist pins to a studio wall as reference. Subtle paper texture. No watermarks, no text annotations, no signatures.'
   return [
-    'A black-ink tattoo flash-sheet design on a clean off-white paper background, photographed top-down. No skin, no body, no person — only the inked design centered on paper.',
+    opener,
     contentFocus ? `Central subject: ${contentFocus.itemLabel} (${contentFocus.categoryLabel}). The design MUST feature this as the primary motif.` : '',
     `Working name: "${fusion.name}".`,
     `Fusion of ${baseStrand.label} (${baseStrand.tagline}) and ${blendStrand.label} (${blendStrand.tagline}).`,
@@ -99,7 +149,8 @@ export function buildFusionImagePrompt(input: FusionImagePromptInput): string {
     safeDescriptor ? `Visual descriptor: ${safeDescriptor}` : `Outlook: ${fusion.outlook}`,
     chaosText ? `Chaos modifier: ${chaosText}` : '',
     safeDirection ? `Creative direction (let this inspiration steer the visual choices while keeping the core composition): ${safeDirection}` : '',
-    'Style: traditional flash-sheet illustration, fine ink work, crisp lines, the kind of drawing a tattoo artist pins to a studio wall as reference. Subtle paper texture. No watermarks, no text annotations, no signatures.',
+    safePalette ? `Color palette (this overrides any default black-ink assumption): ${safePalette}` : '',
+    closer,
   ].filter(Boolean).join(' ')
 }
 
