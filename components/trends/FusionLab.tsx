@@ -68,6 +68,28 @@ interface BatchJobRow {
   completed_at: string | null
 }
 
+/** Color-palette dropdown options — mirrors the server's COLOR_PALETTES in
+ * `lib/trends/fusion-images.ts`. Defined locally so this client component
+ * doesn't pull in the server-only `@google/genai` SDK. The server resolves
+ * the palette text from the id; the client only needs to know the labels. */
+const COLOR_PALETTE_OPTIONS = [
+  { id: 'default',          label: 'Default (auto)' },
+  { id: 'gamble',           label: '🎲 Random gamble (different per image)' },
+  { id: 'mono-black',       label: 'Monochrome black ink' },
+  { id: 'american-trad',    label: 'American Traditional' },
+  { id: 'sailor-jerry',     label: 'Sailor Jerry' },
+  { id: 'neo-traditional',  label: 'Neo-Traditional' },
+  { id: 'pastel-watercolor',label: 'Pastel Watercolor' },
+  { id: 'black-grey',       label: 'Black & Grey realism' },
+  { id: 'neon-cyber',       label: 'Neon Cyberpunk' },
+  { id: 'sepia-bone',       label: 'Sepia & Bone' },
+  { id: 'muted-vintage',    label: 'Muted Vintage' },
+  { id: 'chicano-grey',     label: 'Chicano Grey-Wash' },
+  { id: 'red-only',         label: 'Red Single-Accent' },
+  { id: 'blue-only',        label: 'Blue Single-Accent' },
+  { id: 'gold-leaf',        label: 'Gold Leaf Accent' },
+] as const
+
 const BULK_MIN = 1
 const BULK_MAX = 50
 const BULK_PRICE = {
@@ -152,6 +174,11 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   // phrase for a real-time generation doesn't overwrite the bulk batch field.
   const [flashDirection, setFlashDirection] = useState('')
   const [flashPhraseFilter, setFlashPhraseFilter] = useState('')
+  // Color-palette pickers — id from COLOR_PALETTE_OPTIONS. 'default' means
+  // "let the system prompt's black-ink-on-paper default win". 'gamble' tells
+  // the server to pick a random palette per image in the batch.
+  const [flashColorPalette, setFlashColorPalette] = useState<string>('default')
+  const [bulkColorPalette, setBulkColorPalette] = useState<string>('default')
   // Secondary (reverse-engineered) descriptor — populated by GPT-5 Vision
   // analyzing a chosen produced image. When `useSecondary` is on, generation
   // routes use this descriptor instead of the primary visualDescriptor.
@@ -643,6 +670,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           chaosSweep,
           imageModel,
           chaosDirection: flashDirection.trim() || undefined,
+          colorPalette: flashColorPalette !== 'default' ? flashColorPalette : undefined,
           // Override priority: secondary (if enabled + filled) > edited primary > stored default.
           visualDescriptor: (useSecondaryDescriptor && secondaryDescriptor.trim())
             ? secondaryDescriptor.trim()
@@ -827,6 +855,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           count: bulkCount,
           model: bulkModel,
           chaosDirection: bulkDirection.trim() || undefined,
+          colorPalette: bulkColorPalette !== 'default' ? bulkColorPalette : undefined,
           // Secondary descriptor overrides when enabled — same priority as real-time.
           visualDescriptor: (useSecondaryDescriptor && secondaryDescriptor.trim())
             ? secondaryDescriptor.trim()
@@ -1433,6 +1462,23 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         disabled={generatingImages}
                         className="flex-1 min-w-[180px] text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400"
                       />
+                      <select
+                        value={flashColorPalette}
+                        onChange={e => setFlashColorPalette(e.target.value)}
+                        disabled={generatingImages}
+                        title="Color palette — overrides the default black-ink-on-paper look. 🎲 Gamble picks a random palette per image."
+                        className={`text-xs rounded border px-2 py-1 max-w-[220px] ${
+                          flashColorPalette === 'gamble'
+                            ? 'border-amber-400 bg-amber-50 text-amber-900'
+                            : flashColorPalette !== 'default'
+                              ? 'border-[#7B0000] bg-[#7B0000]/5 text-[#7B0000]'
+                              : 'border-gray-300 bg-white text-gray-900'
+                        }`}
+                      >
+                        {COLOR_PALETTE_OPTIONS.map(p => (
+                          <option key={p.id} value={p.id}>{p.label}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
 
@@ -1537,6 +1583,23 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         disabled={submittingBulk}
                         className="flex-1 min-w-[180px] text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400"
                       />
+                      <select
+                        value={bulkColorPalette}
+                        onChange={e => setBulkColorPalette(e.target.value)}
+                        disabled={submittingBulk}
+                        title="Color palette — overrides the default black-ink-on-paper look. 🎲 Gamble picks a random palette per image in the batch."
+                        className={`text-xs rounded border px-2 py-1 max-w-[220px] ${
+                          bulkColorPalette === 'gamble'
+                            ? 'border-amber-400 bg-amber-50 text-amber-900'
+                            : bulkColorPalette !== 'default'
+                              ? 'border-[#7B0000] bg-[#7B0000]/5 text-[#7B0000]'
+                              : 'border-gray-300 bg-white text-gray-900'
+                        }`}
+                      >
+                        {COLOR_PALETTE_OPTIONS.map(p => (
+                          <option key={p.id} value={p.id}>{p.label}</option>
+                        ))}
+                      </select>
                       <button
                         type="button"
                         onClick={handleSubmitBulk}

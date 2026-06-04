@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { loadFusionHistory, appendFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
 import { fuseStyles } from '@/lib/trends/engine'
-import { buildFusionImagePrompt } from '@/lib/trends/fusion-images'
+import { buildFusionImagePrompt, resolveColorPalette } from '@/lib/trends/fusion-images'
 import {
   BATCH_MAX_COUNT,
   BATCH_MIN_COUNT,
@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
     )
   }
   const chaosDirection = typeof x.chaosDirection === 'string' ? x.chaosDirection.slice(0, 400) : ''
+  const colorPaletteId = typeof x.colorPalette === 'string' ? x.colorPalette.slice(0, 80).trim() : ''
   const visualDescriptorOverride =
     typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
       ? x.visualDescriptor.slice(0, 2000)
@@ -156,9 +157,11 @@ export async function POST(req: NextRequest) {
   const chaosLevels = Array.from({ length: count }, (_, i) =>
     count === 1 ? 0 : Math.round((i / (count - 1)) * 100),
   )
+  // Resolve per-prompt so "gamble" produces a different palette per slot.
   const prompts = chaosLevels.map(c => buildFusionImagePrompt({
     baseStrand, blendStrand, fusion, visualDescriptor, chaos: c, contentFocus,
     chaosDirection: chaosDirection || undefined,
+    colorPalette: colorPaletteId ? resolveColorPalette(colorPaletteId) : undefined,
   }))
 
   try {

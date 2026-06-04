@@ -15,6 +15,7 @@ import {
   isOpenRouterImageModel,
   isReplicateImageModel,
   isValidImageModel,
+  resolveColorPalette,
   type FusionImageRecord,
   type ImageModelId,
 } from '@/lib/trends/fusion-images'
@@ -133,6 +134,9 @@ export async function POST(req: NextRequest) {
   const chaosDirection = typeof x.chaosDirection === 'string'
     ? x.chaosDirection.slice(0, 400).trim() || undefined
     : undefined
+  // Optional color palette id from the dropdown (or raw text). "gamble" picks
+  // a random palette per prompt below.
+  const colorPaletteId = typeof x.colorPalette === 'string' ? x.colorPalette.slice(0, 80).trim() : ''
   if (!entryId) {
     return NextResponse.json({ error: 'entryId is required' }, { status: 400 })
   }
@@ -205,8 +209,19 @@ export async function POST(req: NextRequest) {
   const chaosLevels: number[] = chaosSweep
     ? Array.from({ length: count }, (_, i) => (count === 1 ? chaos : Math.round((i / (count - 1)) * 100)))
     : Array.from({ length: count }, () => chaos)
+  // Resolve color palette per-prompt so "gamble" produces genuinely different
+  // palettes across the batch instead of one palette repeated N times.
   const prompts = chaosLevels.map(c =>
-    buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos: c, contentFocus, chaosDirection }),
+    buildFusionImagePrompt({
+      baseStrand,
+      blendStrand,
+      fusion,
+      visualDescriptor,
+      chaos: c,
+      contentFocus,
+      chaosDirection,
+      colorPalette: colorPaletteId ? resolveColorPalette(colorPaletteId) : undefined,
+    }),
   )
 
   // Generate (one image per prompt) — parallel with concurrency cap and
