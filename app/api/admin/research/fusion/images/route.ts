@@ -127,6 +127,12 @@ export async function POST(req: NextRequest) {
       ? x.visualDescriptor.slice(0, 2000)
       : undefined
   const contentFocusOverride = readContentFocus(x.contentFocus)
+  // Optional creative direction text — same field used by bulk batch. Layered
+  // into every prompt in the batch as additional inspiration alongside the
+  // ramped chaos value.
+  const chaosDirection = typeof x.chaosDirection === 'string'
+    ? x.chaosDirection.slice(0, 400).trim() || undefined
+    : undefined
   if (!entryId) {
     return NextResponse.json({ error: 'entryId is required' }, { status: 400 })
   }
@@ -200,7 +206,7 @@ export async function POST(req: NextRequest) {
     ? Array.from({ length: count }, (_, i) => (count === 1 ? chaos : Math.round((i / (count - 1)) * 100)))
     : Array.from({ length: count }, () => chaos)
   const prompts = chaosLevels.map(c =>
-    buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos: c, contentFocus }),
+    buildFusionImagePrompt({ baseStrand, blendStrand, fusion, visualDescriptor, chaos: c, contentFocus, chaosDirection }),
   )
 
   // Generate (one image per prompt) — parallel with concurrency cap and

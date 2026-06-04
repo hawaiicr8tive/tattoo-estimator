@@ -74,6 +74,7 @@ const BULK_PRICE = {
   'gemini-3-pro-image-preview':     { perImage: 0.075, label: 'Gemini 3 Pro Image' },
   'gemini-3.1-flash-image-preview': { perImage: 0.035, label: 'Nano Banana 2 (Flash)' },
   'openai/gpt-image-1':             { perImage: 0.040, label: 'GPT Image 1 (OpenAI)' },
+  'replicate/stability-ai/stable-diffusion-3.5-large': { perImage: 0.040, label: 'SD 3.5 Large (Replicate)' },
 } as const
 type BulkModelId = keyof typeof BULK_PRICE
 
@@ -143,6 +144,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [quickAddingPhrase, setQuickAddingPhrase] = useState(false)
   const [quickAddPhraseStatus, setQuickAddPhraseStatus] = useState<{ ok: boolean; message: string } | null>(null)
   const [bulkPhraseFilter, setBulkPhraseFilter] = useState('')
+  // Flash Designs (real-time) chaos library — independent state so picking a
+  // phrase for a real-time generation doesn't overwrite the bulk batch field.
+  const [flashDirection, setFlashDirection] = useState('')
+  const [flashPhraseFilter, setFlashPhraseFilter] = useState('')
   // Secondary (reverse-engineered) descriptor — populated by GPT-5 Vision
   // analyzing a chosen produced image. When `useSecondary` is on, generation
   // routes use this descriptor instead of the primary visualDescriptor.
@@ -242,6 +247,23 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       return hay.includes(q)
     })
   }, [chaosLibrary, bulkPhraseFilter])
+
+  /** Same filter logic but for the Flash Designs (real-time) row's phrase
+   * dropdown. Independent state so it doesn't interfere with bulk. */
+  const filteredFlashPhrases = useMemo(() => {
+    if (!chaosLibrary) return []
+    const q = flashPhraseFilter.trim().toLowerCase()
+    if (!q) return chaosLibrary.phrases
+    const tagLabelById = new Map(chaosLibrary.tags.map(t => [t.id, t.label.toLowerCase()]))
+    return chaosLibrary.phrases.filter(p => {
+      const hay = [
+        p.phrase,
+        p.description ?? '',
+        ...(p.tagIds ?? []).map(t => `${t} ${tagLabelById.get(t) ?? ''}`),
+      ].join(' ').toLowerCase()
+      return hay.includes(q)
+    })
+  }, [chaosLibrary, flashPhraseFilter])
 
   const result: FusionResult | null = useMemo(() => {
     if (!base || !blend) return null
@@ -616,6 +638,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
           chaos,
           chaosSweep,
           imageModel,
+          chaosDirection: flashDirection.trim() || undefined,
           // Override priority: secondary (if enabled + filled) > edited primary > stored default.
           visualDescriptor: (useSecondaryDescriptor && secondaryDescriptor.trim())
             ? secondaryDescriptor.trim()
@@ -1335,8 +1358,70 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                       {IMAGE_MODELS.find(m => m.id === imageModel)?.priceHint}
                     </span>
                   </div>
+
+                  {/* Chaos library controls — mirror of the bulk row so real-time
+                      generations can pick a phrase / new-add / set chaos direction. */}
+                  {chaosLibrary && (
+                    <div className="mt-2 flex items-center gap-1 flex-wrap">
+                      <input
+                        type="text"
+                        value={flashPhraseFilter}
+                        onChange={e => setFlashPhraseFilter(e.target.value)}
+                        placeholder="filter (e.g. dotwork, japanese)"
+                        disabled={generatingImages}
+                        className="text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400 w-[160px]"
+                      />
+                      <select
+                        value=""
+                        onChange={e => {
+                          const phrase = chaosLibrary.phrases.find(p => p.id === e.target.value)
+                          if (phrase) setFlashDirection(phrase.phrase)
+                        }}
+                        disabled={generatingImages || filteredFlashPhrases.length === 0}
+                        className="text-xs rounded border border-gray-300 px-2 py-1 bg-white max-w-[220px]"
+                        title="Pick a chaos phrase (fills the direction field)"
+                      >
+                        <option value="">
+                          {filteredFlashPhrases.length === chaosLibrary.phrases.length
+                            ? `Pick phrase (${chaosLibrary.phrases.length}) ▾`
+                            : `Pick phrase (${filteredFlashPhrases.length}/${chaosLibrary.phrases.length}) ▾`}
+                        </option>
+                        {chaosLibrary.categories.map(cat => {
+                          const inCat = filteredFlashPhrases.filter(p => p.categoryId === cat.id)
+                          if (inCat.length === 0) return null
+                          return (
+                            <optgroup key={cat.id} label={cat.label}>
+                              {inCat.map(p => {
+                                const summary = p.description ? `${p.phrase} — ${p.description}` : p.phrase
+                                const truncated = summary.length > 90 ? summary.slice(0, 87) + '…' : summary
+                                return <option key={p.id} value={p.id} title={summary}>{truncated}</option>
+                              })}
+                            </optgroup>
+                          )
+                        })}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowPhraseQuickAdd(v => !v)}
+                        disabled={generatingImages}
+                        title="Add a new phrase to the library"
+                        className="rounded border border-gray-300 text-xs px-2 py-1 bg-white text-gray-700 hover:border-gray-500"
+                      >
+                        + new
+                      </button>
+                      <input
+                        type="text"
+                        value={flashDirection}
+                        onChange={e => setFlashDirection(e.target.value.slice(0, 400))}
+                        placeholder="Chaos direction (optional inspiration)"
+                        disabled={generatingImages}
+                        className="flex-1 min-w-[180px] text-xs rounded border border-gray-300 px-2 py-1 bg-white text-gray-900 placeholder:text-gray-400"
+                      />
+                    </div>
+                  )}
+
                   <p className="mt-1 text-[11px] text-gray-500">
-                    Chaos sweep ramps chaos 0→100 across the {imageCount} image{imageCount === 1 ? '' : 's'} (pick 2+). Plain generate uses the slider value for every image.
+                    Chaos sweep ramps chaos 0→100 across the {imageCount} image{imageCount === 1 ? '' : 's'} (pick 2+). Plain generate uses the slider value for every image. Optional &quot;chaos direction&quot; layers an extra stylistic anchor on every prompt.
                   </p>
                   {imageError && <p className="mt-2 text-xs text-red-600">{imageError}</p>}
 
@@ -1370,6 +1455,9 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         </optgroup>
                         <optgroup label="OpenAI Batch">
                           <option value="openai/gpt-image-1">GPT Image 1</option>
+                        </optgroup>
+                        <optgroup label="Replicate (fan-out)">
+                          <option value="replicate/stability-ai/stable-diffusion-3.5-large">Stable Diffusion 3.5 Large</option>
                         </optgroup>
                       </select>
                       {chaosLibrary && (
