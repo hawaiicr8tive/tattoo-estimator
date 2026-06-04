@@ -51,13 +51,19 @@ export interface SubmitBatchOptions {
   chaosDirection?: string
 }
 
-/** Build the JSONL body the Gemini Batch API consumes. One line per request. */
+/** Build the JSONL body the Gemini Batch API consumes. One line per request.
+ * Each request explicitly asks for IMAGE modality so image-preview models
+ * actually produce an image instead of defaulting to text and silently
+ * returning empty content. */
 function buildBatchJsonl(prompts: string[]): string {
   return prompts
     .map((prompt, i) => JSON.stringify({
       key: `req_${i.toString().padStart(4, '0')}`,
       request: {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseModalities: ['IMAGE'],
+        },
       },
     }))
     .join('\n')
@@ -166,18 +172,24 @@ export async function pollOpenBatches(apiKey: string): Promise<PollResult[]> {
 
     try {
       const job = await ai.batches.get({ name: row.job_name })
-      next = mapJobState(typeof job.state === 'string' ? job.state : (job.state as { name?: string } | undefined)?.name)
+      const rawState = typeof job.state === 'string' ? job.state : (job.state as { name?: string } | undefined)?.name
+      next = mapJobState(rawState)
+      // Log the raw state from Google so we can spot unknown states (which
+      // would default to "pending" and look stuck forever).
+      console.log(`fusion batch ${row.id} (model=${row.model}) state=${rawState}`)
 
       if (next === 'succeeded' && row.added_image_count < row.count) {
         const added = await downloadAndAttach(ai, row, job)
         imagesAdded = added
       }
       if (next === 'failed' || next === 'expired' || next === 'cancelled') {
-        const errorObj = (job as { error?: { message?: string } }).error
+        const errorObj = (job as { error?: { message?: string; code?: number | string } }).error
         errMsg = errorObj?.message ?? 'Batch ended without success'
+        console.error(`fusion batch ${row.id} terminal-${next}:`, errorObj ?? '(no error detail)')
       }
     } catch (e) {
       errMsg = e instanceof Error ? e.message : 'Unknown poll error'
+      console.error(`fusion batch ${row.id} poll error:`, e)
       // Don't mark the row terminal on transient poll errors — let the next
       // cron tick retry. Only flip to failed after persistent failure detection,
       // which we can layer in later if we see real cases.
