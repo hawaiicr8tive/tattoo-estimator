@@ -9,14 +9,23 @@ const TABLE = 'fusion_batch_jobs'
 /** Models supported by the Gemini Batch API for image generation.
  * The two we expose mirror the real-time dropdown's two Gemini variants. */
 export const BATCH_IMAGE_MODELS = [
+  // Google Gemini Batch API
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', pricePerImage: 0.075 },
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', pricePerImage: 0.035 },
+  // OpenAI Batch API (requires OPENAI_API_KEY env var, separate from OpenRouter)
+  { id: 'openai/gpt-image-1', label: 'GPT Image 1 (OpenAI)', pricePerImage: 0.04 },
+  { id: 'openai/gpt-5-image',  label: 'GPT-5 Image (OpenAI)', pricePerImage: 0.05 },
 ] as const
 
 export type BatchImageModelId = (typeof BATCH_IMAGE_MODELS)[number]['id']
 
 export function isValidBatchModel(id: unknown): id is BatchImageModelId {
   return typeof id === 'string' && BATCH_IMAGE_MODELS.some(m => m.id === id)
+}
+
+/** True for batch models routed through OpenAI's Batch API rather than Google's. */
+export function isOpenAIBatchModel(model: string): boolean {
+  return model.startsWith('openai/')
 }
 
 export const BATCH_MIN_COUNT = 1
@@ -81,6 +90,13 @@ export async function submitFusionBatch(opts: SubmitBatchOptions): Promise<Batch
   if (opts.prompts.length < BATCH_MIN_COUNT || opts.prompts.length > BATCH_MAX_COUNT) {
     throw new Error(`Batch must be between ${BATCH_MIN_COUNT} and ${BATCH_MAX_COUNT} prompts`)
   }
+  if (isOpenAIBatchModel(opts.model)) {
+    return submitOpenAIBatch(opts)
+  }
+  return submitGeminiBatch(opts)
+}
+
+async function submitGeminiBatch(opts: SubmitBatchOptions): Promise<BatchJobRow> {
   const ai = new GoogleGenAI({ apiKey: opts.apiKey })
   const jsonl = buildBatchJsonl(opts.prompts)
   const blob = new Blob([jsonl], { type: 'application/jsonl' })
@@ -151,7 +167,7 @@ export interface PollResult {
  * a terminal job is a no-op; re-running on a succeeded job that already had
  * its images attached doesn't duplicate them (we check added_image_count).
  */
-export async function pollOpenBatches(apiKey: string): Promise<PollResult[]> {
+export async function pollOpenBatches(apiKey: string, openaiApiKey?: string): Promise<PollResult[]> {
   const db = getServiceClient()
   const { data: openJobs, error } = await db
     .from(TABLE)
@@ -171,21 +187,34 @@ export async function pollOpenBatches(apiKey: string): Promise<PollResult[]> {
     let errMsg: string | undefined
 
     try {
-      const job = await ai.batches.get({ name: row.job_name })
-      const rawState = typeof job.state === 'string' ? job.state : (job.state as { name?: string } | undefined)?.name
-      next = mapJobState(rawState)
-      // Log the raw state from Google so we can spot unknown states (which
-      // would default to "pending" and look stuck forever).
-      console.log(`fusion batch ${row.id} (model=${row.model}) state=${rawState}`)
-
-      if (next === 'succeeded' && row.added_image_count < row.count) {
-        const added = await downloadAndAttach(ai, row, job)
-        imagesAdded = added
-      }
-      if (next === 'failed' || next === 'expired' || next === 'cancelled') {
-        const errorObj = (job as { error?: { message?: string; code?: number | string } }).error
-        errMsg = errorObj?.message ?? 'Batch ended without success'
-        console.error(`fusion batch ${row.id} terminal-${next}:`, errorObj ?? '(no error detail)')
+      if (isOpenAIBatchModel(row.model)) {
+        if (!openaiApiKey) {
+          errMsg = 'OPENAI_API_KEY missing — cannot poll OpenAI batch'
+        } else {
+          const batch = await pollOpenAIBatch(openaiApiKey, row.job_name)
+          next = mapOpenAIStatus(batch.status)
+          console.log(`fusion batch ${row.id} (model=${row.model}) openai-status=${batch.status}`)
+          if (next === 'succeeded' && row.added_image_count < row.count) {
+            imagesAdded = await downloadAndAttachOpenAI(openaiApiKey, row, batch)
+          }
+          if (next === 'failed' || next === 'expired' || next === 'cancelled') {
+            errMsg = batch.errors?.data?.[0]?.message ?? `OpenAI batch ${next}`
+            console.error(`fusion batch ${row.id} terminal-${next}:`, batch.errors ?? '(no error detail)')
+          }
+        }
+      } else {
+        const job = await ai.batches.get({ name: row.job_name })
+        const rawState = typeof job.state === 'string' ? job.state : (job.state as { name?: string } | undefined)?.name
+        next = mapJobState(rawState)
+        console.log(`fusion batch ${row.id} (model=${row.model}) state=${rawState}`)
+        if (next === 'succeeded' && row.added_image_count < row.count) {
+          imagesAdded = await downloadAndAttach(ai, row, job)
+        }
+        if (next === 'failed' || next === 'expired' || next === 'cancelled') {
+          const errorObj = (job as { error?: { message?: string; code?: number | string } }).error
+          errMsg = errorObj?.message ?? 'Batch ended without success'
+          console.error(`fusion batch ${row.id} terminal-${next}:`, errorObj ?? '(no error detail)')
+        }
       }
     } catch (e) {
       errMsg = e instanceof Error ? e.message : 'Unknown poll error'
@@ -322,6 +351,215 @@ export async function listBatchJobs(fusionEntryId?: string): Promise<BatchJobRow
   const { data, error } = await q
   if (error) throw new Error(`Failed to list batch jobs: ${error.message}`)
   return (data as BatchJobRow[] | null) ?? []
+}
+
+/* ───────────────────────────────────────────────────────────────────────── *
+ *  OpenAI Batch API                                                          *
+ *  Different shape than Google's batch API but conceptually equivalent:      *
+ *    1. Upload JSONL                                                          *
+ *    2. Create batch                                                          *
+ *    3. Poll status                                                           *
+ *    4. Download output JSONL                                                 *
+ * ───────────────────────────────────────────────────────────────────────── */
+
+const OPENAI_API_BASE = 'https://api.openai.com/v1'
+const OPENAI_PREFIX = 'openai/'
+
+/** Build the JSONL OpenAI's batch API expects. One line per prompt, each with
+ * a custom_id (used to correlate output later) and a full image-generations
+ * request body. */
+function buildOpenAIBatchJsonl(prompts: string[], openaiModel: string): string {
+  return prompts
+    .map((prompt, i) => JSON.stringify({
+      custom_id: `req_${i.toString().padStart(4, '0')}`,
+      method: 'POST',
+      url: '/v1/images/generations',
+      body: {
+        model: openaiModel,
+        prompt,
+        size: '1024x1024',
+        quality: 'medium',
+        n: 1,
+      },
+    }))
+    .join('\n')
+}
+
+async function submitOpenAIBatch(opts: SubmitBatchOptions): Promise<BatchJobRow> {
+  const openaiModel = opts.model.slice(OPENAI_PREFIX.length) // 'gpt-image-1' or 'gpt-5-image'
+  const jsonl = buildOpenAIBatchJsonl(opts.prompts, openaiModel)
+
+  // 1) Upload the JSONL as a "batch" purpose file.
+  const formData = new FormData()
+  formData.append('purpose', 'batch')
+  formData.append('file', new Blob([jsonl], { type: 'application/jsonl' }), `fusion-${opts.fusionEntryId}-${Date.now()}.jsonl`)
+  const uploadRes = await fetch(`${OPENAI_API_BASE}/files`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${opts.apiKey}` },
+    body: formData,
+  })
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text().catch(() => '')
+    throw new Error(`OpenAI files upload failed (${uploadRes.status}): ${errText.slice(0, 500)}`)
+  }
+  const uploadData = await uploadRes.json() as { id?: string }
+  if (!uploadData.id) throw new Error('OpenAI files upload returned no file id')
+
+  // 2) Create the batch. completion_window must be '24h' for the discount.
+  const batchRes = await fetch(`${OPENAI_API_BASE}/batches`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${opts.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      input_file_id: uploadData.id,
+      endpoint: '/v1/images/generations',
+      completion_window: '24h',
+      metadata: { fusion_entry: opts.fusionEntryId },
+    }),
+  })
+  if (!batchRes.ok) {
+    const errText = await batchRes.text().catch(() => '')
+    throw new Error(`OpenAI batches.create failed (${batchRes.status}): ${errText.slice(0, 500)}`)
+  }
+  const batchData = await batchRes.json() as { id?: string }
+  if (!batchData.id) throw new Error('OpenAI batches.create returned no batch id')
+
+  // 3) Persist to fusion_batch_jobs. The job_name column stores the OpenAI
+  // batch id (their equivalent of Google's batch resource name).
+  const id = `fb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+  const db = getServiceClient()
+  const { data, error } = await db
+    .from(TABLE)
+    .insert({
+      id,
+      job_name: batchData.id,
+      fusion_entry_id: opts.fusionEntryId,
+      industry_id: opts.industryId,
+      model: opts.model,
+      count: opts.prompts.length,
+      chaos_direction: opts.chaosDirection?.trim() || null,
+      prompts_jsonl: jsonl,
+      status: 'pending',
+    })
+    .select()
+    .single()
+  if (error) throw new Error(`Failed to persist batch job: ${error.message}`)
+  return data as BatchJobRow
+}
+
+/** Map OpenAI's batch status names to our shared BatchJobStatus enum. */
+function mapOpenAIStatus(s: string | undefined): BatchJobStatus {
+  switch (s) {
+    case 'completed': return 'succeeded'
+    case 'failed': return 'failed'
+    case 'expired': return 'expired'
+    case 'cancelled':
+    case 'cancelling': return 'cancelled'
+    case 'validating':
+    case 'in_progress':
+    case 'finalizing':
+    default: return 'pending'
+  }
+}
+
+interface OpenAIBatchResponse {
+  id: string
+  status?: string
+  output_file_id?: string
+  error_file_id?: string
+  errors?: { object: string; data?: Array<{ message?: string }> }
+}
+
+async function pollOpenAIBatch(apiKey: string, jobName: string): Promise<OpenAIBatchResponse> {
+  const res = await fetch(`${OPENAI_API_BASE}/batches/${encodeURIComponent(jobName)}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`OpenAI batch get failed (${res.status}): ${errText.slice(0, 200)}`)
+  }
+  return res.json() as Promise<OpenAIBatchResponse>
+}
+
+/** Download a finished OpenAI batch's output file and upload every image to
+ * Supabase Storage. Returns the count of images successfully attached. */
+async function downloadAndAttachOpenAI(
+  apiKey: string,
+  row: BatchJobRow,
+  batchData: OpenAIBatchResponse,
+): Promise<number> {
+  const outputFileId = batchData.output_file_id
+  if (!outputFileId) throw new Error('Succeeded batch has no output file id')
+
+  const fileRes = await fetch(`${OPENAI_API_BASE}/files/${encodeURIComponent(outputFileId)}/content`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!fileRes.ok) throw new Error(`Failed to download OpenAI batch result (${fileRes.status})`)
+  const text = await fileRes.text()
+
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0)
+  const db = getServiceClient()
+  await db.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => {})
+
+  const uploaded: FusionImageRecord[] = []
+  const createdAtBase = Date.now()
+  const promptByKey = new Map<string, { prompt: string; chaos: number }>()
+  buildPromptKeyMap(row).forEach(({ key, prompt, chaos }) => promptByKey.set(key, { prompt, chaos }))
+
+  for (let i = 0; i < lines.length; i++) {
+    let parsed: {
+      custom_id?: string
+      response?: { body?: { data?: Array<{ b64_json?: string; url?: string }> } }
+      error?: { message?: string }
+    }
+    try { parsed = JSON.parse(lines[i]) } catch { continue }
+    if (parsed.error?.message) continue
+    const datum = parsed.response?.body?.data?.[0]
+    if (!datum) continue
+
+    let bytes: Buffer | null = null
+    let mime = 'image/png'
+    if (datum.b64_json) {
+      bytes = Buffer.from(datum.b64_json, 'base64')
+    } else if (datum.url) {
+      // Some models return a hosted URL — fetch it.
+      const imgRes = await fetch(datum.url)
+      if (imgRes.ok) {
+        bytes = Buffer.from(await imgRes.arrayBuffer())
+        const ct = imgRes.headers.get('content-type'); if (ct) mime = ct
+      }
+    }
+    if (!bytes) continue
+
+    const ext = mime === 'image/jpeg' ? 'jpg' : 'png'
+    const filename = `${row.fusion_entry_id}/${createdAtBase}-batch-${i}.${ext}`
+    const { error: uploadError } = await db.storage
+      .from(STORAGE_BUCKET)
+      .upload(filename, bytes, { contentType: mime, upsert: false })
+    if (uploadError) {
+      console.error('OpenAI batch image upload error:', uploadError)
+      continue
+    }
+    const { data: { publicUrl } } = db.storage.from(STORAGE_BUCKET).getPublicUrl(filename)
+    const meta = parsed.custom_id ? promptByKey.get(parsed.custom_id) : undefined
+    uploaded.push({
+      url: publicUrl,
+      prompt: meta?.prompt ?? `(OpenAI batch ${row.id} image ${i})`,
+      createdAt: new Date(createdAtBase + i).toISOString(),
+      model: row.model,
+      chaos: meta?.chaos,
+    })
+  }
+
+  if (uploaded.length > 0) {
+    const history = await loadFusionHistory()
+    const entry = history.find(e => e.id === row.fusion_entry_id)
+    const existingImages = entry?.images ?? []
+    await attachFusionImages(row.fusion_entry_id, [...existingImages, ...uploaded])
+  }
+  return uploaded.length
 }
 
 // Re-export so callers can use the JobState enum type if needed.

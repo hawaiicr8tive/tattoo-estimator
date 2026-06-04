@@ -73,7 +73,10 @@ const BULK_MAX = 50
 const BULK_PRICE = {
   'gemini-3-pro-image-preview':     { perImage: 0.075, label: 'Gemini 3 Pro Image' },
   'gemini-3.1-flash-image-preview': { perImage: 0.035, label: 'Nano Banana 2 (Flash)' },
+  'openai/gpt-image-1':             { perImage: 0.040, label: 'GPT Image 1 (OpenAI)' },
+  'openai/gpt-5-image':             { perImage: 0.050, label: 'GPT-5 Image (OpenAI)' },
 } as const
+type BulkModelId = keyof typeof BULK_PRICE
 
 function itemAppliesToIndustry(item: MotifItem, industryId: string): boolean {
   return item.industries.includes('*') || item.industries.includes(industryId)
@@ -130,7 +133,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [chaos, setChaos] = useState(0)
   // Bulk batch state — separate from real-time controls.
   const [bulkCount, setBulkCount] = useState(25)
-  const [bulkModel, setBulkModel] = useState<'gemini-3-pro-image-preview' | 'gemini-3.1-flash-image-preview'>('gemini-3-pro-image-preview')
+  const [bulkModel, setBulkModel] = useState<BulkModelId>('gemini-3-pro-image-preview')
   const [bulkDirection, setBulkDirection] = useState('')
   // Chaos-phrase library (for the dropdown next to the chaos-direction input).
   const [chaosLibrary, setChaosLibrary] = useState<ChaosLibrary | null>(null)
@@ -1358,12 +1361,18 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                       </select>
                       <select
                         value={bulkModel}
-                        onChange={e => setBulkModel(e.target.value as typeof bulkModel)}
+                        onChange={e => setBulkModel(e.target.value as BulkModelId)}
                         disabled={submittingBulk}
                         className="text-xs rounded border border-gray-300 px-2 py-1 bg-white"
                       >
-                        <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image</option>
-                        <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (Flash)</option>
+                        <optgroup label="Google (Gemini Batch)">
+                          <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image</option>
+                          <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (Flash)</option>
+                        </optgroup>
+                        <optgroup label="OpenAI Batch">
+                          <option value="openai/gpt-image-1">GPT Image 1</option>
+                          <option value="openai/gpt-5-image">GPT-5 Image</option>
+                        </optgroup>
                       </select>
                       {chaosLibrary && (
                         <div className="flex items-center gap-1">

@@ -10,6 +10,7 @@ import {
   BATCH_DEFAULT_COUNT,
   isValidBatchModel,
   listBatchJobs,
+  isOpenAIBatchModel,
   submitFusionBatch,
   type BatchImageModelId,
 } from '@/lib/trends/fusion-batch'
@@ -74,14 +75,6 @@ export async function POST(req: NextRequest) {
   const denied = requireAdmin(req)
   if (denied) return denied
 
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'GEMINI_API_KEY is not configured on the server.' },
-      { status: 500 },
-    )
-  }
-
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }
   const x = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
@@ -89,6 +82,19 @@ export async function POST(req: NextRequest) {
   const entryId = typeof x.entryId === 'string' ? x.entryId : ''
   const count = clamp(x.count, BATCH_MIN_COUNT, BATCH_MAX_COUNT, BATCH_DEFAULT_COUNT)
   const model: BatchImageModelId = isValidBatchModel(x.model) ? x.model : 'gemini-3-pro-image-preview'
+
+  // Pick the right API key based on provider. OpenAI batch models need a
+  // separate OPENAI_API_KEY (not the OpenRouter one — OR doesn't proxy
+  // batch endpoints).
+  const apiKey = isOpenAIBatchModel(model)
+    ? process.env.OPENAI_API_KEY
+    : (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY)
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: `${isOpenAIBatchModel(model) ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY'} is not configured on the server.` },
+      { status: 500 },
+    )
+  }
   const chaosDirection = typeof x.chaosDirection === 'string' ? x.chaosDirection.slice(0, 400) : ''
   const visualDescriptorOverride =
     typeof x.visualDescriptor === 'string' && x.visualDescriptor.trim().length > 0
