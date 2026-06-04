@@ -1,6 +1,6 @@
 import { GoogleGenAI, type JobState } from '@google/genai'
 import { getServiceClient } from '@/lib/supabase'
-import { attachFusionImages, loadFusionHistory } from './fusion-history'
+import { appendFusionImages } from './fusion-history'
 import type { FusionImageRecord } from './fusion-images'
 
 const STORAGE_BUCKET = 'fusion-images'
@@ -342,10 +342,9 @@ async function downloadAndAttach(
   }
 
   if (uploaded.length > 0) {
-    const history = await loadFusionHistory()
-    const entry = history.find(e => e.id === row.fusion_entry_id)
-    const existingImages = entry?.images ?? []
-    await attachFusionImages(row.fusion_entry_id, [...existingImages, ...uploaded])
+    // appendFusionImages re-reads the entry inside the function so concurrent
+    // batches don't overwrite each other's contributions.
+    await appendFusionImages(row.fusion_entry_id, uploaded)
   }
   return uploaded.length
 }
@@ -578,10 +577,9 @@ async function downloadAndAttachOpenAI(
   }
 
   if (uploaded.length > 0) {
-    const history = await loadFusionHistory()
-    const entry = history.find(e => e.id === row.fusion_entry_id)
-    const existingImages = entry?.images ?? []
-    await attachFusionImages(row.fusion_entry_id, [...existingImages, ...uploaded])
+    // appendFusionImages re-reads the entry inside the function so concurrent
+    // batches don't overwrite each other's contributions.
+    await appendFusionImages(row.fusion_entry_id, uploaded)
   }
   return uploaded.length
 }
@@ -797,10 +795,9 @@ async function pollAndAttachReplicate(apiKey: string, row: BatchJobRow): Promise
   }
 
   if (uploaded.length > 0) {
-    const history = await loadFusionHistory()
-    const entry = history.find(e => e.id === row.fusion_entry_id)
-    const existingImages = entry?.images ?? []
-    await attachFusionImages(row.fusion_entry_id, [...existingImages, ...uploaded])
+    // appendFusionImages re-reads the entry inside the function so concurrent
+    // batches don't overwrite each other's contributions.
+    await appendFusionImages(row.fusion_entry_id, uploaded)
   }
 
   // Roll up the batch status.

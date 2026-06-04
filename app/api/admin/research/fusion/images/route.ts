@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
-import { appendFusionHistory, attachFusionImages, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
+import { appendFusionHistory, appendFusionImages, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
 
 // Vercel Pro caps function execution at 300s; the previous default could clip
@@ -272,8 +272,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Merge: keep existing images + append new ones.
-  const allImages = [...(entry.images ?? []), ...uploaded]
-  const updated = await attachFusionImages(entryId, allImages)
+  // appendFusionImages re-reads inside the call so concurrent generations
+  // don't overwrite each other's images.
+  const updated = await appendFusionImages(entryId, uploaded)
 
   return NextResponse.json({
     entry: updated,

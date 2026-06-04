@@ -77,3 +77,34 @@ export async function attachFusionImages(entryId: string, images: FusionImageRec
   if (error) throw error
   return updated
 }
+
+/**
+ * Append-only version of attachFusionImages — re-reads the current entry
+ * inside the function so concurrent generations don't overwrite each other's
+ * contributions. Returns the entry with both existing and new images.
+ *
+ * This is what you want for any path that runs concurrently (real-time
+ * generations fired in quick succession, batch jobs polling in parallel, etc).
+ */
+export async function appendFusionImages(entryId: string, newImages: FusionImageRecord[]): Promise<FusionHistoryEntry | null> {
+  if (newImages.length === 0) {
+    const all = await loadFusionHistory()
+    return all.find(e => e.id === entryId) ?? null
+  }
+  const db = getServiceClient()
+  const existing = await loadFusionHistory()
+  const idx = existing.findIndex(e => e.id === entryId)
+  if (idx === -1) return null
+  const currentImages = existing[idx].images ?? []
+  const updated: FusionHistoryEntry = { ...existing[idx], images: [...currentImages, ...newImages] }
+  const next = existing.slice()
+  next[idx] = updated
+  const { error } = await db
+    .from('admin_config')
+    .upsert(
+      { key: HISTORY_KEY, data: next, updated_at: new Date().toISOString() },
+      { onConflict: 'key' },
+    )
+  if (error) throw error
+  return updated
+}
