@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   // if there are OpenAI batch jobs in the open queue).
   const geminiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY
   const openaiKey = process.env.OPENAI_API_KEY
+  const replicateKey = process.env.REPLICATE_API_TOKEN
   if (!geminiKey) {
     return NextResponse.json(
       { error: 'GEMINI_API_KEY is not configured on the server.' },
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const results = await pollOpenBatches(geminiKey, openaiKey)
+    const results = await pollOpenBatches(geminiKey, openaiKey, replicateKey)
     const summary = {
       polled: results.length,
       advanced: results.filter(r => r.previousStatus !== r.newStatus).length,

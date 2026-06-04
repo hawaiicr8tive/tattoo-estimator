@@ -17,6 +17,11 @@ export const BATCH_IMAGE_MODELS = [
   // models are batch-eligible. Users can still hit gpt-5-image via the
   // real-time OpenRouter path in the regular image-model dropdown.
   { id: 'openai/gpt-image-1', label: 'GPT Image 1 (OpenAI)', pricePerImage: 0.04 },
+  // Replicate "batch" — Replicate has no batch endpoint, but it's async by
+  // design so we fan-out N concurrent predictions and track them as one job.
+  // No 50% discount (price is the same as real-time), but the queue-based
+  // workflow still helps when you want N variations without watching the page.
+  { id: 'replicate/stability-ai/stable-diffusion-3.5-large', label: 'Stable Diffusion 3.5 Large (Replicate)', pricePerImage: 0.04 },
 ] as const
 
 export type BatchImageModelId = (typeof BATCH_IMAGE_MODELS)[number]['id']
@@ -28,6 +33,11 @@ export function isValidBatchModel(id: unknown): id is BatchImageModelId {
 /** True for batch models routed through OpenAI's Batch API rather than Google's. */
 export function isOpenAIBatchModel(model: string): boolean {
   return model.startsWith('openai/')
+}
+
+/** True for batch models running as fan-out parallel predictions on Replicate. */
+export function isReplicateBatchModel(model: string): boolean {
+  return model.startsWith('replicate/')
 }
 
 export const BATCH_MIN_COUNT = 1
@@ -94,6 +104,9 @@ export async function submitFusionBatch(opts: SubmitBatchOptions): Promise<Batch
   }
   if (isOpenAIBatchModel(opts.model)) {
     return submitOpenAIBatch(opts)
+  }
+  if (isReplicateBatchModel(opts.model)) {
+    return submitReplicateBatch(opts)
   }
   return submitGeminiBatch(opts)
 }
@@ -169,7 +182,7 @@ export interface PollResult {
  * a terminal job is a no-op; re-running on a succeeded job that already had
  * its images attached doesn't duplicate them (we check added_image_count).
  */
-export async function pollOpenBatches(apiKey: string, openaiApiKey?: string): Promise<PollResult[]> {
+export async function pollOpenBatches(apiKey: string, openaiApiKey?: string, replicateApiKey?: string): Promise<PollResult[]> {
   const db = getServiceClient()
   const { data: openJobs, error } = await db
     .from(TABLE)
@@ -189,7 +202,16 @@ export async function pollOpenBatches(apiKey: string, openaiApiKey?: string): Pr
     let errMsg: string | undefined
 
     try {
-      if (isOpenAIBatchModel(row.model)) {
+      if (isReplicateBatchModel(row.model)) {
+        if (!replicateApiKey) {
+          errMsg = 'REPLICATE_API_TOKEN missing — cannot poll Replicate batch'
+        } else {
+          const result = await pollAndAttachReplicate(replicateApiKey, row)
+          next = result.next
+          imagesAdded = result.imagesAdded
+          if (result.errMsg) errMsg = result.errMsg
+        }
+      } else if (isOpenAIBatchModel(row.model)) {
         if (!openaiApiKey) {
           errMsg = 'OPENAI_API_KEY missing — cannot poll OpenAI batch'
         } else {
@@ -562,6 +584,246 @@ async function downloadAndAttachOpenAI(
     await attachFusionImages(row.fusion_entry_id, [...existingImages, ...uploaded])
   }
   return uploaded.length
+}
+
+/* ───────────────────────────────────────────────────────────────────────── *
+ *  Replicate (fan-out parallel predictions)                                  *
+ *  Replicate has no batch endpoint, but its prediction API is async by       *
+ *  design — every call returns a prediction ID you can poll independently.   *
+ *  We fan out N parallel predictions at submit time and track all their IDs  *
+ *  as a single fusion_batch_jobs row. The job_name column holds a JSON       *
+ *  array of prediction IDs.                                                  *
+ * ───────────────────────────────────────────────────────────────────────── */
+
+const REPLICATE_API_BASE = 'https://api.replicate.com/v1'
+const REPLICATE_PREFIX = 'replicate/'
+
+async function submitReplicateBatch(opts: SubmitBatchOptions): Promise<BatchJobRow> {
+  const slug = opts.model.slice(REPLICATE_PREFIX.length) // e.g. "stability-ai/stable-diffusion-3.5-large"
+  const [owner, ...rest] = slug.split('/')
+  const name = rest.join('/')
+  if (!owner || !name) throw new Error(`Bad Replicate model id: ${slug}`)
+
+  // For non-official models we need the latest version hash. Fetch it once.
+  let versionId: string | undefined
+  const modelRes = await fetch(`${REPLICATE_API_BASE}/models/${owner}/${name}`, {
+    headers: { Authorization: `Token ${opts.apiKey}` },
+  })
+  if (modelRes.ok) {
+    const modelData = await modelRes.json()
+    versionId = modelData?.latest_version?.id
+  }
+
+  // Fire off all predictions in parallel — Replicate handles concurrency.
+  // We collect every prediction id even if some failed to create, so the
+  // poller can report partial counts accurately.
+  const predictionIds: string[] = []
+  const createErrors: string[] = []
+  await Promise.all(opts.prompts.map(async (prompt) => {
+    try {
+      // Use model endpoint when official, version endpoint as fallback for
+      // community models without a stable "official" tag.
+      const useModelEndpoint = !versionId
+      const url = useModelEndpoint
+        ? `${REPLICATE_API_BASE}/models/${owner}/${name}/predictions`
+        : `${REPLICATE_API_BASE}/predictions`
+      const body = useModelEndpoint
+        ? { input: { prompt } }
+        : { version: versionId, input: { prompt } }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Token ${opts.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        createErrors.push(`Create failed (${res.status}): ${errText.slice(0, 200)}`)
+        return
+      }
+      const data = await res.json() as { id?: string }
+      if (data.id) predictionIds.push(data.id)
+    } catch (e) {
+      createErrors.push(e instanceof Error ? e.message : 'unknown')
+    }
+  }))
+
+  if (predictionIds.length === 0) {
+    throw new Error(`All ${opts.prompts.length} Replicate predictions failed to create: ${createErrors.slice(0, 3).join('; ')}`)
+  }
+
+  // job_name stores the prediction IDs as a JSON array. Stripping any quotes
+  // / commas inside isn't a concern — Replicate ids are alphanumeric.
+  const id = `fb_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+  const db = getServiceClient()
+  const { data, error } = await db
+    .from(TABLE)
+    .insert({
+      id,
+      job_name: JSON.stringify(predictionIds),
+      fusion_entry_id: opts.fusionEntryId,
+      industry_id: opts.industryId,
+      model: opts.model,
+      count: opts.prompts.length,
+      chaos_direction: opts.chaosDirection?.trim() || null,
+      prompts_jsonl: opts.prompts
+        .map((prompt, i) => JSON.stringify({
+          key: `req_${i.toString().padStart(4, '0')}`,
+          request: { contents: [{ role: 'user', parts: [{ text: prompt }] }] },
+        }))
+        .join('\n'),
+      status: 'pending',
+    })
+    .select()
+    .single()
+  if (error) throw new Error(`Failed to persist batch job: ${error.message}`)
+  return data as BatchJobRow
+}
+
+interface ReplicatePrediction {
+  id: string
+  status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled'
+  output?: unknown
+  error?: string | null
+}
+
+function mapReplicateStatus(s: string | undefined): BatchJobStatus {
+  switch (s) {
+    case 'succeeded': return 'succeeded'
+    case 'failed': return 'failed'
+    case 'canceled': return 'cancelled'
+    case 'starting':
+    case 'processing':
+    default: return 'pending'
+  }
+}
+
+function extractReplicateImageUrl(output: unknown): string | null {
+  if (typeof output === 'string') return output
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      if (typeof item === 'string' && (item.startsWith('http') || item.startsWith('data:image/'))) return item
+    }
+  }
+  if (output && typeof output === 'object') {
+    const o = output as Record<string, unknown>
+    if (typeof o.image === 'string') return o.image
+    if (Array.isArray(o.images)) {
+      for (const item of o.images) {
+        if (typeof item === 'string') return item
+      }
+    }
+    if (typeof o.url === 'string') return o.url
+  }
+  return null
+}
+
+/** Poll every prediction in the Replicate batch in parallel, attach finished
+ * images, and roll up the overall batch status. Returns count of newly
+ * attached images. */
+async function pollAndAttachReplicate(apiKey: string, row: BatchJobRow): Promise<{ next: BatchJobStatus; imagesAdded: number; errMsg?: string }> {
+  let predictionIds: string[]
+  try { predictionIds = JSON.parse(row.job_name) as string[] }
+  catch { return { next: 'failed', imagesAdded: 0, errMsg: 'corrupt prediction-id list' } }
+
+  // Fetch every prediction status in parallel.
+  const predictions: (ReplicatePrediction | null)[] = await Promise.all(
+    predictionIds.map(async (id) => {
+      try {
+        const res = await fetch(`${REPLICATE_API_BASE}/predictions/${id}`, {
+          headers: { Authorization: `Token ${apiKey}` },
+        })
+        if (!res.ok) return null
+        return await res.json() as ReplicatePrediction
+      } catch { return null }
+    }),
+  )
+
+  const succeeded = predictions.filter(p => p?.status === 'succeeded')
+  const terminalFailed = predictions.filter(p => p && (p.status === 'failed' || p.status === 'canceled'))
+  const stillPending = predictions.filter(p => p && (p.status === 'starting' || p.status === 'processing'))
+
+  // Rebuild prompt-by-key map from the stored JSONL so we can attach
+  // metadata to each new image.
+  const promptMeta = buildPromptKeyMap(row)
+
+  // Upload + attach any newly succeeded predictions we haven't recorded yet.
+  // row.added_image_count is the count we've already attached on previous polls,
+  // so we skip the first N succeeded ones.
+  const db = getServiceClient()
+  await db.storage.createBucket(STORAGE_BUCKET, { public: true }).catch(() => {})
+  const newSucceeded = succeeded.slice(row.added_image_count)
+  const uploaded: FusionImageRecord[] = []
+  const createdAtBase = Date.now()
+  for (let i = 0; i < newSucceeded.length; i++) {
+    const pred = newSucceeded[i]
+    if (!pred) continue
+    const url = extractReplicateImageUrl(pred.output)
+    if (!url) continue
+    let bytes: Buffer
+    let mime = 'image/png'
+    if (url.startsWith('data:image/')) {
+      const m = url.match(/^data:(image\/[\w+.-]+);base64,(.+)$/)
+      if (!m) continue
+      bytes = Buffer.from(m[2], 'base64')
+      mime = m[1]
+    } else {
+      const imgRes = await fetch(url)
+      if (!imgRes.ok) continue
+      bytes = Buffer.from(await imgRes.arrayBuffer())
+      const ct = imgRes.headers.get('content-type'); if (ct) mime = ct
+    }
+    const ext = mime === 'image/jpeg' ? 'jpg' : 'png'
+    const slotIndex = row.added_image_count + i
+    const filename = `${row.fusion_entry_id}/${createdAtBase}-replicate-${slotIndex}.${ext}`
+    const { error: uploadError } = await db.storage
+      .from(STORAGE_BUCKET)
+      .upload(filename, bytes, { contentType: mime, upsert: false })
+    if (uploadError) {
+      console.error('Replicate batch image upload error:', uploadError)
+      continue
+    }
+    const { data: { publicUrl } } = db.storage.from(STORAGE_BUCKET).getPublicUrl(filename)
+    const meta = promptMeta[slotIndex]
+    uploaded.push({
+      url: publicUrl,
+      prompt: meta?.prompt ?? `(Replicate batch ${row.id} image ${slotIndex})`,
+      createdAt: new Date(createdAtBase + i).toISOString(),
+      model: row.model,
+      chaos: meta?.chaos,
+    })
+  }
+
+  if (uploaded.length > 0) {
+    const history = await loadFusionHistory()
+    const entry = history.find(e => e.id === row.fusion_entry_id)
+    const existingImages = entry?.images ?? []
+    await attachFusionImages(row.fusion_entry_id, [...existingImages, ...uploaded])
+  }
+
+  // Roll up the batch status.
+  let next: BatchJobStatus
+  let errMsg: string | undefined
+  if (stillPending.length > 0) {
+    next = 'pending'
+  } else if (succeeded.length === predictions.length) {
+    next = 'succeeded'
+  } else if (succeeded.length > 0) {
+    // Mix of succeeded + failed = treat as succeeded since user got partial
+    // results. The error column captures the failure count for context.
+    next = 'succeeded'
+    if (terminalFailed.length > 0) {
+      errMsg = `${terminalFailed.length}/${predictions.length} predictions failed`
+    }
+  } else {
+    next = 'failed'
+    errMsg = terminalFailed[0]?.error ?? 'All Replicate predictions failed'
+  }
+
+  console.log(`fusion batch ${row.id} (model=${row.model}) replicate succeeded=${succeeded.length}/${predictions.length} pending=${stillPending.length}`)
+  return { next, imagesAdded: uploaded.length, errMsg }
 }
 
 // Re-export so callers can use the JobState enum type if needed.
