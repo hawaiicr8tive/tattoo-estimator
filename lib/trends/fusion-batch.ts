@@ -12,9 +12,11 @@ export const BATCH_IMAGE_MODELS = [
   // Google Gemini Batch API
   { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image', pricePerImage: 0.075 },
   { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2 (Flash)', pricePerImage: 0.035 },
-  // OpenAI Batch API (requires OPENAI_API_KEY env var, separate from OpenRouter)
+  // OpenAI Batch API (requires OPENAI_API_KEY env var, separate from OpenRouter).
+  // gpt-5-image isn't accepted by /v1/batches yet — only gpt-image-1 + DALL-E
+  // models are batch-eligible. Users can still hit gpt-5-image via the
+  // real-time OpenRouter path in the regular image-model dropdown.
   { id: 'openai/gpt-image-1', label: 'GPT Image 1 (OpenAI)', pricePerImage: 0.04 },
-  { id: 'openai/gpt-5-image',  label: 'GPT-5 Image (OpenAI)', pricePerImage: 0.05 },
 ] as const
 
 export type BatchImageModelId = (typeof BATCH_IMAGE_MODELS)[number]['id']
