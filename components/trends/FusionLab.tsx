@@ -74,7 +74,6 @@ const BULK_PRICE = {
   'gemini-3-pro-image-preview':     { perImage: 0.075, label: 'Gemini 3 Pro Image' },
   'gemini-3.1-flash-image-preview': { perImage: 0.035, label: 'Nano Banana 2 (Flash)' },
   'openai/gpt-image-1':             { perImage: 0.040, label: 'GPT Image 1 (OpenAI)' },
-  'openai/gpt-5-image':             { perImage: 0.050, label: 'GPT-5 Image (OpenAI)' },
 } as const
 type BulkModelId = keyof typeof BULK_PRICE
 
@@ -1371,7 +1370,6 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         </optgroup>
                         <optgroup label="OpenAI Batch">
                           <option value="openai/gpt-image-1">GPT Image 1</option>
-                          <option value="openai/gpt-5-image">GPT-5 Image</option>
                         </optgroup>
                       </select>
                       {chaosLibrary && (
