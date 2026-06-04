@@ -128,7 +128,11 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [researchError, setResearchError] = useState<string | null>(null)
   const [imageCount, setImageCount] = useState(4)
   const [imageModel, setImageModel] = useState<ImageModelId>('gemini-3.1-flash-image-preview')
-  const [generatingImages, setGeneratingImages] = useState(false)
+  // Real-time generations are fire-and-forget — we track an in-flight counter
+  // instead of a boolean so the user can fire multiple back-to-back without
+  // waiting for each to complete. Each call increments/decrements the counter.
+  const [inFlightGenerations, setInFlightGenerations] = useState(0)
+  const generatingImages = false  // legacy alias used elsewhere; kept for back-compat in the JSX disabled props (now always false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [chaos, setChaos] = useState(0)
   // Bulk batch state — separate from real-time controls.
@@ -604,7 +608,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
 
   async function handleGenerateImages(chaosSweep = false) {
     if (!analysis) return
-    setGeneratingImages(true)
+    setInFlightGenerations(c => c + 1)
     setImageError(null)
     try {
       // Send the full entry as a snapshot fallback. The server prefers a
@@ -667,6 +671,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       const payload = data as { entry: FusionHistoryEntry | null; addedCount?: number; requestedCount?: number; failures?: { index: number; chaos?: number; error: string }[] }
       const updated = payload.entry
       if (updated) {
+        // updated.images is the FULL appended list from the server (existing +
+        // newly added by this call). With appendFusionImages on the backend
+        // doing the read-then-write atomically, this is race-safe across
+        // concurrent in-flight generations.
         setAnalysis(prev => (prev ? { ...prev, images: updated.images ?? [] } : prev))
       }
       // Partial success: show a soft warning, don't block the UI.
@@ -679,7 +687,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
     } catch (e) {
       setImageError(e instanceof Error ? e.message : 'Image generation failed')
     } finally {
-      setGeneratingImages(false)
+      setInFlightGenerations(c => Math.max(0, c - 1))
     }
   }
 
@@ -1340,15 +1348,14 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <button
                       type="button"
                       onClick={() => handleGenerateImages(false)}
-                      disabled={generatingImages}
-                      className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+                      className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90"
                     >
-                      {generatingImages ? 'Generating…' : 'Generate flash designs'}
+                      Generate flash designs
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGenerateImages(true)}
-                      disabled={generatingImages || imageCount < 2}
+                      disabled={imageCount < 2}
                       title="Generate the batch with chaos ramped from 0 to 100 across the images"
                       className="rounded border border-[#7B0000] text-[#7B0000] text-xs px-3 py-1.5 hover:bg-[#7B0000]/5 disabled:opacity-50"
                     >
@@ -1357,6 +1364,15 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <span className="text-[10px] text-gray-500">
                       {IMAGE_MODELS.find(m => m.id === imageModel)?.priceHint}
                     </span>
+                    {inFlightGenerations > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                        title={`${inFlightGenerations} generation${inFlightGenerations === 1 ? '' : 's'} in flight — fire more if you want, images will append as each finishes`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        {inFlightGenerations} in flight
+                      </span>
+                    )}
                   </div>
 
                   {/* Chaos library controls — mirror of the bulk row so real-time
