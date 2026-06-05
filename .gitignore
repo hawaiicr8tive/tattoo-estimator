@@ -41,14 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# flash-crop download artifact (the source lives in flash-crop/)
-flash-crop.zip
-
-# sharp tester download artifact
-flash-cropper-sharp.zip
-
-# kiosk smart-crop deliverable (source lives in the tattoo-flash-kiosk app)
-smart-crop-kiosk.zip
-
-# kiosk docs deliverable (source lives in the tattoo-flash-kiosk app)
-kiosk-docs.zip
+# Delivery/build artifacts generated in this session (sources live elsewhere:
+# flash-crop/, the tattoo-flash-kiosk app, etc.) — never committed here.
+*.zip
