@@ -22,9 +22,14 @@ import {
 import { fuseStyles } from '@/lib/trends/engine'
 
 const STORAGE_BUCKET = 'fusion-images'
-const MAX_PER_REQUEST = 20
-/** Soft per-day cap to keep accidental loops cheap. Override via env var. */
-const MAX_PER_DAY = Number(process.env.FUSION_IMAGE_DAILY_CAP ?? '200')
+// Bumped from 20 to 50 so the user can drive batch-volume Flash runs through
+// the real-time endpoint while Google's Batch API is stuck (Jun 2026 outage).
+// Pro Image still self-caps via Google's 250 RPD; this just lifts our wrapper.
+const MAX_PER_REQUEST = 50
+/** Soft per-day cap to keep accidental loops cheap. Override via env var.
+ * Default bumped to 800 to give Flash (1K RPD) headroom; Pro is capped by
+ * Google at 250 RPD anyway so this won't let it over-spend. */
+const MAX_PER_DAY = Number(process.env.FUSION_IMAGE_DAILY_CAP ?? '800')
 
 function clamp(n: unknown, min: number, max: number, fallback: number): number {
   const v = typeof n === 'number' ? n : Number(n)
@@ -230,8 +235,11 @@ export async function POST(req: NextRequest) {
   let batch
   try {
     // Replicate's free/low-volume tier rate-limits to ~6 req/min with burst=1.
-    // Running 3 in parallel guarantees throttling. Keep Gemini/OR at 3.
-    const concurrency = isReplicateImageModel(imageModel) ? 1 : 3
+    // Running 3 in parallel guarantees throttling. Gemini Flash can handle 8
+    // (1K RPD + 100 RPM cap on Tier 1 = lots of headroom). Pro stays at 3 —
+    // 250 RPD + 20 RPM cap means high concurrency just trips 429.
+    const isGeminiFlash = imageModel === 'gemini-3.1-flash-image-preview'
+    const concurrency = isReplicateImageModel(imageModel) ? 1 : (isGeminiFlash ? 8 : 3)
     batch = await generateBatchWithConcurrency({ apiKey, prompts, model: imageModel, concurrency })
   } catch (e) {
     console.error('fusion image gen error:', e)
