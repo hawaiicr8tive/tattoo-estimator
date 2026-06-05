@@ -208,6 +208,7 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
   const [batchJobs, setBatchJobs] = useState<BatchJobRow[]>([])
   const [pollingBatches, setPollingBatches] = useState(false)
   const [pollSummary, setPollSummary] = useState<string | null>(null)
+  const [cancellingBatches, setCancellingBatches] = useState(false)
   // Quick-add for the motif library — one category + comma-separated items.
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newItemsCsv, setNewItemsCsv] = useState('')
@@ -821,6 +822,49 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
       setPollSummary(e instanceof Error ? e.message : 'Poll failed')
     } finally {
       setPollingBatches(false)
+    }
+  }
+
+  /**
+   * Cancel every pending/running Gemini batch when Google's queue is stuck.
+   * After cancel, the rows are marked cancelled locally even if Google's API
+   * never ack'd — a stuck-pending batch is dead to us either way. Resubmit
+   * on Flash afterward; it's usually faster than Pro under load.
+   */
+  async function handleCancelStuck() {
+    if (cancellingBatches) return
+    const openCount = batchJobs.filter(j => j.status === 'pending' || j.status === 'running').length
+    if (openCount === 0) {
+      setPollSummary('No open batches to cancel.')
+      return
+    }
+    if (!window.confirm(`Cancel ${openCount} open Gemini batch${openCount === 1 ? '' : 'es'}? This can't be undone — you'll need to resubmit if you want them.`)) {
+      return
+    }
+    setCancellingBatches(true)
+    setPollSummary(null)
+    try {
+      const res = await fetch('/api/admin/research/fusion/images/batch/cancel', { method: 'POST' })
+      const data: unknown = await res.json().catch(() => null)
+      if (!res.ok || data === null) {
+        const msg = (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string')
+          ? (data as { error: string }).error
+          : `Cancel failed (HTTP ${res.status})`
+        throw new Error(msg)
+      }
+      const summary = data as { cancelled?: number; googleAcked?: number; googleErrored?: number }
+      const cancelled = summary.cancelled ?? 0
+      const acked = summary.googleAcked ?? 0
+      setPollSummary(
+        cancelled === 0
+          ? 'No open batches to cancel.'
+          : `Cancelled ${cancelled} batch${cancelled === 1 ? '' : 'es'} · ${acked} ack'd by Google`,
+      )
+      await refreshBatchJobs()
+    } catch (e) {
+      setPollSummary(e instanceof Error ? e.message : 'Cancel failed')
+    } finally {
+      setCancellingBatches(false)
     }
   }
 
@@ -1616,6 +1660,15 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                         className="rounded border border-[#7B0000] text-[#7B0000] text-xs px-3 py-1.5 hover:bg-[#7B0000]/5 disabled:opacity-50"
                       >
                         {pollingBatches ? 'Checking…' : 'Check now'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelStuck}
+                        disabled={cancellingBatches}
+                        title="Cancel every pending/running Gemini batch — use this when Google's queue is stuck for hours and you want to resubmit on Flash"
+                        className="rounded border border-rose-400 text-rose-600 text-xs px-3 py-1.5 hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        {cancellingBatches ? 'Cancelling…' : 'Cancel stuck'}
                       </button>
                       <span className="text-[10px] text-gray-500 tabular-nums">
                         ≈ ${(bulkCount * BULK_PRICE[bulkModel].perImage).toFixed(2)}

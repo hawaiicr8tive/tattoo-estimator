@@ -265,6 +265,63 @@ export async function pollOpenBatches(apiKey: string, openaiApiKey?: string, rep
   return results
 }
 
+export interface CancelResult {
+  jobId: string
+  jobName: string
+  ok: boolean
+  error?: string
+}
+
+/**
+ * Cancel every pending/running Gemini batch (Google's queue gets stuck under
+ * load — when it does, the only recovery is to cancel + resubmit). Marks the
+ * row as cancelled regardless of whether Google ack'd, since a stuck-pending
+ * job is effectively dead to us anyway. Skips OpenAI/Replicate rows (those
+ * have their own cancel paths and aren't the failure mode you hit today).
+ */
+export async function cancelOpenGeminiBatches(apiKey: string): Promise<CancelResult[]> {
+  const db = getServiceClient()
+  const { data: openJobs, error } = await db
+    .from(TABLE)
+    .select('*')
+    .in('status', ['pending', 'running'])
+    .order('created_at', { ascending: true })
+    .limit(50)
+  if (error) throw new Error(`Failed to load open batch jobs: ${error.message}`)
+
+  const ai = new GoogleGenAI({ apiKey })
+  const results: CancelResult[] = []
+
+  for (const row of (openJobs as BatchJobRow[] | null) ?? []) {
+    // Skip non-Gemini rows — OpenAI / Replicate batches aren't the stuck ones.
+    if (isOpenAIBatchModel(row.model) || isReplicateBatchModel(row.model)) continue
+
+    let ok = true
+    let errMsg: string | undefined
+    try {
+      await ai.batches.cancel({ name: row.job_name })
+    } catch (e) {
+      // Even if Google says "already done" or "not found", we still mark the
+      // row cancelled locally — a stuck-pending job we can't reach is dead.
+      ok = false
+      errMsg = e instanceof Error ? e.message : 'cancel failed'
+    }
+
+    await db
+      .from(TABLE)
+      .update({
+        status: 'cancelled',
+        error: errMsg ?? 'cancelled by user',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', row.id)
+
+    results.push({ jobId: row.id, jobName: row.job_name, ok, error: errMsg })
+  }
+
+  return results
+}
+
 /**
  * Download the result JSONL of a succeeded batch, decode each image, upload to
  * Supabase Storage, and append to the fusion entry's image array.
