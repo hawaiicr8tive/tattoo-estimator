@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import JSZip from 'jszip'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
 
 const STORAGE_BUCKET = 'fusion-images'
@@ -24,8 +24,8 @@ export const maxDuration = 300
  * fits inside the 300s Vercel cap even for 500-image archives.
  */
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:library')
+  if ('error' in guard) return guard.error
 
   let body: unknown
   try {

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 export default function LoginForm() {
+  const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -14,14 +15,17 @@ export default function LoginForm() {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw }),
+        // Email is optional: leaving it blank signs in the built-in
+        // ADMIN_PASSWORD owner, which is how this form worked before
+        // per-user accounts existed.
+        body: JSON.stringify({ email: email.trim() || undefined, password: pw }),
       })
       if (res.ok) {
         // Reload so the server-rendered layout sees the new cookie.
         window.location.reload()
       } else {
         const data = await res.json()
-        setError(data.error ?? 'Incorrect password')
+        setError(data.error ?? 'Incorrect email or password')
       }
     } catch {
       setError('Connection error — try again')
@@ -38,15 +42,25 @@ export default function LoginForm() {
             <span className="text-[var(--brand-primary)] text-xl">🔒</span>
           </div>
           <h1 className="text-xl font-black text-[#0A0A0A]">Style Prediction Model</h1>
-          <p className="text-sm text-[#555555] mt-1">Enter the admin password to continue</p>
+          <p className="text-sm text-[#555555] mt-1">Sign in to continue</p>
         </div>
+        <input
+          type="email"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setError(null) }}
+          onKeyDown={e => e.key === 'Enter' && handleLogin()}
+          placeholder="Email"
+          autoComplete="username"
+          autoFocus
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent mb-2"
+        />
         <input
           type="password"
           value={pw}
           onChange={e => { setPw(e.target.value); setError(null) }}
           onKeyDown={e => e.key === 'Enter' && handleLogin()}
           placeholder="Password"
-          autoFocus
+          autoComplete="current-password"
           className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-[#0A0A0A] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-transparent mb-3"
         />
         {error && <p className="text-xs text-red-600 mb-3">{error}</p>}

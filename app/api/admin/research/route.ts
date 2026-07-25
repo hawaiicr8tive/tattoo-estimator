@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { isOpenRouterModel, isValidModel, runResearch, type ResearchModelId } from '@/lib/trends/ai-research'
 import { loadIndustryDataset } from '@/lib/trends/store'
 import { appendHistory, loadHistory, markApplied, type ResearchHistoryEntry } from '@/lib/trends/research-history'
@@ -10,15 +10,15 @@ function newId(): string {
 }
 
 export async function GET(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:research')
+  if ('error' in guard) return guard.error
   const history = await loadHistory()
   return NextResponse.json({ history })
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:research')
+  if ('error' in guard) return guard.error
 
   let body: unknown
   try {

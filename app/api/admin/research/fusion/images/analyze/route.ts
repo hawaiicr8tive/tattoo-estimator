@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 
 export const maxDuration = 60
 
@@ -14,8 +14,8 @@ export const maxDuration = 60
  * extracted prompt as the override descriptor for the next generation batch.
  */
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'images:generate')
+  if ('error' in guard) return guard.error
 
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {

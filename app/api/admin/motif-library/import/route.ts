@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { mergeImportedItems } from '@/lib/trends/motif-store'
 import type { MotifCategory, MotifItem } from '@/lib/trends/motif-library'
 
@@ -97,8 +97,8 @@ function slug(s: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:trends')
+  if ('error' in guard) return guard.error
 
   let csv: string | null = null
   const contentType = req.headers.get('content-type') ?? ''

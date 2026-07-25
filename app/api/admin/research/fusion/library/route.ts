@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
 import { loadFusionHistory } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
@@ -39,8 +39,8 @@ export interface LibraryImage {
  * newest-first.
  */
 export async function GET(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:library')
+  if ('error' in guard) return guard.error
 
   const db = getServiceClient()
 

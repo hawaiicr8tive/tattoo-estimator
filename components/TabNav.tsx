@@ -3,18 +3,24 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import AccentPicker from './AccentPicker'
+import { PAGE_ORDER, type Permission } from '@/lib/permissions'
 
-const TABS = [
-  { href: '/',         label: 'Dashboard' },
-  { href: '/data',     label: 'Trends' },
-  { href: '/research', label: 'AI Research' },
-  { href: '/library',  label: 'Library' },
-  { href: '/phrases',  label: 'Phrases' },
-] as const
+interface Props {
+  /** Effective permissions of the signed-in user, resolved server-side. */
+  permissions: Permission[]
+  displayName: string
+}
 
-export default function TabNav() {
+/**
+ * Tabs the user lacks permission for are omitted entirely rather than shown
+ * disabled, so nobody is offered a page they can't open. Hiding a tab is
+ * presentation only — every page re-checks server-side.
+ */
+export default function TabNav({ permissions, displayName }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const granted = new Set(permissions)
+  const tabs = PAGE_ORDER.filter(tab => granted.has(tab.permission))
 
   async function handleSignOut() {
     await fetch('/api/admin/auth', { method: 'DELETE' }).catch(() => {})
@@ -32,6 +38,12 @@ export default function TabNav() {
           </span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <span
+            className="text-xs text-[var(--brand-text-mid)] truncate max-w-[10rem] hidden sm:inline"
+            title={displayName}
+          >
+            {displayName}
+          </span>
           <AccentPicker />
           <button
             type="button"
@@ -53,7 +65,7 @@ export default function TabNav() {
       </div>
       <div className="mx-auto max-w-7xl px-3 sm:px-4">
         <nav className="flex gap-0 overflow-x-auto" aria-label="Primary">
-          {TABS.map(tab => {
+          {tabs.map(tab => {
             const active = pathname === tab.href
             return (
               <Link

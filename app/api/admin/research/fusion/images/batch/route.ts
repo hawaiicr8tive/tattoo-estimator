@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { loadFusionHistory, appendFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
 import { fuseStyles } from '@/lib/trends/engine'
@@ -59,8 +59,8 @@ function readEntrySnapshot(v: unknown): FusionHistoryEntry | null {
 }
 
 export async function GET(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:dashboard')
+  if ('error' in guard) return guard.error
   const url = new URL(req.url)
   const fusionEntryId = url.searchParams.get('fusionEntryId') ?? undefined
   try {
@@ -73,8 +73,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'images:bulk')
+  if ('error' in guard) return guard.error
 
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }

@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plain CommonJS node scripts and the JS they compile against — the Next
+    // app rules (JSX, react-hooks, browser globals) don't apply to them.
+    "tests/**",
+    ".test-build/**",
   ]),
 ]);
 

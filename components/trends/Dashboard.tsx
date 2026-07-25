@@ -14,9 +14,19 @@ interface Props {
   datasets: IndustryDataset[]
   defaultIndustry: string
   currentYear: number
+  /** `images:generate` — may spend credits on real-time generation. */
+  canGenerate: boolean
+  /** `images:bulk` — may queue and cancel bulk batch jobs. */
+  canBulk: boolean
 }
 
-export default function Dashboard({ datasets, defaultIndustry, currentYear }: Props) {
+export default function Dashboard({
+  datasets,
+  defaultIndustry,
+  currentYear,
+  canGenerate,
+  canBulk,
+}: Props) {
   const [industryId, setIndustryId] = useState(defaultIndustry)
   const dataset = datasets.find(d => d.industry.id === industryId) ?? datasets[0]
   const [highlightId, setHighlightId] = useState<string | null>(null)
@@ -140,7 +150,13 @@ export default function Dashboard({ datasets, defaultIndustry, currentYear }: Pr
                 Blend two strands and tune the social-media accelerant and anomaly sliders to forecast a style that isn&apos;t on the radar yet.
               </p>
             </div>
-            <FusionLab styles={dataset.styles} currentYear={currentYear} industryId={dataset.industry.id} />
+            <FusionLab
+              styles={dataset.styles}
+              currentYear={currentYear}
+              industryId={dataset.industry.id}
+              canGenerate={canGenerate}
+              canBulk={canBulk}
+            />
           </section>
         </>
       )}

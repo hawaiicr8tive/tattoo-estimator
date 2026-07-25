@@ -6,7 +6,8 @@
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsc -p tests/tsconfig.json && node tests/auth.test.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
