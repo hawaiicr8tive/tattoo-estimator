@@ -52,22 +52,42 @@ function reqWith(token) {
     assert.ok(p.has('page:dashboard') && p.has('page:trends') && p.has('page:library'))
   })
 
-  await test('member can generate but not bulk or manage users', () => {
+  await test('member gets everything except user management', () => {
+    // The intended shape for a teammate account: same as the owner, with the
+    // Users area in Controls the only thing withheld.
     const p = perms.resolvePermissions({ role: 'member' })
-    assert.ok(p.has('images:generate'))
-    assert.ok(p.has('library:curate'))
-    assert.ok(!p.has('images:bulk'))
-    assert.ok(!p.has('users:manage'))
+    for (const permission of perms.PERMISSIONS) {
+      if (permission === 'users:manage') continue
+      assert.ok(p.has(permission), `member is missing ${permission}`)
+    }
+    assert.ok(!p.has('users:manage'), 'member can manage users')
   })
 
   await test('a new member sees every page but not user management', () => {
-    // The intended shape for a teammate account: same pages as the owner, with
-    // the Users area in Controls the only thing withheld.
     const p = perms.resolvePermissions({ role: 'member' })
     for (const page of perms.PAGE_ORDER) {
       assert.ok(p.has(page.permission), `member cannot reach ${page.href}`)
     }
     assert.ok(!p.has('users:manage'), 'member can manage users')
+  })
+
+  await test('any single permission can be switched off for one member', () => {
+    // Mirrors what the Users UI writes when a checkbox is unticked: a revoke
+    // for a permission the role grants.
+    for (const permission of perms.ROLE_DEFAULTS.member) {
+      const p = perms.resolvePermissions({ role: 'member', revoke: [permission] })
+      assert.ok(!p.has(permission), `${permission} survived being switched off`)
+      // Switching one thing off must not disturb anything else.
+      for (const other of perms.ROLE_DEFAULTS.member) {
+        if (other === permission) continue
+        assert.ok(p.has(other), `switching off ${permission} also removed ${other}`)
+      }
+    }
+  })
+
+  await test('user management can be switched on for one member', () => {
+    const p = perms.resolvePermissions({ role: 'member', grant: ['users:manage'] })
+    assert.ok(p.has('users:manage'))
   })
 
   await test('the owner reaches every page and user management', () => {

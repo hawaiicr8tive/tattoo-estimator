@@ -49,12 +49,14 @@ Each user has a role, which sets a baseline, plus optional per-user overrides:
 | Role | Baseline |
 |---|---|
 | **Admin** | Everything, including user management |
-| **Member** | All pages, single-image generation, library curation — no bulk batches |
+| **Member** | Everything except user management |
 | **Guest** | Read-only: Dashboard, Trends, Library |
 
-Individual permissions can be granted or revoked per user from **Controls →
-Users** — click a permission to cycle it between inheriting the role, an
-explicit grant, and an explicit revoke. A revoke always beats a grant.
+The role is only a starting point. Every permission is an on/off switch per
+person under **Controls → Users** — expand a user and tick or untick anything.
+An override is only stored when it differs from the role, so switching a
+permission back to its role value clears the override rather than pinning it,
+and **Reset to … defaults** drops all of a user's overrides at once.
 
 Tabs a user can't access are hidden from the nav, and every page and API route
 re-checks server-side, so hiding a tab is presentation rather than enforcement.

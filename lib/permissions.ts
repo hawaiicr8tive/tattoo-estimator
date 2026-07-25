@@ -43,8 +43,8 @@ export const PERMISSION_META: Record<Permission, { label: string; description: s
 export const ROLE_DEFAULTS: Record<Role, readonly Permission[]> = {
   // Full access, including user management.
   admin: PERMISSIONS,
-  // Day-to-day operator: every page and single-image generation, but no
-  // expensive bulk batches and no user management.
+  // Day-to-day operator: everything the owner can do except manage users.
+  // Individual permissions can still be switched off per person.
   member: [
     'page:dashboard',
     'page:trends',
@@ -52,6 +52,7 @@ export const ROLE_DEFAULTS: Record<Role, readonly Permission[]> = {
     'page:library',
     'page:controls',
     'images:generate',
+    'images:bulk',
     'library:curate',
   ],
   // Read-only viewer: can look at trends and the existing library, but cannot
@@ -61,7 +62,7 @@ export const ROLE_DEFAULTS: Record<Role, readonly Permission[]> = {
 
 export const ROLE_META: Record<Role, { label: string; description: string }> = {
   admin:  { label: 'Admin',  description: 'Full access, including user management.' },
-  member: { label: 'Member', description: 'All pages, single-image generation, and library curation. No bulk batches.' },
+  member: { label: 'Member', description: 'Everything except managing users.' },
   guest:  { label: 'Guest',  description: 'Read-only: dashboard, trends, and library.' },
 }
 

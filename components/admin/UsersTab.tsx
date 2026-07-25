@@ -157,25 +157,29 @@ export default function UsersTab() {
   }
 
   /**
-   * Cycles a permission between three states rather than a plain on/off, so an
-   * admin can express "follow the role" separately from an explicit yes or no.
+   * Switches a single permission on or off for one user.
+   *
+   * An override is only stored when it differs from what the role already says,
+   * so switching a permission back to its role value clears the override rather
+   * than pinning it. That keeps the checkbox a plain on/off — no third state to
+   * click through — while still letting a role change move anything the admin
+   * hasn't explicitly decided.
    */
-  function togglePermission(user: PublicUser, permission: Permission) {
+  function setPermission(user: PublicUser, permission: Permission, on: boolean) {
     const fromRole = ROLE_DEFAULTS[user.role].includes(permission)
-    const granted = user.grant.includes(permission)
-    const revoked = user.revoke.includes(permission)
+    const grant = user.grant.filter(p => p !== permission)
+    const revoke = user.revoke.filter(p => p !== permission)
 
-    let grant = user.grant.filter(p => p !== permission)
-    let revoke = user.revoke.filter(p => p !== permission)
+    if (on && !fromRole) grant.push(permission)
+    if (!on && fromRole) revoke.push(permission)
 
-    if (granted || revoked) {
-      // Explicit override → back to inheriting from the role.
-    } else if (fromRole) {
-      revoke = [...revoke, permission]
-    } else {
-      grant = [...grant, permission]
-    }
-    void patch(user, { grant, revoke }, `Updated ${user.email}`)
+    const label = PERMISSION_META[permission].label
+    void patch(user, { grant, revoke }, `${on ? 'Enabled' : 'Disabled'} ${label} for ${user.email}`)
+  }
+
+  /** Drops every override so the user follows their role again. */
+  function resetToRole(user: PublicUser) {
+    void patch(user, { grant: [], revoke: [] }, `${user.email} now follows the ${ROLE_META[user.role].label} role`)
   }
 
   const sorted = useMemo(
@@ -325,7 +329,7 @@ export default function UsersTab() {
                               type="checkbox"
                               checked={on}
                               disabled={busy}
-                              onChange={() => togglePermission(user, permission)}
+                              onChange={e => setPermission(user, permission, e.target.checked)}
                               className="mt-0.5 cursor-pointer"
                             />
                             <span className="min-w-0">
@@ -334,9 +338,9 @@ export default function UsersTab() {
                                 {overridden && (
                                   <span
                                     className="ml-1.5 text-[10px] text-[var(--brand-primary)]"
-                                    title="Overridden for this user — click twice to go back to the role default"
+                                    title={`Set for this user, overriding the ${ROLE_META[user.role].label} role default`}
                                   >
-                                    override
+                                    custom
                                   </span>
                                 )}
                               </span>
@@ -349,6 +353,17 @@ export default function UsersTab() {
                       })}
                     </div>
                   ))}
+
+                  {(user.grant.length > 0 || user.revoke.length > 0) && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => resetToRole(user)}
+                      className="text-[11px] text-[var(--brand-text-mid)] hover:text-[var(--brand-text)] underline cursor-pointer disabled:opacity-60"
+                    >
+                      Reset to {ROLE_META[user.role].label} defaults
+                    </button>
+                  )}
 
                   <PasswordReset user={user} onSave={patch} busy={busy} />
                 </div>
