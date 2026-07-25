@@ -60,6 +60,24 @@ function reqWith(token) {
     assert.ok(!p.has('users:manage'))
   })
 
+  await test('a new member sees every page but not user management', () => {
+    // The intended shape for a teammate account: same pages as the owner, with
+    // the Users area in Controls the only thing withheld.
+    const p = perms.resolvePermissions({ role: 'member' })
+    for (const page of perms.PAGE_ORDER) {
+      assert.ok(p.has(page.permission), `member cannot reach ${page.href}`)
+    }
+    assert.ok(!p.has('users:manage'), 'member can manage users')
+  })
+
+  await test('the owner reaches every page and user management', () => {
+    const p = perms.resolvePermissions({ role: 'admin' })
+    for (const page of perms.PAGE_ORDER) {
+      assert.ok(p.has(page.permission), `admin cannot reach ${page.href}`)
+    }
+    assert.ok(p.has('users:manage'))
+  })
+
   await test('admin holds every permission in the catalog', () => {
     const p = perms.resolvePermissions({ role: 'admin' })
     for (const permission of perms.PERMISSIONS) assert.ok(p.has(permission), `admin missing ${permission}`)
