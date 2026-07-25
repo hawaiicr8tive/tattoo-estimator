@@ -3,22 +3,30 @@
 import { useState } from 'react'
 import ChaosPhraseLibrary from './ChaosPhraseLibrary'
 import PromptLibrary from './PromptLibrary'
+import UsersTab from './UsersTab'
 
-type SubTab = 'phrases' | 'prompts'
+type SubTab = 'phrases' | 'prompts' | 'users'
 
 const SUBTABS: { id: SubTab; label: string; description: string }[] = [
   { id: 'phrases', label: 'Chaos Phrases',  description: 'Short stylistic anchors injected into image-gen batches.' },
   { id: 'prompts', label: 'Prompt Library', description: 'Full named prompts saved from the Fusion Lab analyzer.' },
+  { id: 'users',   label: 'Users',          description: 'Who can sign in, and which pages and actions they can reach.' },
 ]
+
+interface Props {
+  /** Hides the Users sub-tab from anyone without `users:manage`. */
+  canManageUsers: boolean
+}
 
 /**
  * Top-level Controls tab — central database for everything that feeds the
  * Fusion Lab image generators. Sub-tabs swap between the two libraries
  * without changing the URL, so users can flip back and forth quickly.
  */
-export default function ControlsPage() {
+export default function ControlsPage({ canManageUsers }: Props) {
   const [active, setActive] = useState<SubTab>('phrases')
-  const current = SUBTABS.find(t => t.id === active) ?? SUBTABS[0]
+  const subtabs = SUBTABS.filter(tab => tab.id !== 'users' || canManageUsers)
+  const current = subtabs.find(t => t.id === active) ?? subtabs[0]
   return (
     <div className="space-y-5">
       <header>
@@ -29,7 +37,7 @@ export default function ControlsPage() {
       </header>
 
       <nav className="flex gap-0 border-b border-[var(--brand-border)] -mb-px">
-        {SUBTABS.map(tab => {
+        {subtabs.map(tab => {
           const isActive = active === tab.id
           return (
             <button
@@ -58,6 +66,7 @@ export default function ControlsPage() {
 
       {active === 'phrases' && <ChaosPhraseLibrary />}
       {active === 'prompts' && <PromptLibrary />}
+      {active === 'users' && canManageUsers && <UsersTab />}
     </div>
   )
 }

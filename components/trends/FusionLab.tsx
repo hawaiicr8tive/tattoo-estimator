@@ -122,6 +122,10 @@ interface Props {
   styles: StyleStrand[]
   currentYear: number
   industryId: string
+  /** `images:generate` — may spend credits on real-time generation. */
+  canGenerate: boolean
+  /** `images:bulk` — may queue and cancel bulk batch jobs. */
+  canBulk: boolean
 }
 
 interface AnalysisState {
@@ -136,7 +140,13 @@ interface AnalysisState {
   images: FusionImage[]
 }
 
-export default function FusionLab({ styles, currentYear, industryId }: Props) {
+export default function FusionLab({
+  styles,
+  currentYear,
+  industryId,
+  canGenerate,
+  canBulk,
+}: Props) {
   const [baseId, setBaseId] = useState(styles[0]?.id ?? '')
   const [blendId, setBlendId] = useState(styles[1]?.id ?? styles[0]?.id ?? '')
   const [blendWeight, setBlendWeight] = useState(45)
@@ -636,6 +646,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
 
   async function handleGenerateImages(chaosSweep = false) {
     if (!analysis) return
+    if (!canGenerate) {
+      setImageError('You do not have permission to generate images.')
+      return
+    }
     setInFlightGenerations(c => c + 1)
     setImageError(null)
     try {
@@ -833,6 +847,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
    */
   async function handleCancelStuck() {
     if (cancellingBatches) return
+    if (!canBulk) {
+      setPollSummary('You do not have permission to cancel batches.')
+      return
+    }
     const openCount = batchJobs.filter(j => j.status === 'pending' || j.status === 'running').length
     if (openCount === 0) {
       setPollSummary('No open batches to cancel.')
@@ -870,6 +888,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
 
   async function handleSubmitBulk() {
     if (!analysis) return
+    if (!canBulk) {
+      setBulkError('You do not have permission to submit bulk batches.')
+      return
+    }
     setSubmittingBulk(true)
     setBulkError(null)
     try {
@@ -1421,15 +1443,19 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                     <button
                       type="button"
                       onClick={() => handleGenerateImages(false)}
-                      className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90"
+                      disabled={!canGenerate}
+                      title={canGenerate ? undefined : 'You do not have permission to generate images'}
+                      className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
                     >
                       Generate flash designs
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGenerateImages(true)}
-                      disabled={imageCount < 2}
-                      title="Generate the batch with chaos ramped from 0 to 100 across the images"
+                      disabled={imageCount < 2 || !canGenerate}
+                      title={canGenerate
+                        ? 'Generate the batch with chaos ramped from 0 to 100 across the images'
+                        : 'You do not have permission to generate images'}
                       className="rounded border border-[#7B0000] text-[#7B0000] text-xs px-3 py-1.5 hover:bg-[#7B0000]/5 disabled:opacity-50"
                     >
                       Chaos sweep
@@ -1647,7 +1673,8 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                       <button
                         type="button"
                         onClick={handleSubmitBulk}
-                        disabled={submittingBulk}
+                        disabled={submittingBulk || !canBulk}
+                        title={canBulk ? undefined : 'You do not have permission to submit bulk batches'}
                         className="rounded bg-[#7B0000] text-white text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
                       >
                         {submittingBulk ? 'Submitting…' : 'Submit bulk job'}
@@ -1664,8 +1691,10 @@ export default function FusionLab({ styles, currentYear, industryId }: Props) {
                       <button
                         type="button"
                         onClick={handleCancelStuck}
-                        disabled={cancellingBatches}
-                        title="Cancel every pending/running Gemini batch — use this when Google's queue is stuck for hours and you want to resubmit on Flash"
+                        disabled={cancellingBatches || !canBulk}
+                        title={canBulk
+                          ? "Cancel every pending/running Gemini batch — use this when Google's queue is stuck for hours and you want to resubmit on Flash"
+                          : 'You do not have permission to cancel batches'}
                         className="rounded border border-rose-400 text-rose-600 text-xs px-3 py-1.5 hover:bg-rose-50 disabled:opacity-50"
                       >
                         {cancellingBatches ? 'Cancelling…' : 'Cancel stuck'}

@@ -20,9 +20,9 @@ export async function GET(req: NextRequest) {
 
   if (!isCron) {
     // Fall back to admin auth for manual pokes from the dashboard.
-    const { requireAdmin } = await import('@/lib/admin-auth')
-    const denied = requireAdmin(req)
-    if (denied) return denied
+    const { requirePermission } = await import('@/lib/admin-auth')
+    const guard = await requirePermission(req, 'page:dashboard')
+    if ('error' in guard) return guard.error
   }
 
   // Gemini key is required (most jobs); OpenAI key is optional (only needed

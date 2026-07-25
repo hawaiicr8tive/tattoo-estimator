@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from 'next'
-import { cookies } from 'next/headers'
 import './globals.css'
 import LoginForm from '@/components/LoginForm'
 import TabNav from '@/components/TabNav'
-import { ADMIN_COOKIE, verifyAdminToken } from '@/lib/admin-auth'
+import { getSession } from '@/lib/dal'
 
 export const metadata: Metadata = {
   title: 'Style Prediction Model',
@@ -39,9 +38,10 @@ try {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get(ADMIN_COOKIE)?.value
-  const authed = verifyAdminToken(token)
+  // The single authentication gate: with no session, page bodies are never
+  // rendered at all, only the login form. Per-page *authorization* is enforced
+  // separately by `requirePage` in each page.
+  const user = await getSession()
 
   return (
     <html lang="en" className="h-full antialiased dark" data-accent="indigo" suppressHydrationWarning>
@@ -49,9 +49,12 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: ACCENT_BOOTSTRAP }} />
       </head>
       <body className="min-h-full flex flex-col bg-[var(--brand-bg)] text-[var(--brand-text)]">
-        {authed ? (
+        {user ? (
           <>
-            <TabNav />
+            <TabNav
+              permissions={[...user.permissions]}
+              displayName={user.name || user.email}
+            />
             <main className="flex-1">{children}</main>
           </>
         ) : (

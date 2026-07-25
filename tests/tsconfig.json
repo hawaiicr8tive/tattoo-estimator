@@ -1,0 +1,22 @@
+{
+  "// ": "Compiles the auth/permission modules to CommonJS so tests/auth.test.cjs can exercise the real code under plain node (no test framework needed).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": false,
+    "baseUrl": "..",
+    "paths": { "@/*": ["./*"] },
+    "rootDir": "..",
+    "outDir": "../.test-build",
+    "types": ["node"]
+  },
+  "files": [
+    "../lib/permissions.ts",
+    "../lib/users-store.ts",
+    "../lib/admin-auth.ts"
+  ]
+}

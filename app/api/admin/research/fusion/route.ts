@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { isOpenRouterModel, isValidModel, runFusionResearch, type ResearchModelId } from '@/lib/trends/ai-research'
 import { loadIndustryDataset } from '@/lib/trends/store'
 import { appendFusionHistory, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
@@ -24,15 +24,15 @@ function clamp(n: unknown, min: number, max: number, fallback: number): number {
 }
 
 export async function GET(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:dashboard')
+  if ('error' in guard) return guard.error
   const history = await loadFusionHistory()
   return NextResponse.json({ history })
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:dashboard')
+  if ('error' in guard) return guard.error
 
   let body: unknown
   try {

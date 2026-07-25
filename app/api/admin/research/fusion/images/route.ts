@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { getServiceClient } from '@/lib/supabase'
 import { appendFusionHistory, appendFusionImages, loadFusionHistory, type FusionHistoryEntry } from '@/lib/trends/fusion-history'
 import { loadIndustryDataset } from '@/lib/trends/store'
@@ -92,8 +92,8 @@ async function imagesGeneratedToday(): Promise<number> {
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'images:generate')
+  if ('error' in guard) return guard.error
 
   let body: unknown
   try {

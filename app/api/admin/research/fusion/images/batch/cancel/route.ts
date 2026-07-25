@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { cancelOpenGeminiBatches } from '@/lib/trends/fusion-batch'
 
 export const maxDuration = 60
@@ -12,8 +12,8 @@ export const maxDuration = 60
  * No body required. Returns a summary of what was cancelled.
  */
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'images:bulk')
+  if ('error' in guard) return guard.error
   const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'GEMINI_API_KEY is not configured' }, { status: 500 })

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requirePermission } from '@/lib/admin-auth'
 import { addChaosPhrase, loadChaosLibrary } from '@/lib/trends/chaos-store'
 
 export async function GET(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:dashboard')
+  if ('error' in guard) return guard.error
   try {
     const library = await loadChaosLibrary()
     return NextResponse.json(library)
@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const denied = requireAdmin(req)
-  if (denied) return denied
+  const guard = await requirePermission(req, 'page:controls')
+  if ('error' in guard) return guard.error
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const x = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>

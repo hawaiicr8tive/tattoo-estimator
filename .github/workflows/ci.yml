@@ -28,6 +28,11 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      # Runs before Lint so an access-control regression is reported even while
+      # lint has unrelated failures outstanding.
+      - name: Test
+        run: npm test
+
       - name: Lint
         run: npm run lint
 
